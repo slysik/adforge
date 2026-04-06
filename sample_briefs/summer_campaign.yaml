@@ -1,0 +1,68 @@
+campaign:
+  name: "Summer Refresh 2025"
+  brand: "FreshCo"
+  message: "Stay Fresh This Summer"
+  tagline: "Naturally Refreshing"
+  target_region: "North America"
+  target_audience: "Health-conscious millennials and Gen Z, ages 22-38"
+
+  languages:
+    - en
+    - es
+
+  brand_guidelines:
+    primary_colors:
+      - "#00A86B"   # Fresh green
+      - "#FFFFFF"    # White
+      - "#1B1B1B"    # Near-black
+    accent_color: "#FFD700"
+    font_family: "Helvetica"
+    logo_path: "input_assets/logo.png"
+    prohibited_words:
+      - "cheap"
+      - "discount"
+      - "knockoff"
+      - "diet"
+    required_disclaimer: null
+
+  products:
+    - id: "sparkling-water"
+      name: "FreshCo Sparkling Water"
+      description: "Premium sparkling water infused with natural citrus essence, zero calories, refreshing and crisp"
+      hero_image: null  # Will be generated via GenAI
+      keywords:
+        - sparkling water
+        - citrus
+        - refreshing
+        - summer drink
+        - bubbles
+        - lime
+        - ice cold
+
+    - id: "green-smoothie"
+      name: "FreshCo Green Smoothie"
+      description: "Organic green smoothie blend with kale, spinach, green apple, and ginger – energizing and nutritious"
+      hero_image: "input_assets/green_smoothie.jpg"  # Pre-existing asset
+      keywords:
+        - green smoothie
+        - organic
+        - healthy
+        - kale
+        - energizing
+        - morning routine
+
+  aspect_ratios:
+    - name: "instagram_square"
+      ratio: "1:1"
+      width: 1080
+      height: 1080
+
+    - name: "stories_reels"
+      ratio: "9:16"
+      width: 1080
+      height: 1920
+
+    - name: "facebook_landscape"
+      ratio: "16:9"
+      width: 1920
+      height: 1080

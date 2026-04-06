@@ -1,0 +1,69 @@
+campaign:
+  name: "Holiday Glow 2025"
+  brand: "LuxeBeauty"
+  message: "New Year, New You"
+  tagline: "Glow Into the New Year"
+  target_region: "Europe"
+  target_audience: "Fashion-forward women and men, ages 25-45, interested in premium skincare"
+
+  languages:
+    - en
+    - fr
+    - de
+
+  brand_guidelines:
+    primary_colors:
+      - "#C9A96E"   # Gold
+      - "#1A1A2E"   # Deep navy
+      - "#FFFFFF"    # White
+    accent_color: "#E8D5B7"
+    font_family: "Georgia"
+    logo_path: null
+    prohibited_words:
+      - "anti-aging"
+      - "wrinkle-free"
+      - "miracle"
+      - "permanent"
+    required_disclaimer: "Results may vary. Not tested on animals."
+
+  products:
+    - id: "radiance-serum"
+      name: "LuxeBeauty Radiance Serum"
+      description: "24K gold-infused vitamin C serum for luminous, hydrated skin with visible radiance in 7 days"
+      hero_image: null
+      keywords:
+        - serum
+        - gold
+        - radiance
+        - vitamin C
+        - luxury skincare
+        - glowing skin
+        - dropper bottle
+
+    - id: "velvet-moisturizer"
+      name: "LuxeBeauty Velvet Moisturizer"
+      description: "Rich, velvety moisturizer with hyaluronic acid and shea butter for all-day hydration"
+      hero_image: null
+      keywords:
+        - moisturizer
+        - velvet texture
+        - hydration
+        - luxury cream
+        - jar
+        - winter skincare
+
+  aspect_ratios:
+    - name: "instagram_square"
+      ratio: "1:1"
+      width: 1080
+      height: 1080
+
+    - name: "stories_reels"
+      ratio: "9:16"
+      width: 1080
+      height: 1920
+
+    - name: "facebook_landscape"
+      ratio: "16:9"
+      width: 1920
+      height: 1080
