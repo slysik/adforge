@@ -1,360 +1,236 @@
 # AdForge
 
-AdForge is a proof-of-concept creative automation app for localized social campaigns, built for the Adobe Forward Deployed Engineer - Creative Technologist assessment interview.
+**Creative automation pipeline for localized social campaigns.**
 
-It is intentionally framed as more than an image-generation demo. The goal is to show how a hands-on creative technologist would structure a client-facing prototype that is easy to explain, maintain, extend, and defend in a live review.
+Built for the Adobe Forward Deployed Engineer – Creative Technologist assessment. Designed to show how a hands-on creative technologist would structure a client-facing prototype: easy to explain, maintain, extend, and defend live.
 
-The project intent is documented in [ADFORGE_INTENT.md](./ADFORGE_INTENT.md).
-
-## Why This Exists
-
-The assessment is evaluating more than whether the code runs. AdForge is designed to demonstrate:
-
-- rapid prototyping with clear technical judgment
-- practical GenAI orchestration inside a real creative workflow
-- strong system boundaries across inputs, generation, composition, validation, and reporting
-- an implementation that maps cleanly to business goals and creative-operations pain points
-- an artifact that can be presented credibly to both engineering and client stakeholders
-
-## What It Does
-
-Given a **campaign brief** (YAML/JSON), this pipeline:
-
-1. **Parses** campaign details — products, target audience, brand guidelines, aspect ratios, languages
-2. **Discovers or generates** hero images — reuses existing assets or generates new ones via DALL-E 3
-3. **Composites** final ad creatives — resizing, text overlays, logo placement, brand styling
-4. **Validates** output — brand compliance checks and legal content screening
-5. **Reports** results — console summary, JSON data, and visual HTML report
-
-![Pipeline Flow](https://img.shields.io/badge/Input-Campaign_Brief-blue) → ![GenAI](https://img.shields.io/badge/GenAI-DALL--E_3-green) → ![Composition](https://img.shields.io/badge/Composition-Pillow-orange) → ![Validation](https://img.shields.io/badge/Validation-Brand_%26_Legal-red) → ![Output](https://img.shields.io/badge/Output-Organized_Assets-purple)
+Full intent documented in [ADFORGE_INTENT.md](./ADFORGE_INTENT.md).
 
 ---
 
-> **AdForge** turns a campaign brief into reviewable social ad variants through a clear pipeline: resolve assets, generate missing heroes, compose placements, validate outputs, and report the result.
+## What It Does
+
+Given a **campaign brief** (YAML/JSON), AdForge runs a 7-stage pipeline:
+
+```
+Brief → Analyze → Resolve → Generate → Compose → Validate → Report
+```
+
+1. **Ingests** a structured campaign brief (products, audience, brand guidelines, placements)
+2. **Analyzes** brief quality with a scoring engine (completeness, clarity, brand strength, targeting)
+3. **Resolves** existing assets first — reuses what's available, generates only what's missing
+4. **Generates** hero images via a provider chain: Adobe Firefly → DALL-E 3 → Mock
+5. **Composes** final creatives using auto-selected layout templates with brand styling
+6. **Validates** outputs against brand compliance and legal content rules
+7. **Reports** results as console summary, JSON, and an interactive HTML dashboard
+
+**Key differentiators:**
+- **Adobe Firefly-first** provider architecture with graceful fallback chain
+- **LLM-powered brief analysis** — GenAI as a judgment tool, not just an image generator
+- **Multi-template layout system** — 5 composition templates auto-selected by content
+- **Parallel generation** — ThreadPool-based hero generation across ratios
+- **Cost & performance tracking** — per-stage timing and estimated cost in every report
 
 ---
 
 ## Quick Start
 
-### Prerequisites
-
-- Python 3.9+
-- (Optional) OpenAI API key for real image generation
-
-### Setup
-
 ```bash
-# Clone the repo
-git clone https://github.com/slysik/adforge.git
-cd adforge
-
-# Create virtual environment
-python3 -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-
-# Install dependencies
+# Clone and setup
+git clone https://github.com/slysik/adforge.git && cd adforge
+python3 -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
-
-# Generate sample input assets (logo + test product image)
 python create_sample_assets.py
 
-# (Optional) Set your OpenAI API key for real image generation
-cp .env.example .env
-# Edit .env with your key
-```
-
-### Run the Pipeline
-
-```bash
-# Mock mode (no API key needed — generates placeholder images)
+# Run with mock images (no API key needed)
 python -m src.cli generate sample_briefs/summer_campaign.yaml --mock
 
-# With real GenAI (requires OPENAI_API_KEY)
+# Analyze a brief without generating
+python -m src.cli analyze sample_briefs/holiday_campaign.yaml
+
+# List available providers
+python -m src.cli providers
+
+# Run with DALL-E 3
+export OPENAI_API_KEY=sk-your-key
 python -m src.cli generate sample_briefs/summer_campaign.yaml
 
-# Custom input/output directories
-python -m src.cli generate brief.yaml -i ./my_assets -o ./my_output
+# Force a specific template
+python -m src.cli generate brief.yaml --mock --template minimal
 
-# Validate a brief without generating
-python -m src.cli validate sample_briefs/summer_campaign.yaml
-
-# Run the holiday beauty campaign (3 languages, 18 creatives)
-python -m src.cli generate sample_briefs/holiday_campaign.yaml --mock
-```
-
-### Run Tests
-
-```bash
-pip install pytest
+# Run tests (139 tests)
 python -m pytest tests/ -v
 ```
 
 ---
 
-## Example Input
+## Provider Architecture
 
-### Campaign Brief (`sample_briefs/summer_campaign.yaml`)
-
-```yaml
-campaign:
-  name: "Summer Refresh 2025"
-  brand: "FreshCo"
-  message: "Stay Fresh This Summer"
-  tagline: "Naturally Refreshing"
-  target_region: "North America"
-  target_audience: "Health-conscious millennials and Gen Z, ages 22-38"
-
-  languages:
-    - en
-    - es
-
-  brand_guidelines:
-    primary_colors: ["#00A86B", "#FFFFFF", "#1B1B1B"]
-    logo_path: "input_assets/logo.png"
-    prohibited_words: ["cheap", "discount", "knockoff", "diet"]
-
-  products:
-    - id: "sparkling-water"
-      name: "FreshCo Sparkling Water"
-      description: "Premium sparkling water with natural citrus essence"
-      hero_image: null  # Will be generated
-      keywords: [sparkling water, citrus, refreshing, summer drink]
-
-    - id: "green-smoothie"
-      name: "FreshCo Green Smoothie"
-      description: "Organic green smoothie blend with kale and ginger"
-      hero_image: "input_assets/green_smoothie.jpg"  # Pre-existing
-      keywords: [green smoothie, organic, healthy, kale]
-
-  aspect_ratios:
-    - name: "instagram_square"
-      ratio: "1:1"
-      width: 1080
-      height: 1080
-    - name: "stories_reels"
-      ratio: "9:16"
-      width: 1080
-      height: 1920
-    - name: "facebook_landscape"
-      ratio: "16:9"
-      width: 1920
-      height: 1080
-```
-
-### Example Output Structure
+AdForge uses a **provider abstraction** that makes image generation provider-swappable via configuration:
 
 ```
-output/
-└── summer_refresh_2025/
-    ├── report.json              # Machine-readable results
-    ├── report.html              # Visual HTML report
-    ├── sparkling-water/
-    │   ├── instagram_square/
-    │   │   ├── hero.png          # Generated hero (1:1)
-    │   │   ├── creative_en.jpg   # Final creative, English
-    │   │   └── creative_es.jpg   # Final creative, Spanish
-    │   ├── stories_reels/
-    │   │   ├── hero.png          # Generated hero (9:16)
-    │   │   ├── creative_en.jpg
-    │   │   └── creative_es.jpg
-    │   └── facebook_landscape/
-    │       ├── hero.png          # Generated hero (16:9)
-    │       ├── creative_en.jpg
-    │       └── creative_es.jpg
-    └── green-smoothie/
-        ├── hero_base.png         # Copied from input (reused)
-        ├── instagram_square/
-        │   ├── creative_en.jpg
-        │   └── creative_es.jpg
-        ├── stories_reels/
-        │   ├── creative_en.jpg
-        │   └── creative_es.jpg
-        └── facebook_landscape/
-            ├── creative_en.jpg
-            └── creative_es.jpg
+┌─────────────────────────────────────────┐
+│          ImageProvider (ABC)            │
+│  generate() → (Image, Metadata)        │
+└─────────┬──────────┬──────────┬────────┘
+          │          │          │
+    ┌─────▼──┐  ┌────▼───┐  ┌──▼────┐
+    │Firefly │  │DALL-E 3│  │ Mock  │
+    │Services│  │        │  │       │
+    │        │  │$0.04/  │  │$0.00  │
+    │Generate│  │image   │  │       │
+    │Expand  │  │        │  │Determ-│
+    │Fill    │  │3 fixed │  │inistic│
+    │Style   │  │sizes   │  │       │
+    └────────┘  └────────┘  └───────┘
 ```
 
-**This brief generates 12 creatives** (2 products × 3 ratios × 2 languages) in ~3 seconds (mock) or ~60 seconds (with DALL-E 3).
+**Auto-resolution:** Firefly → DALL-E → Mock. The pipeline always runs.
+
+### Adobe Firefly Services
+
+The `FireflyProvider` implements the Firefly Services REST API:
+- **Text-to-Image** (`/v3/images/generate`) — primary hero generation
+- **Generative Expand** (`/v3/images/expand`) — aspect-ratio adaptation without crop artifacts
+- **Style Reference** — brand-consistent generation from reference images
+- **IMS Authentication** — client_credentials grant with automatic token refresh
+
+Set `FIREFLY_CLIENT_ID` + `FIREFLY_CLIENT_SECRET` from [Adobe Developer Console](https://developer.adobe.com/console/).
+
+> In production, Generative Expand replaces center-crop for adapting existing assets to different aspect ratios. It generates contextually consistent content at the edges instead of cutting the image.
+
+---
+
+## Brief Analysis
+
+Before generating anything, AdForge scores the brief on 4 dimensions (0–25 each, 100 total):
+
+| Dimension | What It Checks |
+|-----------|---------------|
+| **Completeness** | Products, keywords, descriptions, hero assets, languages |
+| **Clarity** | Action-oriented messaging, audience specificity, region targeting |
+| **Brand Strength** | Color palette, accent color, logo, prohibited words, disclaimer, font |
+| **Targeting** | Language count, aspect ratio coverage, platform reach |
+
+The analyzer also:
+- Identifies strengths and weaknesses
+- Suggests actionable improvements
+- Flags potential brand/legal risks (e.g., "guaranteed" in ad copy)
+- Generates prompt enrichment context per product (audience-informed, region-informed)
+- Infers creative direction recommendations
+
+```
+╭──────── Brief Analysis ─────────╮
+│ Brief Quality Score: 88/100 (A) │
+│   [█████████████████░░░]        │
+│   Completeness:   23/25         │
+│   Clarity:        22/25         │
+│   Brand Strength: 21/25         │
+│   Targeting:      22/25         │
+╰─────────────────────────────────╯
+```
+
+This demonstrates **GenAI as a judgment tool** — the LLM analyzes strategy, not just generates images.
+
+---
+
+## Layout Templates
+
+5 composition templates, auto-selected based on content signals:
+
+| Template | When Selected | Layout |
+|----------|---------------|--------|
+| `product_hero` | Default — universally safe | Full-bleed hero + gradient + bottom text |
+| `editorial` | Long messages | 60/40 hero/text split with brand panel |
+| `split_panel` | Vertical formats (9:16) | 50/50 image/text with accent bar |
+| `minimal` | Luxury/premium keywords | Centered hero, generous whitespace |
+| `bold_type` | Short punchy messages | Oversized typography on tinted hero |
+
+Auto-selection logic:
+```python
+if luxury_keywords:    → MINIMAL
+if short_message:      → BOLD_TYPE
+if vertical_format:    → SPLIT_PANEL
+if long_message:       → EDITORIAL
+else:                  → PRODUCT_HERO
+```
+
+Override with `--template <name>` on the CLI.
 
 ---
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                        CLI (cli.py)                             │
-│                  click-based command interface                   │
-└─────────────────────────┬───────────────────────────────────────┘
-                          │
-┌─────────────────────────▼───────────────────────────────────────┐
-│                   Pipeline (pipeline.py)                        │
-│              Orchestrates the full workflow                      │
-└──┬──────────┬───────────┬───────────┬────────────┬──────────────┘
-   │          │           │           │            │
-   ▼          ▼           ▼           ▼            ▼
-┌──────┐  ┌────────┐  ┌──────────┐  ┌─────────┐  ┌────────┐
-│Models│  │Storage │  │Generator │  │Compositor│  │Validator│
-│      │  │Manager │  │(GenAI)   │  │(Pillow)  │  │(Brand/ │
-│Pydantic│ │Local FS│  │DALL-E 3  │  │Resize   │  │ Legal) │
-│schemas│  │I/O     │  │or Mock   │  │Overlay  │  │        │
-└──────┘  └────────┘  └──────────┘  │Text     │  └────────┘
-                                     │Logo     │
-                                     └─────────┘
-                                          │
-                                     ┌────▼────┐
-                                     │ Report  │
-                                     │Console  │
-                                     │JSON/HTML│
-                                     └─────────┘
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         CLI / API Layer                                 │
+│                      click + REST-ready                                 │
+└───────────────────────┬─────────────────────────────────────────────────┘
+                        │
+┌───────────────────────▼─────────────────────────────────────────────────┐
+│                      Pipeline Orchestrator                              │
+│        Ingest → Analyze → Resolve → Generate → Compose → Validate →    │
+│                                                          Report        │
+└──┬──────┬──────┬──────┬──────┬──────┬──────┬───────────────────────────┘
+   │      │      │      │      │      │      │
+   ▼      ▼      ▼      ▼      ▼      ▼      ▼
+┌─────┐┌──────┐┌──────┐┌──────┐┌─────┐┌─────┐┌──────┐
+│Brief││Brief ││Provid││Templ-││Compo││Valid││Report│
+│Model││Analy-││er    ││ates  ││sitor││ator ││      │
+│s    ││zer   ││Layer ││      ││     ││     ││JSON  │
+│     ││      ││      ││5     ││Text ││Brand││HTML  │
+│Pydan││Score ││Fire- ││layout││Logo ││Legal││Metro │
+│tic  ││Enrich││fly   ││auto- ││Grad ││Pixel││ics   │
+│     ││Risks ││DALL-E││select││     ││     ││      │
+└─────┘└──────┘│Mock  │└──────┘└─────┘└─────┘└──────┘
+               └──────┘
 ```
 
-### Module Responsibilities
+### Module Inventory
 
-| Module | File | Role |
-|--------|------|------|
-| **Models** | `src/models.py` | Pydantic data models with validation |
-| **CLI** | `src/cli.py` | Click-based command-line interface |
-| **Pipeline** | `src/pipeline.py` | Orchestration: load brief → generate → compose → validate → report |
-| **Generator** | `src/generator.py` | GenAI image generation (DALL-E 3 + mock mode) |
-| **Compositor** | `src/compositor.py` | Image composition: resize, crop, text overlay, gradient, logo |
+| Module | File | Purpose |
+|--------|------|---------|
+| **Models** | `src/models.py` | Pydantic schemas with validation (min products, hex colors, language codes) |
+| **Pipeline** | `src/pipeline.py` | 7-stage orchestrator with parallel generation |
+| **Providers** | `src/providers.py` | Firefly / DALL-E / Mock provider abstraction |
+| **Analyzer** | `src/analyzer.py` | Brief quality scoring + prompt enrichment |
+| **Templates** | `src/templates.py` | 5 layout templates with auto-selection |
+| **Compositor** | `src/compositor.py` | Image composition, text overlay, translation |
 | **Validator** | `src/validator.py` | Brand compliance + legal content checks |
-| **Storage** | `src/storage.py` | File-based asset management with organized output structure |
-| **Report** | `src/report.py` | Console summary (Rich), JSON, and HTML visual report |
+| **Storage** | `src/storage.py` | Asset storage with organized output structure |
+| **Tracker** | `src/tracker.py` | Per-stage timing and cost tracking |
+| **Report** | `src/report.py` | Console, JSON, and interactive HTML dashboard |
+| **CLI** | `src/cli.py` | Click commands: generate, validate, analyze, providers |
 
 ---
 
-## Key Design Decisions
+## Sample Output
 
-### 1. **YAML Campaign Briefs with Pydantic Validation**
-Campaign briefs use YAML for human readability with Pydantic models for strict validation. This keeps the business contract explicit and ensures invalid briefs fail fast with clear errors instead of producing misleading outputs downstream.
-
-### 2. **Hero Image Reuse Strategy**
-The pipeline first checks for existing hero images (explicit path or auto-discovery in `input_assets/`) before falling back to GenAI generation. This:
-- Avoids unnecessary API costs
-- Respects pre-approved creative assets
-- Enables hybrid workflows (some AI-generated, some manually created)
-
-### 3. **Per-Ratio Hero Generation**
-When an existing hero is not available, the pipeline generates a separate hero image at each target aspect ratio rather than generating a single 1:1 hero and cropping it. This avoids visible artifacts from cross-ratio cropping (e.g., text or composition elements from one ratio bleeding into another). For reused assets (from DAM / input folder), center-crop is applied since the source image was presumably composed for flexibility.
-
-### 4. **Mock Mode for Development/Testing**
-The mock mode generates deterministic placeholder images with distinct colors per product. This enables:
-- Full pipeline testing without API keys
-- Fast CI/CD runs
-- Predictable output for debugging
-
-### 5. **Composition Over Text-in-Image Generation**
-Campaign text is composited via Pillow rather than baked into GenAI prompts. This gives:
-- Precise typographic control (font, size, positioning)
-- Exact message fidelity (no hallucinated text)
-- Language switching without regenerating images
-- Brand font consistency
-
-### 6. **Modular Architecture**
-Each concern (generation, composition, validation, storage, reporting) is isolated in its own module with clean interfaces. This makes it easy to:
-- Swap DALL-E for another provider (Stability AI, Firefly, Midjourney)
-- Replace local storage with S3/Azure Blob/Dropbox
-- Add new validation rules
-- Extend reporting
-
-### 7. **Assessment-Oriented Scope**
-AdForge is deliberately scoped as a defendable proof of concept for an interview setting. It focuses on a coherent end-to-end workflow rather than trying to simulate a full production marketing platform.
-
----
-
-## Features Checklist
-
-### Required ✅
-- [x] Accept campaign brief (YAML format)
-- [x] Multiple products (2+ per brief)
-- [x] Target region/market
-- [x] Target audience
-- [x] Campaign message
-- [x] Accept/reuse existing input assets
-- [x] Generate missing assets via GenAI (DALL-E 3)
-- [x] Three aspect ratios (1:1, 9:16, 16:9)
-- [x] Campaign message displayed on final creatives
-- [x] Runs locally (CLI tool)
-- [x] Output organized by product and aspect ratio
-- [x] Documentation (this README)
-
-### Nice-to-Have ✅
-- [x] Brand compliance checks (color presence, logo, prohibited words)
-- [x] Legal content checks (flagging regulated advertising terms)
-- [x] Logging/reporting (console summary, JSON report, HTML visual report)
-- [x] Multi-language support with explicit translation provider (EN, ES, FR, DE, PT, JA, ZH)
-- [x] Mock mode for testing without API keys (clean, label-free procedural images)
-- [x] Evidence-backed compliance results (passed/warning/failed/not_checked with notes)
-- [x] Test suite (83 tests covering models, composition, generation, validation, pipeline)
-
----
-
-## Assumptions & Limitations
-
-### Assumptions
-- **Per-ratio generation** is preferred for generated heroes; reused assets use center-crop
-- **Translation** uses an explicit provider with pre-approved translations; unknown text falls back to source language with a warning (never silent). A production system would integrate DeepL / Google Translate with human review
-- **Brand compliance** uses pixel sampling for colors and pixel-level region checks for logo presence; production would use CV-based template matching
-- **Font availability** depends on the OS; the compositor tries family-specific paths, then generic fallbacks
-
-### Limitations
-- **DALL-E 3 size constraints**: Only supports 1024×1024, 1024×1792, 1792×1024 — final dimensions are achieved via resize/crop
-- **No content-aware cropping**: Reused heroes use center-crop; a production system would use saliency detection
-- **Curated translation table**: Only supports pre-approved translations; unknown text returns source language with a warning
-- **No approval workflow**: This is a generation pipeline; a production system needs review/approval stages
-- **No A/B variant generation**: Generates one variant per product/ratio/language; production should support multiple creative variants
-- **No performance analytics integration**: Reports on generation but not on downstream ad performance
-- **Single-threaded generation**: API calls are sequential; production should parallelize with async/await
-
-### What I'd Improve Next
-1. **Async pipeline** with `asyncio` for parallel image generation
-2. **Content-aware cropping** using saliency detection (OpenCV) or Firefly's generative fill
-3. **Dynamic translation** via DeepL or Google Translate API
-4. **Template system** for different ad layouts (product-focused, lifestyle, promotional)
-5. **Cloud storage integration** (S3/Azure Blob) with CDN delivery
-6. **Approval workflow** with Slack/email notifications
-7. **A/B variant generation** with multiple creative options per placement
-8. **Performance tracking** integration with ad platform APIs
-9. **Cost tracking** per generation (API costs, time)
-10. **Caching layer** to avoid regenerating identical prompts
-
----
-
-## Project Structure
+### Summer Campaign (2 products × 3 ratios × 2 languages = 12 creatives)
 
 ```
-adforge/
-├── README.md                    # This file
-├── ADFORGE_INTENT.md            # Product and interview intent
-├── requirements.txt             # Python dependencies
-├── .env.example                 # Environment variable template
-├── .gitignore
-├── create_sample_assets.py      # Script to generate test assets
-├── sample_briefs/
-│   ├── summer_campaign.yaml     # Example: consumer goods campaign
-│   └── holiday_campaign.yaml    # Example: luxury beauty campaign
-├── input_assets/
-│   ├── logo.png                 # Generated brand logo
-│   └── green_smoothie.jpg       # Sample pre-existing product asset
-├── src/
-│   ├── __init__.py
-│   ├── __main__.py              # python -m src entry point
-│   ├── cli.py                   # Click CLI commands
-│   ├── pipeline.py              # Main orchestrator
-│   ├── models.py                # Pydantic data models
-│   ├── generator.py             # GenAI image generation
-│   ├── compositor.py            # Image composition & text overlay
-│   ├── validator.py             # Brand & legal compliance
-│   ├── storage.py               # Asset storage manager
-│   └── report.py                # Console, JSON, HTML reporting
-├── tests/
-│   ├── test_models.py           # Schema enforcement, validation
-│   ├── test_generator.py        # Mock image generation contracts
-│   ├── test_compositor.py       # Layout, text rendering, branding
-│   ├── test_validator.py        # Compliance + legal checks
-│   ├── test_storage.py          # File management
-│   └── test_pipeline.py         # End-to-end integration
-└── output/                      # Generated creatives (gitignored)
+output/summer_refresh_2025/
+├── report.json              # Machine-readable results + metrics + analysis
+├── report.html              # Interactive HTML dashboard (open in browser)
+├── sparkling-water/
+│   ├── instagram_square/
+│   │   ├── hero.png          # Generated hero (1:1)
+│   │   ├── creative_en.jpg   # Final creative, English
+│   │   └── creative_es.jpg   # Final creative, Spanish
+│   ├── stories_reels/
+│   │   ├── hero.png          # Generated hero (9:16)
+│   │   ├── creative_en.jpg
+│   │   └── creative_es.jpg
+│   └── facebook_landscape/
+│       ├── hero.png          # Generated hero (16:9)
+│       ├── creative_en.jpg
+│       └── creative_es.jpg
+└── green-smoothie/
+    ├── hero_base.png         # Copied from input (reused ♻)
+    ├── instagram_square/
+    │   ├── creative_en.jpg
+    │   └── creative_es.jpg
+    └── ...
 ```
 
 ---
@@ -362,28 +238,98 @@ adforge/
 ## CLI Reference
 
 ```bash
-# Generate creatives from a campaign brief
-python -m src.cli generate <BRIEF_FILE> [OPTIONS]  # aka "adforge generate"
+# Generate creatives
+adforge generate <BRIEF> [OPTIONS]
+  -i, --input-dir       Input assets directory (default: input_assets)
+  -o, --output-dir      Output directory (default: output)
+  --mock                Force mock image generation
+  -p, --provider        Force provider: firefly | dalle | mock
+  -t, --template        Force template: product_hero | editorial | split_panel | minimal | bold_type
+  --no-analysis         Skip brief analysis stage
+  --no-parallel         Disable parallel hero generation
+  -w, --workers         Thread pool size (default: 4)
+  -v, --verbose         Debug logging
 
-Options:
-  -i, --input-dir   Input assets directory (default: input_assets)
-  -o, --output-dir  Output directory (default: output)
-  --mock            Use mock image generation (no API key needed)
-  --api-key         OpenAI API key (or set OPENAI_API_KEY env var)
-  -v, --verbose     Enable debug logging
+# Analyze brief quality
+adforge analyze <BRIEF> [--llm]
 
-# Validate a brief file
-python -m src.cli validate <BRIEF_FILE>
+# Validate brief schema
+adforge validate <BRIEF>
 
-# Show version
-python -m src.cli --version
+# List providers
+adforge providers
 ```
 
 ---
 
-## About the Name
+## Tests
 
-**AdForge** is meant to communicate transformation with discipline: structured campaign inputs go in, reviewable creative outputs come out. The name fits the interview goal better than a generic "pipeline" label because it suggests both craft and repeatable production.
+**139 tests** across 9 test modules:
+
+```bash
+python -m pytest tests/ -v
+```
+
+| Module | Tests | Coverage |
+|--------|-------|----------|
+| `test_models.py` | Schema enforcement, validation rules | 14 |
+| `test_generator.py` | Mock generation, dimensions, determinism | 7 |
+| `test_compositor.py` | Composition, text rendering, branding | 14 |
+| `test_validator.py` | Brand colors, logo, text, legal | 17 |
+| `test_pipeline.py` | End-to-end integration | 12 |
+| `test_storage.py` | File management | 5 |
+| `test_providers.py` | Provider abstraction, factory | 14 |
+| `test_analyzer.py` | Brief scoring, enrichment, risks | 17 |
+| `test_templates.py` | Template rendering, auto-selection | 14 |
+| `test_tracker.py` | Metrics tracking, serialization | 4 |
+
+---
+
+## Key Design Decisions
+
+### 1. Firefly-First Provider Architecture
+Even without Firefly credentials in this assessment, the provider abstraction shows production intent. Swapping DALL-E for Firefly is a config change, not a refactor. The `FireflyProvider` models the actual API — generate, expand, fill, style reference.
+
+### 2. GenAI as Judgment, Not Just Generation
+The brief analyzer uses AI to evaluate strategy, not just produce pixels. This shows that a creative technologist uses GenAI thoughtfully — the LLM identifies weak briefs, suggests improvements, and enriches prompts before a single image is generated.
+
+### 3. Template System Over Single Layout
+Real creative teams use different layouts for different placements. Auto-selection based on content signals (luxury → minimal, vertical → split panel) encodes creative judgment into the pipeline.
+
+### 4. Parallel Generation
+Heroes are generated concurrently across aspect ratios using ThreadPoolExecutor. This matters for production throughput and demonstrates async-aware engineering.
+
+### 5. Cost Tracking From Day One
+Every stage is timed and costed. Client-facing creative automation needs cost visibility — per campaign, per asset, per API call. The tracker is wired into the JSON and HTML reports.
+
+### 6. Composition Over Text-in-Image
+Campaign text is composited via Pillow, not baked into GenAI prompts. This gives precise typographic control, exact message fidelity, and language switching without regenerating images.
+
+---
+
+## Production Extension Points
+
+| Integration | Current | Production |
+|-------------|---------|------------|
+| **Image Generation** | DALL-E 3 / Mock | Adobe Firefly Services |
+| **Asset Storage** | Local filesystem | AEM DAM / S3 / Azure Blob |
+| **Brief Management** | YAML files | Adobe GenStudio / Custom CMS |
+| **Translation** | Curated lookup table | TMS (Smartling / Transifex) |
+| **Brand Assets** | Local files | Creative Cloud Libraries |
+| **Compositing** | Pillow | Photoshop API / Express |
+| **Approval** | Manual review | Slack/email workflows |
+| **Analytics** | HTML report | Ad platform APIs + dashboards |
+| **Deployment** | CLI | App Builder + webhooks |
+
+---
+
+## What I'd Say in the Interview
+
+> "AdForge is deliberately scoped as a proof of concept. The architecture decisions — provider abstraction, brief analysis, template system, cost tracking — are chosen to show how I'd build this for a real client, not just for a demo. Every module has a clear production extension point, and every design choice has a reason I can defend."
+
+For the full post-mortem and evolution story, see [LEARNINGS.md](./LEARNINGS.md).
+
+---
 
 ## License
 

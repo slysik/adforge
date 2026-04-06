@@ -162,6 +162,82 @@ They did NOT check:
 
 ---
 
+---
+
+## V3: Strategic Improvements (~2 hours)
+
+Applied a systematic evaluation framework (inspired by Karpathy's autoresearch pattern) to identify and implement the highest-signal improvements for the Adobe interviewer. Evaluated each potential improvement against 6 criteria:
+
+1. Creative workflow credibility
+2. AI orchestration sophistication
+3. Adobe ecosystem alignment
+4. Engineering fundamentals
+5. Interview defensibility
+6. Production extensibility
+
+Expanded from 83 to 139 tests. Added 4 new modules.
+
+### Improvement 1: Adobe Firefly-First Provider Architecture
+**Why:** The target role works with Adobe Firefly Services daily. This is THE signal for Adobe alignment.
+
+**What:** Created `src/providers.py` with an abstract `ImageProvider` base class and three implementations:
+- `FireflyProvider` — models the actual Firefly v3 API (generate, expand, fill, style reference, IMS auth)
+- `DalleProvider` — extracted from the old `generator.py`
+- `MockProvider` — extracted and unchanged
+
+Auto-resolution chain: Firefly → DALL-E → Mock. The pipeline always runs.
+
+**Signal sent:** "I understand Firefly Services architecture and designed for Adobe from day one. Swapping providers is a config change, not a refactor."
+
+### Improvement 2: LLM-Powered Brief Analyzer
+**Why:** Shows GenAI as a **judgment tool**, not just an image generator. This is the key differentiator.
+
+**What:** Created `src/analyzer.py` that scores briefs on 4 dimensions (completeness, clarity, brand strength, targeting — 0-25 each). Identifies strengths, weaknesses, risks, and generates prompt enrichment per product.
+
+**Signal sent:** "I know where GenAI adds value beyond image generation. The LLM evaluates strategy and surfaces risks before a single pixel is generated."
+
+### Improvement 3: Multi-Template Layout System
+**Why:** Real creative teams use different layouts for different placements and goals.
+
+**What:** Created `src/templates.py` with 5 layout templates (product_hero, editorial, split_panel, minimal, bold_type). Auto-selection based on content signals (luxury keywords → minimal, vertical → split panel).
+
+**Signal sent:** "I understand creative operations. Layout selection encodes creative judgment into the pipeline, not just engineering."
+
+### Improvement 4: Parallel Generation + Cost Tracking
+**Why:** Shows engineering maturity (parallel) and client-facing mindset (cost tracking).
+
+**What:** 
+- `ThreadPoolExecutor` for hero generation across ratios
+- `src/tracker.py` tracks per-stage timing, API call count, and estimated cost
+- All metrics flow into the JSON and HTML reports
+
+**Signal sent:** "I think about throughput and cost from the start, not as an afterthought."
+
+### Improvement 5: Interactive HTML Dashboard
+**Why:** The HTML report is what gets demoed in the interview. It needs to be impressive.
+
+**What:** Complete redesign of `src/report.py` with:
+- Tabbed navigation (Overview, Assets, Brief Analysis, Performance, Architecture)
+- Brief quality score visualization with bar charts
+- Per-stage pipeline performance breakdown
+- Asset filtering by product
+- Architecture diagram with production extension points
+
+**Signal sent:** "I care about presentation and can deliver something a client would actually use."
+
+### Improvement 6: Enhanced CLI
+**Why:** The CLI is the entry point for the demo.
+
+**What:** Added commands: `analyze`, `providers`. Added flags: `--provider`, `--template`, `--no-analysis`, `--workers`.
+
+### V3 Test Expansion (83 → 139 tests)
+- `test_providers.py` (14 tests): Provider abstraction, factory resolution, metadata
+- `test_analyzer.py` (17 tests): Scoring, enrichment, risks, direction, edge cases
+- `test_templates.py` (14 tests): All 5 templates, auto-selection, dimensions
+- `test_tracker.py` (4 tests): Stage tracking, serialization
+
+---
+
 ## Key Principles (for future projects)
 
 1. **Every stage's output is the next stage's input.** Test the contract between stages, not just the final result.

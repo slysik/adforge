@@ -276,12 +276,16 @@ class Compositor:
         brand_name: str = "",
         language: str = "en",
         product_name: str = "",
+        template: object = None,
     ) -> tuple[Path, list[str]]:
         """
         Produce a final campaign creative from a hero image.
 
         Returns (output_path, rendered_texts) where rendered_texts is
         a list of every text string actually rendered on the creative.
+
+        If template is provided (a LayoutTemplate enum), uses the template
+        renderer. Otherwise falls back to the default PRODUCT_HERO layout.
         """
         self.logo_placed = False
         rendered_texts: list[str] = []
@@ -289,23 +293,46 @@ class Compositor:
 
         hero = Image.open(str(hero_path)).convert("RGBA")
 
-        # --- Resize / crop to target dimensions ---
-        canvas = self._smart_resize(hero, width, height)
-
-        # --- Gradient overlay ---
-        canvas = _draw_gradient_overlay(canvas, "bottom", opacity=190)
-
-        # --- Campaign text ---
+        # --- Translate text ---
         message_translated, _ = translator.translate(campaign_message, language)
         tagline_translated = None
         if tagline:
             tagline_translated, _ = translator.translate(tagline, language)
 
-        canvas, texts = self._draw_campaign_text(
-            canvas, message_translated, tagline_translated,
-            brand_name, language, width, height,
-        )
-        rendered_texts.extend(texts)
+        # --- Use template renderer if available ---
+        if template is not None:
+            try:
+                from .templates import TEMPLATE_RENDERERS
+                renderer = TEMPLATE_RENDERERS.get(template)
+                if renderer:
+                    canvas, texts = renderer(
+                        hero=hero,
+                        width=width,
+                        height=height,
+                        message=message_translated,
+                        tagline=tagline_translated,
+                        brand_name=brand_name,
+                        font_family=self.font_family,
+                        brand_colors=self.brand_colors,
+                        accent_color=self.accent_color,
+                    )
+                    rendered_texts.extend(texts)
+                else:
+                    # Unknown template, fall through to default
+                    template = None
+            except ImportError:
+                template = None
+
+        if template is None:
+            # --- Default PRODUCT_HERO layout ---
+            canvas = self._smart_resize(hero, width, height)
+            canvas = _draw_gradient_overlay(canvas, "bottom", opacity=190)
+
+            canvas, texts = self._draw_campaign_text(
+                canvas, message_translated, tagline_translated,
+                brand_name, language, width, height,
+            )
+            rendered_texts.extend(texts)
 
         # --- Required disclaimer ---
         if self.required_disclaimer:
