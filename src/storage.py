@@ -10,6 +10,7 @@ Handles:
 from __future__ import annotations
 
 import shutil
+import zipfile
 from pathlib import Path
 
 from rich.console import Console
@@ -125,3 +126,26 @@ class StorageManager:
         dest.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(str(src), str(dest))
         return dest
+
+    def package_campaign_zip(self, campaign_name: str) -> Path:
+        """Package an entire campaign output folder into a ZIP for delivery.
+
+        Creates a ZIP file next to the campaign directory containing all
+        generated creatives, hero images, and reports. This is the
+        production handoff artifact — ready to upload to a DAM or share
+        with stakeholders.
+
+        Returns the path to the created ZIP file.
+        """
+        campaign_dir = self.get_campaign_dir(campaign_name)
+        zip_path = campaign_dir.parent / f"{slugify(campaign_name)}.zip"
+
+        with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+            for file_path in sorted(campaign_dir.rglob("*")):
+                if file_path.is_file():
+                    # Archive name preserves folder structure from campaign root
+                    arcname = file_path.relative_to(campaign_dir.parent)
+                    zf.write(file_path, arcname)
+
+        console.print(f"  [dim]ZIP package: {zip_path} ({zip_path.stat().st_size / 1024:.0f} KB)[/dim]")
+        return zip_path

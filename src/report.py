@@ -199,6 +199,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             {% if metrics %}
             <div class="stat orange"><div class="num">${{ "%.3f"|format(metrics.total_estimated_cost_usd) }}</div><div class="label">Est. Cost</div></div>
             {% endif %}
+            {% if time_saved_hours %}
+            <div class="stat green"><div class="num">{{ time_saved_hours }}h</div><div class="label">Time Saved</div></div>
+            {% endif %}
         </div>
 
         {% if metrics and metrics.stages %}
@@ -565,6 +568,7 @@ def save_json_report(
     output_dir: Path,
     metrics=None,
     analysis=None,
+    time_saved_minutes: float = 0.0,
 ) -> Path:
     """Save pipeline results as JSON with optional metrics and analysis."""
     data = json.loads(result.model_dump_json(indent=2))
@@ -589,6 +593,17 @@ def save_json_report(
             "analyzed_by": analysis.analyzed_by,
         }
 
+    # ROI / efficiency metrics
+    data["efficiency"] = {
+        "automated_seconds": round(result.elapsed_seconds, 2),
+        "estimated_manual_minutes": round(result.created_count * 15, 1),
+        "time_saved_minutes": round(time_saved_minutes, 1),
+        "time_saved_hours": round(time_saved_minutes / 60, 2),
+        "speedup_factor": round(
+            (result.created_count * 15 * 60) / max(result.elapsed_seconds, 0.1), 1
+        ),
+    }
+
     path = output_dir / "report.json"
     path.write_text(json.dumps(data, indent=2))
     console.print(f"  [dim]JSON report: {path}[/dim]")
@@ -600,6 +615,7 @@ def save_html_report(
     output_dir: Path,
     metrics=None,
     analysis=None,
+    time_saved_minutes: float = 0.0,
 ) -> Path:
     """Render and save an HTML dashboard report."""
     template = Template(HTML_TEMPLATE)
@@ -644,6 +660,8 @@ def save_html_report(
         metrics=metrics_dict,
         analysis=analysis_dict,
         provider_name=provider_name,
+        time_saved_minutes=round(time_saved_minutes, 1),
+        time_saved_hours=round(time_saved_minutes / 60, 1),
     )
     path = output_dir / "report.html"
     path.write_text(html)

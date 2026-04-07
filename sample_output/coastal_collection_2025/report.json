@@ -529,16 +529,16 @@
     }
   ],
   "warnings": [],
-  "elapsed_seconds": 4.2392449378967285,
+  "elapsed_seconds": 4.261175155639648,
   "metrics": {
-    "total_elapsed_ms": 4239,
+    "total_elapsed_ms": 4261,
     "total_api_calls": 0,
     "total_estimated_cost_usd": 0.0,
     "provider": "mock (mock-v1)",
     "stages": [
       {
         "name": "brief_ingestion",
-        "elapsed_ms": 6,
+        "elapsed_ms": 5,
         "items_processed": 1,
         "api_calls": 0,
         "estimated_cost_usd": 0.0,
@@ -558,7 +558,7 @@
       },
       {
         "name": "compose_resort-shell-handbag",
-        "elapsed_ms": 1400,
+        "elapsed_ms": 1409,
         "items_processed": 6,
         "api_calls": 0,
         "estimated_cost_usd": 0.0,
@@ -566,7 +566,7 @@
       },
       {
         "name": "validate_resort-shell-handbag",
-        "elapsed_ms": 1400,
+        "elapsed_ms": 1409,
         "items_processed": 6,
         "api_calls": 0,
         "estimated_cost_usd": 0.0,
@@ -574,7 +574,7 @@
       },
       {
         "name": "compose_cowrie-shell-box",
-        "elapsed_ms": 1359,
+        "elapsed_ms": 1372,
         "items_processed": 6,
         "api_calls": 0,
         "estimated_cost_usd": 0.0,
@@ -582,7 +582,7 @@
       },
       {
         "name": "validate_cowrie-shell-box",
-        "elapsed_ms": 1359,
+        "elapsed_ms": 1372,
         "items_processed": 6,
         "api_calls": 0,
         "estimated_cost_usd": 0.0,
@@ -590,7 +590,7 @@
       },
       {
         "name": "compose_painted-shell-art",
-        "elapsed_ms": 1428,
+        "elapsed_ms": 1436,
         "items_processed": 6,
         "api_calls": 0,
         "estimated_cost_usd": 0.0,
@@ -598,7 +598,7 @@
       },
       {
         "name": "validate_painted-shell-art",
-        "elapsed_ms": 1428,
+        "elapsed_ms": 1436,
         "items_processed": 6,
         "api_calls": 0,
         "estimated_cost_usd": 0.0,
@@ -612,8 +612,8 @@
         "language": "en",
         "provider": "reused",
         "generation_ms": 0,
-        "composition_ms": 90,
-        "validation_ms": 97,
+        "composition_ms": 86,
+        "validation_ms": 96,
         "estimated_cost_usd": 0.0
       },
       {
@@ -622,8 +622,8 @@
         "language": "es",
         "provider": "reused",
         "generation_ms": 0,
-        "composition_ms": 81,
-        "validation_ms": 88,
+        "composition_ms": 80,
+        "validation_ms": 90,
         "estimated_cost_usd": 0.0
       },
       {
@@ -632,28 +632,28 @@
         "language": "en",
         "provider": "reused",
         "generation_ms": 0,
-        "composition_ms": 85,
+        "composition_ms": 87,
+        "validation_ms": 157,
+        "estimated_cost_usd": 0.0
+      },
+      {
+        "product_id": "resort-shell-handbag",
+        "aspect_ratio": "9:16",
+        "language": "es",
+        "provider": "reused",
+        "generation_ms": 0,
+        "composition_ms": 86,
         "validation_ms": 156,
         "estimated_cost_usd": 0.0
       },
       {
         "product_id": "resort-shell-handbag",
-        "aspect_ratio": "9:16",
-        "language": "es",
-        "provider": "reused",
-        "generation_ms": 0,
-        "composition_ms": 84,
-        "validation_ms": 158,
-        "estimated_cost_usd": 0.0
-      },
-      {
-        "product_id": "resort-shell-handbag",
         "aspect_ratio": "16:9",
         "language": "en",
         "provider": "reused",
         "generation_ms": 0,
-        "composition_ms": 127,
-        "validation_ms": 152,
+        "composition_ms": 126,
+        "validation_ms": 155,
         "estimated_cost_usd": 0.0
       },
       {
@@ -662,8 +662,8 @@
         "language": "es",
         "provider": "reused",
         "generation_ms": 0,
-        "composition_ms": 124,
-        "validation_ms": 152,
+        "composition_ms": 125,
+        "validation_ms": 159,
         "estimated_cost_usd": 0.0
       },
       {
@@ -672,8 +672,8 @@
         "language": "en",
         "provider": "reused",
         "generation_ms": 0,
-        "composition_ms": 72,
-        "validation_ms": 97,
+        "composition_ms": 76,
+        "validation_ms": 101,
         "estimated_cost_usd": 0.0
       },
       {
@@ -682,8 +682,8 @@
         "language": "es",
         "provider": "reused",
         "generation_ms": 0,
-        "composition_ms": 71,
-        "validation_ms": 97,
+        "composition_ms": 73,
+        "validation_ms": 100,
         "estimated_cost_usd": 0.0
       },
       {
@@ -692,8 +692,8 @@
         "language": "en",
         "provider": "reused",
         "generation_ms": 0,
-        "composition_ms": 80,
-        "validation_ms": 169,
+        "composition_ms": 82,
+        "validation_ms": 168,
         "estimated_cost_usd": 0.0
       },
       {
@@ -703,7 +703,7 @@
         "provider": "reused",
         "generation_ms": 0,
         "composition_ms": 81,
-        "validation_ms": 170,
+        "validation_ms": 168,
         "estimated_cost_usd": 0.0
       },
       {
@@ -713,7 +713,7 @@
         "provider": "reused",
         "generation_ms": 0,
         "composition_ms": 103,
-        "validation_ms": 155,
+        "validation_ms": 154,
         "estimated_cost_usd": 0.0
       },
       {
@@ -722,14 +722,24 @@
         "language": "es",
         "provider": "reused",
         "generation_ms": 0,
-        "composition_ms": 102,
-        "validation_ms": 156,
+        "composition_ms": 103,
+        "validation_ms": 157,
         "estimated_cost_usd": 0.0
       },
       {
         "product_id": "painted-shell-art",
         "aspect_ratio": "1:1",
         "language": "en",
+        "provider": "reused",
+        "generation_ms": 0,
+        "composition_ms": 88,
+        "validation_ms": 90,
+        "estimated_cost_usd": 0.0
+      },
+      {
+        "product_id": "painted-shell-art",
+        "aspect_ratio": "1:1",
+        "language": "es",
         "provider": "reused",
         "generation_ms": 0,
         "composition_ms": 87,
@@ -738,22 +748,12 @@
       },
       {
         "product_id": "painted-shell-art",
-        "aspect_ratio": "1:1",
-        "language": "es",
-        "provider": "reused",
-        "generation_ms": 0,
-        "composition_ms": 91,
-        "validation_ms": 88,
-        "estimated_cost_usd": 0.0
-      },
-      {
-        "product_id": "painted-shell-art",
         "aspect_ratio": "9:16",
         "language": "en",
         "provider": "reused",
         "generation_ms": 0,
-        "composition_ms": 92,
-        "validation_ms": 157,
+        "composition_ms": 95,
+        "validation_ms": 162,
         "estimated_cost_usd": 0.0
       },
       {
@@ -762,7 +762,7 @@
         "language": "es",
         "provider": "reused",
         "generation_ms": 0,
-        "composition_ms": 90,
+        "composition_ms": 93,
         "validation_ms": 154,
         "estimated_cost_usd": 0.0
       },
@@ -772,7 +772,7 @@
         "language": "en",
         "provider": "reused",
         "generation_ms": 0,
-        "composition_ms": 134,
+        "composition_ms": 133,
         "validation_ms": 154,
         "estimated_cost_usd": 0.0
       },
@@ -783,7 +783,7 @@
         "provider": "reused",
         "generation_ms": 0,
         "composition_ms": 132,
-        "validation_ms": 152,
+        "validation_ms": 153,
         "estimated_cost_usd": 0.0
       }
     ]
@@ -821,5 +821,12 @@
     "risk_flags": [],
     "creative_direction": "Recommended direction: seasonal, coastal/nautical, design-professional visual language",
     "analyzed_by": "heuristic"
+  },
+  "efficiency": {
+    "automated_seconds": 4.26,
+    "estimated_manual_minutes": 270,
+    "time_saved_minutes": 269.9,
+    "time_saved_hours": 4.5,
+    "speedup_factor": 3801.8
   }
 }

@@ -519,8 +519,36 @@ def run_pipeline(
     campaign_dir = storage.get_campaign_dir(brief.name)
     print_console_report(result)
     print_metrics(metrics)
-    save_json_report(result, campaign_dir, metrics=metrics, analysis=analysis)
-    save_html_report(result, campaign_dir, metrics=metrics, analysis=analysis)
+
+    # Estimate time saved vs manual workflow
+    # Industry benchmark: ~15 min per creative manually (design + resize + text + review)
+    manual_minutes_per_creative = 15
+    manual_total_minutes = result.created_count * manual_minutes_per_creative
+    automated_minutes = result.elapsed_seconds / 60
+    time_saved_minutes = max(0, manual_total_minutes - automated_minutes)
+    time_saved_hours = time_saved_minutes / 60
+
+    console.print(
+        f"  [bold]⏱ Estimated time saved:[/bold] "
+        f"[green]{time_saved_hours:.1f} hours[/green] "
+        f"({result.created_count} creatives × {manual_minutes_per_creative} min manual "
+        f"= {manual_total_minutes} min vs {result.elapsed_seconds:.1f}s automated)"
+    )
+    console.print()
+
+    save_json_report(
+        result, campaign_dir,
+        metrics=metrics, analysis=analysis,
+        time_saved_minutes=time_saved_minutes,
+    )
+    save_html_report(
+        result, campaign_dir,
+        metrics=metrics, analysis=analysis,
+        time_saved_minutes=time_saved_minutes,
+    )
+
+    # ── Package campaign as ZIP for delivery ──────────────────────────
+    zip_path = storage.package_campaign_zip(brief.name)
 
     console.print(
         f"[bold green]✓ Done![/bold green] "

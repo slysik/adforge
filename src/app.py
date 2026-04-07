@@ -703,6 +703,30 @@ elif mode == "View Pre-generated Samples":
                 elapsed = report.get("elapsed_seconds", 0)
                 st.markdown(f"**Pipeline Time:** {elapsed:.1f}s")
 
+                # Efficiency metrics
+                efficiency = report.get("efficiency")
+                if efficiency:
+                    st.markdown("---")
+                    st.markdown("#### ⏱ Efficiency")
+                    e1, e2, e3 = st.columns(3)
+                    e1.metric("Time Saved", f"{efficiency['time_saved_hours']:.1f} hours")
+                    e2.metric("Speedup", f"{efficiency['speedup_factor']:.0f}×")
+                    e3.metric("Manual Estimate", f"{efficiency['estimated_manual_minutes']:.0f} min")
+
+                # ZIP download
+                zip_path = campaign_dir / f"{campaign_dir.name}.zip"
+                if not zip_path.exists():
+                    zip_path = campaign_dir.parent / f"{campaign_dir.name}.zip"
+                if zip_path.exists():
+                    with open(zip_path, "rb") as zf:
+                        st.download_button(
+                            "📦 Download Campaign ZIP",
+                            data=zf.read(),
+                            file_name=zip_path.name,
+                            mime="application/zip",
+                            key=f"zip_sample_{selected_idx}",
+                        )
+
                 # Report uses "brief_analysis" not "analysis"
                 analysis_data = report.get("brief_analysis")
                 if analysis_data:
