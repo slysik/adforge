@@ -66,7 +66,7 @@ class HeuristicAnalyzer:
 
     This is the default analyzer. It applies structured heuristics to
     evaluate brief quality without any API calls. Every rule is explicit
-    and auditable — important for interview defensibility.
+    and auditable — important for production trust and debugging.
     """
 
     def analyze(self, brief: CampaignBrief) -> BriefAnalysis:

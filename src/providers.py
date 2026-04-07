@@ -254,7 +254,7 @@ class FireflyProvider(ImageProvider):
       - FIREFLY_IMS_ORG_ID (optional, for enterprise)
 
     In production, this would use adobe-auth-sdk for token management.
-    For this assessment, it falls back gracefully when credentials are absent.
+    It falls back gracefully when credentials are absent.
 
     API Reference: https://developer.adobe.com/firefly-services/docs/
     Pricing: ~$0.04 per standard generation, ~$0.08 per premium generation

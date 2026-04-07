@@ -509,14 +509,6 @@ Follow these steps for the required demo video:
 
 ---
 
-## 💬 What I'd Say in the Interview
+## 📄 License
 
-> *"AdForge is deliberately scoped as a proof of concept. The architecture decisions — provider abstraction, brief analysis, template system, cost tracking — are chosen to show how I'd build this for a real client, not just for a demo. Every module has a clear production extension point, and every design choice has a reason I can defend."*
-
-For the full post-mortem and evolution story, see [LEARNINGS.md](./LEARNINGS.md).
-
----
-
-**Built for the Adobe FDE – Creative Technologist Assessment**
-
-[ADFORGE_INTENT.md](./ADFORGE_INTENT.md) · [LEARNINGS.md](./LEARNINGS.md) · [EVALUATION.md](./EVALUATION.md)
+MIT
