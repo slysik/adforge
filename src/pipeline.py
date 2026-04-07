@@ -229,7 +229,9 @@ def run_pipeline(
             console.print(f"\n[bold white]▸ Product: {product.name}[/bold white]")
 
             # ── Stage 3: Asset resolution ─────────────────────────────
-            existing_hero = storage.find_existing_hero(product.id, product.hero_image)
+            # When hero_image is explicitly null, skip auto-discovery to force generation
+            auto_discover = product.hero_image is not None or "hero_image" not in (product.model_fields_set or set())
+            existing_hero = storage.find_existing_hero(product.id, product.hero_image, auto_discover=auto_discover)
             hero_status = AssetStatus.REUSED if existing_hero else AssetStatus.GENERATED
 
             if existing_hero:
@@ -323,121 +325,125 @@ def run_pipeline(
                                 )
 
             # ── Stage 5+6: Composition + validation per language ──────
-            for ratio in brief.aspect_ratios:
-                hero_path = hero_paths.get(ratio.name) or existing_hero
+            with tracker.stage(f"compose_{product.id}") as comp_stage, \
+                 tracker.stage(f"validate_{product.id}") as val_stage:
+                for ratio in brief.aspect_ratios:
+                    hero_path = hero_paths.get(ratio.name) or existing_hero
 
-                if hero_path is None:
+                    if hero_path is None:
+                        for lang in brief.languages:
+                            progress.advance(task)
+                            result.assets.append(GeneratedAsset(
+                                product_id=product.id,
+                                aspect_ratio=ratio.ratio,
+                                language=lang,
+                                file_path="",
+                                status=AssetStatus.FAILED,
+                                hero_status=AssetStatus.FAILED,
+                            ))
+                            result.failed_count += 1
+                        continue
+
                     for lang in brief.languages:
+                        progress.update(
+                            task,
+                            description=f"{product.id} / {ratio.ratio} / {lang}",
+                        )
+
+                        output_path = storage.creative_output_path(
+                            brief.name, product.id, ratio.name, lang,
+                        )
+
+                        comp_start = time.time()
+
+                        try:
+                            # Select layout template
+                            selected_template = forced_template or auto_select_template(
+                                ratio.ratio, product.keywords, brief.message,
+                            )
+
+                            # ── Layout rendering with template ────────────
+                            _, rendered_texts = compositor.compose(
+                                hero_path=hero_path,
+                                output_path=output_path,
+                                width=ratio.width,
+                                height=ratio.height,
+                                campaign_message=brief.message,
+                                tagline=brief.tagline,
+                                brand_name=brief.brand,
+                                language=lang,
+                                product_name=product.name,
+                                template=selected_template,
+                            )
+
+                            comp_ms = int((time.time() - comp_start) * 1000)
+                            comp_stage.items_processed += 1
+
+                            # ── Policy checks ─────────────────────────────
+                            val_start = time.time()
+                            brand_result = brand_checker.full_check(
+                                image_path=output_path,
+                                rendered_texts=rendered_texts,
+                                logo_was_placed=compositor.logo_placed,
+                            )
+                            legal_result = legal_checker.check(rendered_texts)
+                            val_ms = int((time.time() - val_start) * 1000)
+                            val_stage.items_processed += 1
+
+                            # Prompt used for this hero
+                            hero_prompt = hero_prompts.get(ratio.name)
+
+                            asset = GeneratedAsset(
+                                product_id=product.id,
+                                aspect_ratio=ratio.ratio,
+                                language=lang,
+                                file_path=str(output_path),
+                                status=AssetStatus.GENERATED,
+                                hero_status=hero_status,
+                                prompt_used=hero_prompt,
+                                brand_compliance=brand_result,
+                                legal_compliance=legal_result,
+                                rendered_texts=rendered_texts,
+                            )
+                            result.assets.append(asset)
+                            result.created_count += 1
+
+                            # Track per-asset metrics
+                            gen_meta = hero_metas.get(ratio.name)
+                            tracker.track_asset(AssetMetrics(
+                                product_id=product.id,
+                                aspect_ratio=ratio.ratio,
+                                language=lang,
+                                provider=gen_meta.provider if gen_meta else "reused",
+                                generation_ms=gen_meta.generation_time_ms if gen_meta else 0,
+                                composition_ms=comp_ms,
+                                validation_ms=val_ms,
+                                estimated_cost_usd=gen_meta.estimated_cost_usd if gen_meta else 0.0,
+                            ))
+
+                        except Exception as exc:
+                            logger.error(f"Composition failed: {exc}", exc_info=True)
+                            result.assets.append(GeneratedAsset(
+                                product_id=product.id,
+                                aspect_ratio=ratio.ratio,
+                                language=lang,
+                                file_path="",
+                                status=AssetStatus.FAILED,
+                                hero_status=hero_status,
+                            ))
+                            result.failed_count += 1
+                            result.warnings.append(
+                                f"Composition failed for {product.id}/{ratio.ratio}/{lang}: {exc}"
+                            )
+
                         progress.advance(task)
-                        result.assets.append(GeneratedAsset(
-                            product_id=product.id,
-                            aspect_ratio=ratio.ratio,
-                            language=lang,
-                            file_path="",
-                            status=AssetStatus.FAILED,
-                            hero_status=AssetStatus.FAILED,
-                        ))
-                        result.failed_count += 1
-                    continue
-
-                for lang in brief.languages:
-                    progress.update(
-                        task,
-                        description=f"{product.id} / {ratio.ratio} / {lang}",
-                    )
-
-                    output_path = storage.creative_output_path(
-                        brief.name, product.id, ratio.name, lang,
-                    )
-
-                    comp_start = time.time()
-
-                    try:
-                        # Select layout template
-                        selected_template = forced_template or auto_select_template(
-                            ratio.ratio, product.keywords, brief.message,
-                        )
-
-                        # ── Layout rendering with template ────────────
-                        _, rendered_texts = compositor.compose(
-                            hero_path=hero_path,
-                            output_path=output_path,
-                            width=ratio.width,
-                            height=ratio.height,
-                            campaign_message=brief.message,
-                            tagline=brief.tagline,
-                            brand_name=brief.brand,
-                            language=lang,
-                            product_name=product.name,
-                            template=selected_template,
-                        )
-
-                        comp_ms = int((time.time() - comp_start) * 1000)
-
-                        # ── Policy checks ─────────────────────────────
-                        val_start = time.time()
-                        brand_result = brand_checker.full_check(
-                            image_path=output_path,
-                            rendered_texts=rendered_texts,
-                            logo_was_placed=compositor.logo_placed,
-                        )
-                        legal_result = legal_checker.check(rendered_texts)
-                        val_ms = int((time.time() - val_start) * 1000)
-
-                        # Prompt used for this hero
-                        hero_prompt = hero_prompts.get(ratio.name)
-
-                        asset = GeneratedAsset(
-                            product_id=product.id,
-                            aspect_ratio=ratio.ratio,
-                            language=lang,
-                            file_path=str(output_path),
-                            status=AssetStatus.GENERATED,
-                            hero_status=hero_status,
-                            prompt_used=hero_prompt,
-                            brand_compliance=brand_result,
-                            legal_compliance=legal_result,
-                            rendered_texts=rendered_texts,
-                        )
-                        result.assets.append(asset)
-                        result.generated_count += 1
-
-                        # Track per-asset metrics
-                        gen_meta = hero_metas.get(ratio.name)
-                        tracker.track_asset(AssetMetrics(
-                            product_id=product.id,
-                            aspect_ratio=ratio.ratio,
-                            language=lang,
-                            provider=gen_meta.provider if gen_meta else "reused",
-                            generation_ms=gen_meta.generation_time_ms if gen_meta else 0,
-                            composition_ms=comp_ms,
-                            validation_ms=val_ms,
-                            estimated_cost_usd=gen_meta.estimated_cost_usd if gen_meta else 0.0,
-                        ))
-
-                    except Exception as exc:
-                        logger.error(f"Composition failed: {exc}", exc_info=True)
-                        result.assets.append(GeneratedAsset(
-                            product_id=product.id,
-                            aspect_ratio=ratio.ratio,
-                            language=lang,
-                            file_path="",
-                            status=AssetStatus.FAILED,
-                            hero_status=hero_status,
-                        ))
-                        result.failed_count += 1
-                        result.warnings.append(
-                            f"Composition failed for {product.id}/{ratio.ratio}/{lang}: {exc}"
-                        )
-
-                    progress.advance(task)
 
     # ── Collect translation warnings ──────────────────────────────────
     for tw in translator.warnings:
         result.warnings.append(f"[Translation] {tw}")
 
     result.total_assets = len(result.assets)
-    result.reused_count = sum(
+    result.hero_reused_count = sum(
         1 for a in result.assets if a.hero_status == AssetStatus.REUSED
     )
     result.elapsed_seconds = time.time() - start

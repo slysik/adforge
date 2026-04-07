@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AdForge Report – Coastal Collection 2025</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+               background: #0a0a0f; color: #e0e0e0; padding: 2rem; }
+
+        /* Header */
+        .header { display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem; }
+        .header svg { width: 40px; height: 40px; }
+        h1 { font-size: 2rem; color: #fff; }
+        .subtitle { color: #888; margin-bottom: 2rem; font-size: 0.9rem; }
+
+        /* Nav tabs */
+        .tabs { display: flex; gap: 0; margin-bottom: 2rem; border-bottom: 2px solid #222; }
+        .tab { padding: 0.8rem 1.5rem; color: #888; cursor: pointer; border-bottom: 2px solid transparent;
+               margin-bottom: -2px; transition: all 0.2s; font-size: 0.9rem; }
+        .tab:hover { color: #fff; }
+        .tab.active { color: #4fc3f7; border-bottom-color: #4fc3f7; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* Stats bar */
+        .stats { display: flex; gap: 1.2rem; margin-bottom: 2rem; flex-wrap: wrap; }
+        .stat { background: #12121e; padding: 1.2rem 1.6rem; border-radius: 12px;
+                border: 1px solid #1e1e35; min-width: 140px; flex: 1; }
+        .stat .num { font-size: 2rem; font-weight: 700; color: #4fc3f7; }
+        .stat .label { font-size: 0.8rem; color: #666; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .stat.green .num { color: #66bb6a; }
+        .stat.blue .num { color: #42a5f5; }
+        .stat.orange .num { color: #ffa726; }
+        .stat.red .num { color: #ef5350; }
+        .stat.purple .num { color: #ab47bc; }
+
+        /* Brief analysis */
+        .analysis-grid { display: grid; grid-template-columns: 300px 1fr; gap: 2rem; margin-bottom: 2rem; }
+        .score-ring { text-align: center; padding: 2rem; background: #12121e; border-radius: 16px; border: 1px solid #1e1e35; }
+        .score-number { font-size: 4rem; font-weight: 800; color: #4fc3f7; }
+        .score-label { color: #888; font-size: 0.85rem; margin-top: 4px; }
+        .score-bars { padding: 1.5rem 0; }
+        .score-bar { margin-bottom: 1rem; }
+        .score-bar-label { display: flex; justify-content: space-between; font-size: 0.8rem; margin-bottom: 4px; }
+        .score-bar-track { height: 8px; background: #1a1a2e; border-radius: 4px; overflow: hidden; }
+        .score-bar-fill { height: 100%; border-radius: 4px; transition: width 0.3s; }
+        .insights { background: #12121e; border-radius: 16px; border: 1px solid #1e1e35; padding: 1.5rem; }
+        .insight-section { margin-bottom: 1.2rem; }
+        .insight-section h3 { font-size: 0.85rem; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.5rem; }
+        .insight-section ul { list-style: none; padding: 0; }
+        .insight-section li { padding: 4px 0; font-size: 0.85rem; color: #ccc; }
+        .insight-section li::before { content: "•"; margin-right: 8px; }
+        .insight-section.strengths li::before { content: "✓"; color: #66bb6a; }
+        .insight-section.weaknesses li::before { content: "⚠"; color: #ffa726; }
+        .insight-section.risks li::before { content: "🚩"; }
+        .insight-section.suggestions li::before { content: "💡"; }
+
+        /* Metrics table */
+        .metrics-table { width: 100%; border-collapse: collapse; margin-bottom: 2rem; background: #12121e;
+                         border-radius: 12px; overflow: hidden; }
+        .metrics-table th { background: #1a1a2e; padding: 1rem; text-align: left; font-size: 0.8rem;
+                            color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
+        .metrics-table td { padding: 0.8rem 1rem; border-top: 1px solid #1a1a2e; font-size: 0.85rem; }
+        .metrics-table tr:hover td { background: #161628; }
+
+        /* Asset grid */
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+                gap: 1.5rem; margin-top: 1rem; }
+        .card { background: #12121e; border-radius: 12px; overflow: hidden;
+                border: 1px solid #1e1e35; transition: all 0.2s; }
+        .card:hover { transform: translateY(-2px); border-color: #4fc3f7; box-shadow: 0 8px 30px rgba(79,195,247,0.1); }
+        .card img { width: 100%; height: 220px; object-fit: cover; }
+        .card-body { padding: 1rem; }
+        .card-body h3 { font-size: 0.95rem; margin-bottom: 0.4rem; color: #fff; }
+        .card-body .meta { font-size: 0.8rem; color: #888; }
+        .badge { display: inline-block; padding: 2px 10px; border-radius: 20px;
+                 font-size: 0.72rem; font-weight: 600; margin-right: 4px; }
+        .badge.generated { background: #1b5e20; color: #a5d6a7; }
+        .badge.reused { background: #0d47a1; color: #90caf9; }
+        .badge.failed { background: #b71c1c; color: #ef9a9a; }
+        .badge.pass { background: #1b5e20; color: #a5d6a7; }
+        .badge.warn { background: #e65100; color: #ffcc80; }
+        .badge.na { background: #222; color: #666; }
+        .notes { font-size: 0.75rem; color: #888; margin-top: 6px; line-height: 1.4; }
+
+        /* Warnings */
+        .warnings { background: #1a1500; border: 1px solid #332a00; border-radius: 12px;
+                     padding: 1rem; margin-bottom: 2rem; }
+        .warnings li { color: #ffcc80; font-size: 0.85rem; padding: 2px 0; }
+
+        /* Pipeline flow */
+        .pipeline-flow { display: flex; gap: 0; margin-bottom: 2rem; overflow-x: auto; padding: 1rem 0; }
+        .pipeline-step { flex: 1; min-width: 140px; text-align: center; padding: 1rem; position: relative; }
+        .pipeline-step::after { content: "→"; position: absolute; right: -8px; top: 50%; transform: translateY(-50%);
+                                 color: #333; font-size: 1.2rem; }
+        .pipeline-step:last-child::after { content: ""; }
+        .pipeline-step .step-icon { font-size: 1.5rem; margin-bottom: 0.3rem; }
+        .pipeline-step .step-label { font-size: 0.75rem; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
+        .pipeline-step .step-time { font-size: 0.8rem; color: #4fc3f7; margin-top: 0.2rem; }
+
+        /* Provider badge */
+        .provider-badge { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.4rem 1rem;
+                          background: #1a1a2e; border: 1px solid #333; border-radius: 8px; margin-bottom: 1rem; }
+        .provider-badge.firefly { border-color: #e03e2d; }
+        .provider-badge.dalle { border-color: #10a37f; }
+        .provider-badge.mock { border-color: #666; }
+
+        /* Footer */
+        .footer { margin-top: 3rem; text-align: center; color: #444; font-size: 0.75rem; }
+        .footer a { color: #4fc3f7; text-decoration: none; }
+
+        /* Filter bar */
+        .filter-bar { display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap; }
+        .filter-btn { padding: 0.4rem 1rem; background: #1a1a2e; border: 1px solid #333; border-radius: 20px;
+                      color: #888; cursor: pointer; font-size: 0.8rem; transition: all 0.2s; }
+        .filter-btn:hover, .filter-btn.active { background: #4fc3f7; color: #000; border-color: #4fc3f7; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="40" height="40" rx="8" fill="#4fc3f7" fill-opacity="0.1"/>
+            <path d="M12 28L20 12L28 28H12Z" stroke="#4fc3f7" stroke-width="2" fill="none"/>
+            <circle cx="20" cy="22" r="3" fill="#4fc3f7"/>
+        </svg>
+        <h1>AdForge</h1>
+    </div>
+    <p class="subtitle">Coastal Collection 2025 — Generated 2026-04-07 15:42:28 — Provider: mock (mock-v1)</p>
+
+    <!-- Tabs -->
+    <div class="tabs">
+        <div class="tab active" onclick="showTab('overview')">Overview</div>
+        <div class="tab" onclick="showTab('assets')">Assets (18)</div>
+        <div class="tab" onclick="showTab('analysis')">Brief Analysis</div>
+        <div class="tab" onclick="showTab('performance')">Performance</div>
+        <div class="tab" onclick="showTab('architecture')">Architecture</div>
+    </div>
+
+    <!-- Overview Tab -->
+    <div id="tab-overview" class="tab-content active">
+        <div class="stats">
+            <div class="stat"><div class="num">18</div><div class="label">Total Assets</div></div>
+            <div class="stat green"><div class="num">18</div><div class="label">Generated</div></div>
+            <div class="stat blue"><div class="num">18</div><div class="label">Reused</div></div>
+            <div class="stat red"><div class="num">0</div><div class="label">Failed</div></div>
+            <div class="stat purple"><div class="num">5.1s</div><div class="label">Elapsed</div></div>
+            
+            <div class="stat orange"><div class="num">$0.000</div><div class="label">Est. Cost</div></div>
+            
+        </div>
+
+        
+        <!-- Pipeline Flow -->
+        <div class="pipeline-flow">
+            
+            <div class="pipeline-step">
+                <div class="step-icon">📋</div>
+                <div class="step-label">brief ingestion</div>
+                <div class="step-time">5ms</div>
+            </div>
+            
+            <div class="pipeline-step">
+                <div class="step-icon">📋</div>
+                <div class="step-label">brief analysis</div>
+                <div class="step-time">0ms</div>
+            </div>
+            
+        </div>
+        
+
+        
+        <div class="warnings">
+            <strong>⚠ Warnings:</strong>
+            <ul style="margin-top:0.5rem;padding-left:1.5rem;">
+            
+                <li>[Translation] No approved translation for 'The perfect shell handbag for the season, complete with a lined interior, drawstring closure, and room for all your essentials.' in 'es' – using source language. Submit to TMS for review.</li>
+            
+                <li>[Translation] No approved translation for 'Handcrafted Coastal Elegance' in 'es' – using source language. Submit to TMS for review.</li>
+            
+                <li>[Translation] No approved translation for 'The perfect shell handbag for the season, complete with a lined interior, drawstring closure, and room for all your essentials.' in 'es' – using source language. Submit to TMS for review.</li>
+            
+                <li>[Translation] No approved translation for 'Handcrafted Coastal Elegance' in 'es' – using source language. Submit to TMS for review.</li>
+            
+                <li>[Translation] No approved translation for 'The perfect shell handbag for the season, complete with a lined interior, drawstring closure, and room for all your essentials.' in 'es' – using source language. Submit to TMS for review.</li>
+            
+                <li>[Translation] No approved translation for 'Handcrafted Coastal Elegance' in 'es' – using source language. Submit to TMS for review.</li>
+            
+                <li>[Translation] No approved translation for 'The perfect shell handbag for the season, complete with a lined interior, drawstring closure, and room for all your essentials.' in 'es' – using source language. Submit to TMS for review.</li>
+            
+                <li>[Translation] No approved translation for 'Handcrafted Coastal Elegance' in 'es' – using source language. Submit to TMS for review.</li>
+            
+                <li>[Translation] No approved translation for 'The perfect shell handbag for the season, complete with a lined interior, drawstring closure, and room for all your essentials.' in 'es' – using source language. Submit to TMS for review.</li>
+            
+                <li>[Translation] No approved translation for 'Handcrafted Coastal Elegance' in 'es' – using source language. Submit to TMS for review.</li>
+            
+                <li>[Translation] No approved translation for 'The perfect shell handbag for the season, complete with a lined interior, drawstring closure, and room for all your essentials.' in 'es' – using source language. Submit to TMS for review.</li>
+            
+                <li>[Translation] No approved translation for 'Handcrafted Coastal Elegance' in 'es' – using source language. Submit to TMS for review.</li>
+            
+                <li>[Translation] No approved translation for 'The perfect shell handbag for the season, complete with a lined interior, drawstring closure, and room for all your essentials.' in 'es' – using source language. Submit to TMS for review.</li>
+            
+                <li>[Translation] No approved translation for 'Handcrafted Coastal Elegance' in 'es' – using source language. Submit to TMS for review.</li>
+            
+                <li>[Translation] No approved translation for 'The perfect shell handbag for the season, complete with a lined interior, drawstring closure, and room for all your essentials.' in 'es' – using source language. Submit to TMS for review.</li>
+            
+                <li>[Translation] No approved translation for 'Handcrafted Coastal Elegance' in 'es' – using source language. Submit to TMS for review.</li>
+            
+                <li>[Translation] No approved translation for 'The perfect shell handbag for the season, complete with a lined interior, drawstring closure, and room for all your essentials.' in 'es' – using source language. Submit to TMS for review.</li>
+            
+                <li>[Translation] No approved translation for 'Handcrafted Coastal Elegance' in 'es' – using source language. Submit to TMS for review.</li>
+            
+            </ul>
+        </div>
+        
+
+        <!-- Quick preview grid (first 6) -->
+        <h2 style="margin-bottom:1rem; font-size: 1.1rem;">Recent Assets</h2>
+        <div class="grid">
+        
+            <div class="card">
+                
+                <img src="file:///Users/slysik/adobe/creative-automation/sample_output/coastal_collection_2025/resort-shell-handbag/instagram_square/creative_en.jpg" alt="resort-shell-handbag">
+                
+                <div class="card-body">
+                    <h3>resort-shell-handbag — 1:1</h3>
+                    <div class="meta">
+                        <span class="badge reused">Hero: reused</span>
+                        <span class="badge pass">
+                            Brand: ✓
+                        </span>
+                        <span class="badge pass">
+                            Legal: ✓
+                        </span>
+                        <span style="color:#666;font-size:0.7rem;">en</span>
+                    </div>
+                </div>
+            </div>
+        
+            <div class="card">
+                
+                <img src="file:///Users/slysik/adobe/creative-automation/sample_output/coastal_collection_2025/resort-shell-handbag/instagram_square/creative_es.jpg" alt="resort-shell-handbag">
+                
+                <div class="card-body">
+                    <h3>resort-shell-handbag — 1:1</h3>
+                    <div class="meta">
+                        <span class="badge reused">Hero: reused</span>
+                        <span class="badge pass">
+                            Brand: ✓
+                        </span>
+                        <span class="badge pass">
+                            Legal: ✓
+                        </span>
+                        <span style="color:#666;font-size:0.7rem;">es</span>
+                    </div>
+                </div>
+            </div>
+        
+            <div class="card">
+                
+                <img src="file:///Users/slysik/adobe/creative-automation/sample_output/coastal_collection_2025/resort-shell-handbag/stories_reels/creative_en.jpg" alt="resort-shell-handbag">
+                
+                <div class="card-body">
+                    <h3>resort-shell-handbag — 9:16</h3>
+                    <div class="meta">
+                        <span class="badge reused">Hero: reused</span>
+                        <span class="badge pass">
+                            Brand: ✓
+                        </span>
+                        <span class="badge pass">
+                            Legal: ✓
+                        </span>
+                        <span style="color:#666;font-size:0.7rem;">en</span>
+                    </div>
+                </div>
+            </div>
+        
+            <div class="card">
+                
+                <img src="file:///Users/slysik/adobe/creative-automation/sample_output/coastal_collection_2025/resort-shell-handbag/stories_reels/creative_es.jpg" alt="resort-shell-handbag">
+                
+                <div class="card-body">
+                    <h3>resort-shell-handbag — 9:16</h3>
+                    <div class="meta">
+                        <span class="badge reused">Hero: reused</span>
+                        <span class="badge pass">
+                            Brand: ✓
+                        </span>
+                        <span class="badge pass">
+                            Legal: ✓
+                        </span>
+                        <span style="color:#666;font-size:0.7rem;">es</span>
+                    </div>
+                </div>
+            </div>
+        
+            <div class="card">
+                
+                <img src="file:///Users/slysik/adobe/creative-automation/sample_output/coastal_collection_2025/resort-shell-handbag/facebook_landscape/creative_en.jpg" alt="resort-shell-handbag">
+                
+                <div class="card-body">
+                    <h3>resort-shell-handbag — 16:9</h3>
+                    <div class="meta">
+                        <span class="badge reused">Hero: reused</span>
+                        <span class="badge pass">
+                            Brand: ✓
+                        </span>
+                        <span class="badge pass">
+                            Legal: ✓
+                        </span>
+                        <span style="color:#666;font-size:0.7rem;">en</span>
+                    </div>
+                </div>
+            </div>
+        
+            <div class="card">
+                
+                <img src="file:///Users/slysik/adobe/creative-automation/sample_output/coastal_collection_2025/resort-shell-handbag/facebook_landscape/creative_es.jpg" alt="resort-shell-handbag">
+                
+                <div class="card-body">
+                    <h3>resort-shell-handbag — 16:9</h3>
+                    <div class="meta">
+                        <span class="badge reused">Hero: reused</span>
+                        <span class="badge pass">
+                            Brand: ✓
+                        </span>
+                        <span class="badge pass">
+                            Legal: ✓
+                        </span>
+                        <span style="color:#666;font-size:0.7rem;">es</span>
+                    </div>
+                </div>
+            </div>
+        
+        </div>
+    </div>
+
+    <!-- Assets Tab -->
+    <div id="tab-assets" class="tab-content">
+        <div class="filter-bar">
+            <div class="filter-btn active" onclick="filterAssets('all', this)">All</div>
+            
+            <div class="filter-btn" onclick="filterAssets('cowrie-shell-box', this)">cowrie-shell-box</div>
+            
+            <div class="filter-btn" onclick="filterAssets('painted-shell-art', this)">painted-shell-art</div>
+            
+            <div class="filter-btn" onclick="filterAssets('resort-shell-handbag', this)">resort-shell-handbag</div>
+            
+        </div>
+        <div class="grid" id="assets-grid">
+        
+            <div class="card asset-card" data-product="resort-shell-handbag" data-ratio="1:1" data-lang="en">
+                
+                <img src="file:///Users/slysik/adobe/creative-automation/sample_output/coastal_collection_2025/resort-shell-handbag/instagram_square/creative_en.jpg" alt="resort-shell-handbag">
+                
+                <div class="card-body">
+                    <h3>resort-shell-handbag — 1:1</h3>
+                    <div class="meta">
+                        <span class="badge reused">Hero: reused</span>
+                        <span class="badge generated">generated</span>
+                        <span class="badge pass">
+                            Brand: ✓
+                        </span>
+                        <span class="badge pass">
+                            Legal: ✓
+                        </span>
+                    </div>
+                    <div class="meta" style="margin-top:4px;">Language: en</div>
+                    
+                    <div class="notes">[Colors] All brand colors detected in image.; [Logo] Logo verified in top-right region (16641/16641 opaque pixels, 147 distinct colors).; [Text] No prohibited words detected. Checked 4 rendered text(s).</div>
+                    
+                    
+                </div>
+            </div>
+        
+            <div class="card asset-card" data-product="resort-shell-handbag" data-ratio="1:1" data-lang="es">
+                
+                <img src="file:///Users/slysik/adobe/creative-automation/sample_output/coastal_collection_2025/resort-shell-handbag/instagram_square/creative_es.jpg" alt="resort-shell-handbag">
+                
+                <div class="card-body">
+                    <h3>resort-shell-handbag — 1:1</h3>
+                    <div class="meta">
+                        <span class="badge reused">Hero: reused</span>
+                        <span class="badge generated">generated</span>
+                        <span class="badge pass">
+                            Brand: ✓
+                        </span>
+                        <span class="badge pass">
+                            Legal: ✓
+                        </span>
+                    </div>
+                    <div class="meta" style="margin-top:4px;">Language: es</div>
+                    
+                    <div class="notes">[Colors] All brand colors detected in image.; [Logo] Logo verified in top-right region (16641/16641 opaque pixels, 147 distinct colors).; [Text] No prohibited words detected. Checked 4 rendered text(s).</div>
+                    
+                    
+                </div>
+            </div>
+        
+            <div class="card asset-card" data-product="resort-shell-handbag" data-ratio="9:16" data-lang="en">
+                
+                <img src="file:///Users/slysik/adobe/creative-automation/sample_output/coastal_collection_2025/resort-shell-handbag/stories_reels/creative_en.jpg" alt="resort-shell-handbag">
+                
+                <div class="card-body">
+                    <h3>resort-shell-handbag — 9:16</h3>
+                    <div class="meta">
+                        <span class="badge reused">Hero: reused</span>
+                        <span class="badge generated">generated</span>
+                        <span class="badge pass">
+                            Brand: ✓
+                        </span>
+                        <span class="badge pass">
+                            Legal: ✓
+                        </span>
+                    </div>
+                    <div class="meta" style="margin-top:4px;">Language: en</div>
+                    
+                    <div class="notes">[Colors] All brand colors detected in image.; [Logo] Logo verified in top-right region (16641/16641 opaque pixels, 115 distinct colors).; [Text] No prohibited words detected. Checked 4 rendered text(s).</div>
+                    
+                    
+                </div>
+            </div>
+        
+            <div class="card asset-card" data-product="resort-shell-handbag" data-ratio="9:16" data-lang="es">
+                
+                <img src="file:///Users/slysik/adobe/creative-automation/sample_output/coastal_collection_2025/resort-shell-handbag/stories_reels/creative_es.jpg" alt="resort-shell-handbag">
+                
+                <div class="card-body">
+                    <h3>resort-shell-handbag — 9:16</h3>
+                    <div class="meta">
+                        <span class="badge reused">Hero: reused</span>
+                        <span class="badge generated">generated</span>
+                        <span class="badge pass">
+                            Brand: ✓
+                        </span>
+                        <span class="badge pass">
+                            Legal: ✓
+                        </span>
+                    </div>
+                    <div class="meta" style="margin-top:4px;">Language: es</div>
+                    
+                    <div class="notes">[Colors] All brand colors detected in image.; [Logo] Logo verified in top-right region (16641/16641 opaque pixels, 115 distinct colors).; [Text] No prohibited words detected. Checked 4 rendered text(s).</div>
+                    
+                    
+                </div>
+            </div>
+        
+            <div class="card asset-card" data-product="resort-shell-handbag" data-ratio="16:9" data-lang="en">
+                
+                <img src="file:///Users/slysik/adobe/creative-automation/sample_output/coastal_collection_2025/resort-shell-handbag/facebook_landscape/creative_en.jpg" alt="resort-shell-handbag">
+                
+                <div class="card-body">
+                    <h3>resort-shell-handbag — 16:9</h3>
+                    <div class="meta">
+                        <span class="badge reused">Hero: reused</span>
+                        <span class="badge generated">generated</span>
+                        <span class="badge pass">
+                            Brand: ✓
+                        </span>
+                        <span class="badge pass">
+                            Legal: ✓
+                        </span>
+                    </div>
+                    <div class="meta" style="margin-top:4px;">Language: en</div>
+                    
+                    <div class="notes">[Colors] All brand colors detected in image.; [Logo] Logo verified in top-right region (16641/16641 opaque pixels, 84 distinct colors).; [Text] No prohibited words detected. Checked 4 rendered text(s).</div>
+                    
+                    
+                </div>
+            </div>
+        
+            <div class="card asset-card" data-product="resort-shell-handbag" data-ratio="16:9" data-lang="es">
+                
+                <img src="file:///Users/slysik/adobe/creative-automation/sample_output/coastal_collection_2025/resort-shell-handbag/facebook_landscape/creative_es.jpg" alt="resort-shell-handbag">
+                
+                <div class="card-body">
+                    <h3>resort-shell-handbag — 16:9</h3>
+                    <div class="meta">
+                        <span class="badge reused">Hero: reused</span>
+                        <span class="badge generated">generated</span>
+                        <span class="badge pass">
+                            Brand: ✓
+                        </span>
+                        <span class="badge pass">
+                            Legal: ✓
+                        </span>
+                    </div>
+                    <div class="meta" style="margin-top:4px;">Language: es</div>
+                    
+                    <div class="notes">[Colors] All brand colors detected in image.; [Logo] Logo verified in top-right region (16641/16641 opaque pixels, 84 distinct colors).; [Text] No prohibited words detected. Checked 4 rendered text(s).</div>
+                    
+                    
+                </div>
+            </div>
+        
+            <div class="card asset-card" data-product="cowrie-shell-box" data-ratio="1:1" data-lang="en">
+                
+                <img src="file:///Users/slysik/adobe/creative-automation/sample_output/coastal_collection_2025/cowrie-shell-box/instagram_square/creative_en.jpg" alt="cowrie-shell-box">
+                
+                <div class="card-body">
+                    <h3>cowrie-shell-box — 1:1</h3>
+                    <div class="meta">
+                        <span class="badge reused">Hero: reused</span>
+                        <span class="badge generated">generated</span>
+                        <span class="badge pass">
+                            Brand: ✓
+                        </span>
+                        <span class="badge pass">
+                            Legal: ✓
+                        </span>
+                    </div>
+                    <div class="meta" style="margin-top:4px;">Language: en</div>
+                    
+                    <div class="notes">[Colors] All brand colors detected in image.; [Logo] Logo verified in top-right region (16641/16641 opaque pixels, 107 distinct colors).; [Text] No prohibited words detected. Checked 4 rendered text(s).</div>
+                    
+                    
+                </div>
+            </div>
+        
+            <div class="card asset-card" data-product="cowrie-shell-box" data-ratio="1:1" data-lang="es">
+                
+                <img src="file:///Users/slysik/adobe/creative-automation/sample_output/coastal_collection_2025/cowrie-shell-box/instagram_square/creative_es.jpg" alt="cowrie-shell-box">
+                
+                <div class="card-body">
+                    <h3>cowrie-shell-box — 1:1</h3>
+                    <div class="meta">
+                        <span class="badge reused">Hero: reused</span>
+                        <span class="badge generated">generated</span>
+                        <span class="badge pass">
+                            Brand: ✓
+                        </span>
+                        <span class="badge pass">
+                            Legal: ✓
+                        </span>
+                    </div>
+                    <div class="meta" style="margin-top:4px;">Language: es</div>
+                    
+                    <div class="notes">[Colors] All brand colors detected in image.; [Logo] Logo verified in top-right region (16641/16641 opaque pixels, 107 distinct colors).; [Text] No prohibited words detected. Checked 4 rendered text(s).</div>
+                    
+                    
+                </div>
+            </div>
+        
+            <div class="card asset-card" data-product="cowrie-shell-box" data-ratio="9:16" data-lang="en">
+                
+                <img src="file:///Users/slysik/adobe/creative-automation/sample_output/coastal_collection_2025/cowrie-shell-box/stories_reels/creative_en.jpg" alt="cowrie-shell-box">
+                
+                <div class="card-body">
+                    <h3>cowrie-shell-box — 9:16</h3>
+                    <div class="meta">
+                        <span class="badge reused">Hero: reused</span>
+                        <span class="badge generated">generated</span>
+                        <span class="badge pass">
+                            Brand: ✓
+                        </span>
+                        <span class="badge pass">
+                            Legal: ✓
+                        </span>
+                    </div>
+                    <div class="meta" style="margin-top:4px;">Language: en</div>
+                    
+                    <div class="notes">[Colors] All brand colors detected in image.; [Logo] Logo verified in top-right region (16641/16641 opaque pixels, 81 distinct colors).; [Text] No prohibited words detected. Checked 4 rendered text(s).</div>
+                    
+                    
+                </div>
+            </div>
+        
+            <div class="card asset-card" data-product="cowrie-shell-box" data-ratio="9:16" data-lang="es">
+                
+                <img src="file:///Users/slysik/adobe/creative-automation/sample_output/coastal_collection_2025/cowrie-shell-box/stories_reels/creative_es.jpg" alt="cowrie-shell-box">
+                
+                <div class="card-body">
+                    <h3>cowrie-shell-box — 9:16</h3>
+                    <div class="meta">
+                        <span class="badge reused">Hero: reused</span>
+                        <span class="badge generated">generated</span>
+                        <span class="badge pass">
+                            Brand: ✓
+                        </span>
+                        <span class="badge pass">
+                            Legal: ✓
+                        </span>
+                    </div>
+                    <div class="meta" style="margin-top:4px;">Language: es</div>
+                    
+                    <div class="notes">[Colors] All brand colors detected in image.; [Logo] Logo verified in top-right region (16641/16641 opaque pixels, 81 distinct colors).; [Text] No prohibited words detected. Checked 4 rendered text(s).</div>
+                    
+                    
+                </div>
+            </div>
+        
+            <div class="card asset-card" data-product="cowrie-shell-box" data-ratio="16:9" data-lang="en">
+                
+                <img src="file:///Users/slysik/adobe/creative-automation/sample_output/coastal_collection_2025/cowrie-shell-box/facebook_landscape/creative_en.jpg" alt="cowrie-shell-box">
+                
+                <div class="card-body">
+                    <h3>cowrie-shell-box — 16:9</h3>
+                    <div class="meta">
+                        <span class="badge reused">Hero: reused</span>
+                        <span class="badge generated">generated</span>
+                        <span class="badge pass">
+                            Brand: ✓
+                        </span>
+                        <span class="badge pass">
+                            Legal: ✓
+                        </span>
+                    </div>
+                    <div class="meta" style="margin-top:4px;">Language: en</div>
+                    
+                    <div class="notes">[Colors] All brand colors detected in image.; [Logo] Logo verified in top-right region (16641/16641 opaque pixels, 80 distinct colors).; [Text] No prohibited words detected. Checked 4 rendered text(s).</div>
+                    
+                    
+                </div>
+            </div>
+        
+            <div class="card asset-card" data-product="cowrie-shell-box" data-ratio="16:9" data-lang="es">
+                
+                <img src="file:///Users/slysik/adobe/creative-automation/sample_output/coastal_collection_2025/cowrie-shell-box/facebook_landscape/creative_es.jpg" alt="cowrie-shell-box">
+                
+                <div class="card-body">
+                    <h3>cowrie-shell-box — 16:9</h3>
+                    <div class="meta">
+                        <span class="badge reused">Hero: reused</span>
+                        <span class="badge generated">generated</span>
+                        <span class="badge pass">
+                            Brand: ✓
+                        </span>
+                        <span class="badge pass">
+                            Legal: ✓
+                        </span>
+                    </div>
+                    <div class="meta" style="margin-top:4px;">Language: es</div>
+                    
+                    <div class="notes">[Colors] All brand colors detected in image.; [Logo] Logo verified in top-right region (16641/16641 opaque pixels, 80 distinct colors).; [Text] No prohibited words detected. Checked 4 rendered text(s).</div>
+                    
+                    
+                </div>
+            </div>
+        
+            <div class="card asset-card" data-product="painted-shell-art" data-ratio="1:1" data-lang="en">
+                
+                <img src="file:///Users/slysik/adobe/creative-automation/sample_output/coastal_collection_2025/painted-shell-art/instagram_square/creative_en.jpg" alt="painted-shell-art">
+                
+                <div class="card-body">
+                    <h3>painted-shell-art — 1:1</h3>
+                    <div class="meta">
+                        <span class="badge reused">Hero: reused</span>
+                        <span class="badge generated">generated</span>
+                        <span class="badge pass">
+                            Brand: ✓
+                        </span>
+                        <span class="badge pass">
+                            Legal: ✓
+                        </span>
+                    </div>
+                    <div class="meta" style="margin-top:4px;">Language: en</div>
+                    
+                    <div class="notes">[Colors] All brand colors detected in image.; [Logo] Logo verified in top-right region (16641/16641 opaque pixels, 242 distinct colors).; [Text] No prohibited words detected. Checked 4 rendered text(s).</div>
+                    
+                    
+                </div>
+            </div>
+        
+            <div class="card asset-card" data-product="painted-shell-art" data-ratio="1:1" data-lang="es">
+                
+                <img src="file:///Users/slysik/adobe/creative-automation/sample_output/coastal_collection_2025/painted-shell-art/instagram_square/creative_es.jpg" alt="painted-shell-art">
+                
+                <div class="card-body">
+                    <h3>painted-shell-art — 1:1</h3>
+                    <div class="meta">
+                        <span class="badge reused">Hero: reused</span>
+                        <span class="badge generated">generated</span>
+                        <span class="badge pass">
+                            Brand: ✓
+                        </span>
+                        <span class="badge pass">
+                            Legal: ✓
+                        </span>
+                    </div>
+                    <div class="meta" style="margin-top:4px;">Language: es</div>
+                    
+                    <div class="notes">[Colors] All brand colors detected in image.; [Logo] Logo verified in top-right region (16641/16641 opaque pixels, 242 distinct colors).; [Text] No prohibited words detected. Checked 4 rendered text(s).</div>
+                    
+                    
+                </div>
+            </div>
+        
+            <div class="card asset-card" data-product="painted-shell-art" data-ratio="9:16" data-lang="en">
+                
+                <img src="file:///Users/slysik/adobe/creative-automation/sample_output/coastal_collection_2025/painted-shell-art/stories_reels/creative_en.jpg" alt="painted-shell-art">
+                
+                <div class="card-body">
+                    <h3>painted-shell-art — 9:16</h3>
+                    <div class="meta">
+                        <span class="badge reused">Hero: reused</span>
+                        <span class="badge generated">generated</span>
+                        <span class="badge pass">
+                            Brand: ✓
+                        </span>
+                        <span class="badge pass">
+                            Legal: ✓
+                        </span>
+                    </div>
+                    <div class="meta" style="margin-top:4px;">Language: en</div>
+                    
+                    <div class="notes">[Colors] All brand colors detected in image.; [Logo] Logo verified in top-right region (16641/16641 opaque pixels, 249 distinct colors).; [Text] No prohibited words detected. Checked 4 rendered text(s).</div>
+                    
+                    
+                </div>
+            </div>
+        
+            <div class="card asset-card" data-product="painted-shell-art" data-ratio="9:16" data-lang="es">
+                
+                <img src="file:///Users/slysik/adobe/creative-automation/sample_output/coastal_collection_2025/painted-shell-art/stories_reels/creative_es.jpg" alt="painted-shell-art">
+                
+                <div class="card-body">
+                    <h3>painted-shell-art — 9:16</h3>
+                    <div class="meta">
+                        <span class="badge reused">Hero: reused</span>
+                        <span class="badge generated">generated</span>
+                        <span class="badge pass">
+                            Brand: ✓
+                        </span>
+                        <span class="badge pass">
+                            Legal: ✓
+                        </span>
+                    </div>
+                    <div class="meta" style="margin-top:4px;">Language: es</div>
+                    
+                    <div class="notes">[Colors] All brand colors detected in image.; [Logo] Logo verified in top-right region (16641/16641 opaque pixels, 249 distinct colors).; [Text] No prohibited words detected. Checked 4 rendered text(s).</div>
+                    
+                    
+                </div>
+            </div>
+        
+            <div class="card asset-card" data-product="painted-shell-art" data-ratio="16:9" data-lang="en">
+                
+                <img src="file:///Users/slysik/adobe/creative-automation/sample_output/coastal_collection_2025/painted-shell-art/facebook_landscape/creative_en.jpg" alt="painted-shell-art">
+                
+                <div class="card-body">
+                    <h3>painted-shell-art — 16:9</h3>
+                    <div class="meta">
+                        <span class="badge reused">Hero: reused</span>
+                        <span class="badge generated">generated</span>
+                        <span class="badge pass">
+                            Brand: ✓
+                        </span>
+                        <span class="badge pass">
+                            Legal: ✓
+                        </span>
+                    </div>
+                    <div class="meta" style="margin-top:4px;">Language: en</div>
+                    
+                    <div class="notes">[Colors] All brand colors detected in image.; [Logo] Logo verified in top-right region (16641/16641 opaque pixels, 111 distinct colors).; [Text] No prohibited words detected. Checked 4 rendered text(s).</div>
+                    
+                    
+                </div>
+            </div>
+        
+            <div class="card asset-card" data-product="painted-shell-art" data-ratio="16:9" data-lang="es">
+                
+                <img src="file:///Users/slysik/adobe/creative-automation/sample_output/coastal_collection_2025/painted-shell-art/facebook_landscape/creative_es.jpg" alt="painted-shell-art">
+                
+                <div class="card-body">
+                    <h3>painted-shell-art — 16:9</h3>
+                    <div class="meta">
+                        <span class="badge reused">Hero: reused</span>
+                        <span class="badge generated">generated</span>
+                        <span class="badge pass">
+                            Brand: ✓
+                        </span>
+                        <span class="badge pass">
+                            Legal: ✓
+                        </span>
+                    </div>
+                    <div class="meta" style="margin-top:4px;">Language: es</div>
+                    
+                    <div class="notes">[Colors] All brand colors detected in image.; [Logo] Logo verified in top-right region (16641/16641 opaque pixels, 111 distinct colors).; [Text] No prohibited words detected. Checked 4 rendered text(s).</div>
+                    
+                    
+                </div>
+            </div>
+        
+        </div>
+    </div>
+
+    
+    <!-- Analysis Tab -->
+    <div id="tab-analysis" class="tab-content">
+        <div class="analysis-grid">
+            <div class="score-ring">
+                <div class="score-number">85</div>
+                <div class="score-label">Brief Quality Score / 100</div>
+                <div class="score-bars" style="margin-top: 1.5rem;">
+                    <div class="score-bar">
+                        <div class="score-bar-label"><span>Completeness</span><span>25/25</span></div>
+                        <div class="score-bar-track"><div class="score-bar-fill" style="width:100%;background:#66bb6a;"></div></div>
+                    </div>
+                    <div class="score-bar">
+                        <div class="score-bar-label"><span>Clarity</span><span>13/25</span></div>
+                        <div class="score-bar-track"><div class="score-bar-fill" style="width:52%;background:#42a5f5;"></div></div>
+                    </div>
+                    <div class="score-bar">
+                        <div class="score-bar-label"><span>Brand Strength</span><span>25/25</span></div>
+                        <div class="score-bar-track"><div class="score-bar-fill" style="width:100%;background:#ab47bc;"></div></div>
+                    </div>
+                    <div class="score-bar">
+                        <div class="score-bar-label"><span>Targeting</span><span>22/25</span></div>
+                        <div class="score-bar-track"><div class="score-bar-fill" style="width:88%;background:#ffa726;"></div></div>
+                    </div>
+                </div>
+                <div style="margin-top:1rem;font-size:0.75rem;color:#666;">Analyzed by: heuristic</div>
+            </div>
+            <div class="insights">
+                
+                <div class="insight-section">
+                    <h3>🎨 Creative Direction</h3>
+                    <p style="font-size:0.9rem;color:#ddd;">Recommended direction: seasonal, aspirational lifestyle</p>
+                </div>
+                
+                
+                <div class="insight-section strengths">
+                    <h3>Strengths</h3>
+                    <ul><li>Tagline provided — adds messaging depth</li><li>3 products defined</li><li>Multi-language campaign (en, es)</li><li>Pre-existing hero for 'Resort Shell Handbag' — saves generation cost</li><li>Pre-existing hero for 'Bespoke Rattan Cowrie Shell Box' — saves generation cost</li><li>Pre-existing hero for 'Painted Shell Art' — saves generation cost</li><li>Target audience includes demographic specifics</li><li>Brand palette defined (3 colors)</li><li>Accent color specified for secondary UI elements</li><li>Logo asset provided</li><li>Prohibited words list (4 terms)</li><li>Legal disclaimer configured</li><li>Custom font family: Georgia</li><li>3 aspect ratios for multi-platform delivery</li><li>Full platform coverage: Instagram, Stories/Reels, Facebook/YouTube</li></ul>
+                </div>
+                
+                
+                
+                <div class="insight-section suggestions">
+                    <h3>Suggestions</h3>
+                    <ul><li>Consider action-oriented messaging (e.g., 'Discover...', 'Feel...')</li><li>Be more specific about target region for localized creative style</li></ul>
+                </div>
+                
+                
+            </div>
+        </div>
+    </div>
+    
+
+    
+    <!-- Performance Tab -->
+    <div id="tab-performance" class="tab-content">
+        <div class="stats">
+            <div class="stat"><div class="num">5057ms</div><div class="label">Total Time</div></div>
+            <div class="stat blue"><div class="num">0</div><div class="label">API Calls</div></div>
+            <div class="stat orange"><div class="num">$0.000</div><div class="label">Est. Cost</div></div>
+            <div class="stat purple"><div class="num"></div><div class="label">Provider</div></div>
+        </div>
+
+        <h3 style="margin-bottom:1rem;">Stage Breakdown</h3>
+        <table class="metrics-table">
+            <thead><tr><th>Stage</th><th>Time</th><th>Items</th><th>API Calls</th><th>Est. Cost</th><th>Notes</th></tr></thead>
+            <tbody>
+            
+            <tr>
+                <td>brief_ingestion</td>
+                <td style="color:#4fc3f7;">5ms</td>
+                <td>1</td>
+                <td>0</td>
+                <td style="color:#ffa726;">–</td>
+                <td style="color:#888;font-size:0.8rem;">Loaded: Coastal Collection 2025</td>
+            </tr>
+            
+            <tr>
+                <td>brief_analysis</td>
+                <td style="color:#4fc3f7;">0ms</td>
+                <td>1</td>
+                <td>0</td>
+                <td style="color:#ffa726;">–</td>
+                <td style="color:#888;font-size:0.8rem;">Score: 85/100</td>
+            </tr>
+            
+            </tbody>
+        </table>
+
+        
+        <h3 style="margin-bottom:1rem;">Per-Asset Metrics</h3>
+        <table class="metrics-table">
+            <thead><tr><th>Product</th><th>Ratio</th><th>Lang</th><th>Provider</th><th>Gen (ms)</th><th>Compose (ms)</th><th>Validate (ms)</th><th>Cost</th></tr></thead>
+            <tbody>
+            
+            <tr>
+                <td>resort-shell-handbag</td>
+                <td>1:1</td>
+                <td>en</td>
+                <td>reused</td>
+                <td style="color:#4fc3f7;">0</td>
+                <td>101</td>
+                <td>108</td>
+                <td style="color:#ffa726;">–</td>
+            </tr>
+            
+            <tr>
+                <td>resort-shell-handbag</td>
+                <td>1:1</td>
+                <td>es</td>
+                <td>reused</td>
+                <td style="color:#4fc3f7;">0</td>
+                <td>102</td>
+                <td>103</td>
+                <td style="color:#ffa726;">–</td>
+            </tr>
+            
+            <tr>
+                <td>resort-shell-handbag</td>
+                <td>9:16</td>
+                <td>en</td>
+                <td>reused</td>
+                <td style="color:#4fc3f7;">0</td>
+                <td>98</td>
+                <td>199</td>
+                <td style="color:#ffa726;">–</td>
+            </tr>
+            
+            <tr>
+                <td>resort-shell-handbag</td>
+                <td>9:16</td>
+                <td>es</td>
+                <td>reused</td>
+                <td style="color:#4fc3f7;">0</td>
+                <td>113</td>
+                <td>194</td>
+                <td style="color:#ffa726;">–</td>
+            </tr>
+            
+            <tr>
+                <td>resort-shell-handbag</td>
+                <td>16:9</td>
+                <td>en</td>
+                <td>reused</td>
+                <td style="color:#4fc3f7;">0</td>
+                <td>155</td>
+                <td>183</td>
+                <td style="color:#ffa726;">–</td>
+            </tr>
+            
+            <tr>
+                <td>resort-shell-handbag</td>
+                <td>16:9</td>
+                <td>es</td>
+                <td>reused</td>
+                <td style="color:#4fc3f7;">0</td>
+                <td>149</td>
+                <td>171</td>
+                <td style="color:#ffa726;">–</td>
+            </tr>
+            
+            <tr>
+                <td>cowrie-shell-box</td>
+                <td>1:1</td>
+                <td>en</td>
+                <td>reused</td>
+                <td style="color:#4fc3f7;">0</td>
+                <td>85</td>
+                <td>109</td>
+                <td style="color:#ffa726;">–</td>
+            </tr>
+            
+            <tr>
+                <td>cowrie-shell-box</td>
+                <td>1:1</td>
+                <td>es</td>
+                <td>reused</td>
+                <td style="color:#4fc3f7;">0</td>
+                <td>90</td>
+                <td>108</td>
+                <td style="color:#ffa726;">–</td>
+            </tr>
+            
+            <tr>
+                <td>cowrie-shell-box</td>
+                <td>9:16</td>
+                <td>en</td>
+                <td>reused</td>
+                <td style="color:#4fc3f7;">0</td>
+                <td>92</td>
+                <td>182</td>
+                <td style="color:#ffa726;">–</td>
+            </tr>
+            
+            <tr>
+                <td>cowrie-shell-box</td>
+                <td>9:16</td>
+                <td>es</td>
+                <td>reused</td>
+                <td style="color:#4fc3f7;">0</td>
+                <td>105</td>
+                <td>190</td>
+                <td style="color:#ffa726;">–</td>
+            </tr>
+            
+            <tr>
+                <td>cowrie-shell-box</td>
+                <td>16:9</td>
+                <td>en</td>
+                <td>reused</td>
+                <td style="color:#4fc3f7;">0</td>
+                <td>122</td>
+                <td>169</td>
+                <td style="color:#ffa726;">–</td>
+            </tr>
+            
+            <tr>
+                <td>cowrie-shell-box</td>
+                <td>16:9</td>
+                <td>es</td>
+                <td>reused</td>
+                <td style="color:#4fc3f7;">0</td>
+                <td>120</td>
+                <td>198</td>
+                <td style="color:#ffa726;">–</td>
+            </tr>
+            
+            <tr>
+                <td>painted-shell-art</td>
+                <td>1:1</td>
+                <td>en</td>
+                <td>reused</td>
+                <td style="color:#4fc3f7;">0</td>
+                <td>101</td>
+                <td>97</td>
+                <td style="color:#ffa726;">–</td>
+            </tr>
+            
+            <tr>
+                <td>painted-shell-art</td>
+                <td>1:1</td>
+                <td>es</td>
+                <td>reused</td>
+                <td style="color:#4fc3f7;">0</td>
+                <td>105</td>
+                <td>104</td>
+                <td style="color:#ffa726;">–</td>
+            </tr>
+            
+            <tr>
+                <td>painted-shell-art</td>
+                <td>9:16</td>
+                <td>en</td>
+                <td>reused</td>
+                <td style="color:#4fc3f7;">0</td>
+                <td>105</td>
+                <td>175</td>
+                <td style="color:#ffa726;">–</td>
+            </tr>
+            
+            <tr>
+                <td>painted-shell-art</td>
+                <td>9:16</td>
+                <td>es</td>
+                <td>reused</td>
+                <td style="color:#4fc3f7;">0</td>
+                <td>120</td>
+                <td>172</td>
+                <td style="color:#ffa726;">–</td>
+            </tr>
+            
+            <tr>
+                <td>painted-shell-art</td>
+                <td>16:9</td>
+                <td>en</td>
+                <td>reused</td>
+                <td style="color:#4fc3f7;">0</td>
+                <td>164</td>
+                <td>181</td>
+                <td style="color:#ffa726;">–</td>
+            </tr>
+            
+            <tr>
+                <td>painted-shell-art</td>
+                <td>16:9</td>
+                <td>es</td>
+                <td>reused</td>
+                <td style="color:#4fc3f7;">0</td>
+                <td>159</td>
+                <td>183</td>
+                <td style="color:#ffa726;">–</td>
+            </tr>
+            
+            </tbody>
+        </table>
+        
+    </div>
+    
+
+    <!-- Architecture Tab -->
+    <div id="tab-architecture" class="tab-content">
+        <div style="background:#12121e;border-radius:16px;border:1px solid #1e1e35;padding:2rem;">
+            <h2 style="margin-bottom:1rem;">Pipeline Architecture</h2>
+            <pre style="font-family:monospace;font-size:0.8rem;color:#ccc;line-height:1.6;">
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                            CLI / API Layer                                  │
+│                         click + REST-ready                                  │
+└─────────────────────┬───────────────────────────────────────────────────────┘
+                      │
+┌─────────────────────▼───────────────────────────────────────────────────────┐
+│                         Pipeline Orchestrator                               │
+│              Stages: Ingest → Analyze → Resolve → Generate →                │
+│                      Compose → Validate → Report                            │
+└──┬────────┬─────────┬──────────┬──────────┬──────────┬──────────┬───────────┘
+   │        │         │          │          │          │          │
+   ▼        ▼         ▼          ▼          ▼          ▼          ▼
+┌──────┐ ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐
+│Brief │ │Brief   │ │Provider│ │Template│ │Compos- │ │Valida- │ │Report  │
+│Models│ │Analyzer│ │Layer   │ │System  │ │itor   │ │tor     │ │Engine  │
+│      │ │        │ │        │ │        │ │        │ │        │ │        │
+│Pydant│ │Heurist │ │Firefly │ │Product │ │Resize  │ │Brand   │ │Console │
+│ic    │ │ic +    │ │DALL-E  │ │Editor- │ │Overlay │ │Legal   │ │JSON    │
+│valid-│ │LLM     │ │Mock    │ │ial     │ │Text    │ │Pixel   │ │HTML    │
+│ation │ │scoring │ │        │ │Split   │ │Logo    │ │verify  │ │Metrics │
+└──────┘ └────────┘ │Auto-   │ │Minimal │ └────────┘ └────────┘ └────────┘
+                    │resolve │ │Bold    │
+                    └────────┘ └────────┘
+                         │
+              ┌──────────┼──────────┐
+              ▼          ▼          ▼
+         ┌────────┐ ┌────────┐ ┌────────┐
+         │Adobe   │ │OpenAI  │ │Mock    │
+         │Firefly │ │DALL-E 3│ │(test)  │
+         │Services│ │        │ │        │
+         │        │ │$0.04/  │ │$0.00   │
+         │$0.04/  │ │image   │ │        │
+         │image   │ └────────┘ └────────┘
+         │        │
+         │Generate│
+         │Expand  │
+         │Fill    │
+         └────────┘
+            </pre>
+            <div style="margin-top:2rem;">
+                <h3 style="margin-bottom:0.5rem;">Production Extension Points</h3>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;font-size:0.85rem;">
+                    <div style="padding:1rem;background:#0a0a0f;border-radius:8px;border:1px solid #1e1e35;">
+                        <strong style="color:#4fc3f7;">Adobe Integration</strong>
+                        <ul style="margin-top:0.5rem;padding-left:1rem;color:#aaa;">
+                            <li>Firefly Services for generation + expand + fill</li>
+                            <li>AEM DAM for asset storage + retrieval</li>
+                            <li>GenStudio for brief management</li>
+                            <li>Creative Cloud Libraries for brand assets</li>
+                            <li>Photoshop API for advanced compositing</li>
+                        </ul>
+                    </div>
+                    <div style="padding:1rem;background:#0a0a0f;border-radius:8px;border:1px solid #1e1e35;">
+                        <strong style="color:#4fc3f7;">Cloud & Scale</strong>
+                        <ul style="margin-top:0.5rem;padding-left:1rem;color:#aaa;">
+                            <li>S3/Azure Blob for asset storage</li>
+                            <li>CDN delivery for published creatives</li>
+                            <li>Webhook events for pipeline stages</li>
+                            <li>Async job queue for batch campaigns</li>
+                            <li>Cost tracking per client/campaign</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        AdForge — Creative Automation Pipeline — <a href="#">Documentation</a>
+    </div>
+
+    <script>
+    function showTab(name) {
+        document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        document.getElementById('tab-' + name).classList.add('active');
+        event.target.classList.add('active');
+    }
+    function filterAssets(product, btn) {
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        document.querySelectorAll('.asset-card').forEach(card => {
+            if (product === 'all' || card.dataset.product === product) {
+                card.style.display = '';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    }
+    </script>
+</body>
+</html>

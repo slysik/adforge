@@ -42,7 +42,10 @@ python3 -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
 python create_sample_assets.py
 
-# Run with mock images (no API key needed)
+# Option A: Web UI (recommended for demo)
+streamlit run src/app.py
+
+# Option B: CLI
 python -m src.cli generate sample_briefs/summer_campaign.yaml --mock
 
 # Analyze a brief without generating
@@ -64,28 +67,49 @@ python -m pytest tests/ -v
 
 ---
 
+## Web UI
+
+AdForge includes a **Streamlit web interface** for visual campaign management:
+
+```bash
+streamlit run src/app.py
+```
+
+The UI provides:
+- **Campaign overview** — brief metadata, analysis scores, product details
+- **Creative gallery** — side-by-side ratio comparison per product with compliance badges
+- **Pipeline metrics** — stage timing, cost breakdown, provider info
+- **Pre-generated samples** — browse `sample_output/` without needing an API key
+- **Live pipeline execution** — run the full pipeline from the browser with mock, Gemini, or Firefly
+
+Two modes:
+1. **Run Pipeline** — select a sample brief or upload a custom one, choose provider, run
+2. **View Pre-generated Samples** — browse previously generated outputs from `sample_output/`
+
+---
+
 ## Provider Architecture
 
 AdForge uses a **provider abstraction** that makes image generation provider-swappable via configuration:
 
 ```
-┌─────────────────────────────────────────┐
-│          ImageProvider (ABC)            │
-│  generate() → (Image, Metadata)        │
-└─────────┬──────────┬──────────┬────────┘
-          │          │          │
-    ┌─────▼──┐  ┌────▼───┐  ┌──▼────┐
-    │Firefly │  │DALL-E 3│  │ Mock  │
-    │Services│  │        │  │       │
-    │        │  │$0.04/  │  │$0.00  │
-    │Generate│  │image   │  │       │
-    │Expand  │  │        │  │Determ-│
-    │Fill    │  │3 fixed │  │inistic│
-    │Style   │  │sizes   │  │       │
-    └────────┘  └────────┘  └───────┘
+┌─────────────────────────────────────────────────────┐
+│              ImageProvider (ABC)                     │
+│  generate() → (Image, Metadata)                     │
+└─────────┬──────────┬──────────┬──────────┬─────────┘
+          │          │          │          │
+    ┌─────▼──┐  ┌────▼───┐  ┌──▼─────┐ ┌─▼─────┐
+    │Firefly │  │Imagen  │  │DALL-E 3│ │ Mock  │
+    │Services│  │4.0     │  │        │ │       │
+    │        │  │        │  │$0.04/  │ │$0.00  │
+    │Generate│  │Native  │  │image   │ │       │
+    │Expand  │  │aspect  │  │        │ │Determ-│
+    │Fill    │  │ratios  │  │3 fixed │ │inistic│
+    │Style   │  │        │  │sizes   │ │       │
+    └────────┘  └────────┘  └────────┘ └───────┘
 ```
 
-**Auto-resolution:** Firefly → DALL-E → Mock. The pipeline always runs.
+**Auto-resolution:** Firefly → Gemini → Mock. The pipeline always runs.
 
 ### Adobe Firefly Services
 

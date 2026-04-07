@@ -58,6 +58,7 @@ class ProviderType(str, Enum):
     """Available image generation providers."""
     FIREFLY = "firefly"
     DALLE = "dalle"
+    GEMINI = "gemini"
     MOCK = "mock"
 
 
@@ -445,6 +446,105 @@ class DalleProvider(ImageProvider):
 
 
 # ---------------------------------------------------------------------------
+# Google Gemini / Imagen Provider
+# ---------------------------------------------------------------------------
+
+IMAGEN_RATIOS = {"1:1", "9:16", "16:9", "3:4", "4:3"}
+
+
+class GeminiProvider(ImageProvider):
+    """Google Gemini Imagen 4.0 provider.
+
+    Uses the google-genai SDK to generate images via Imagen 4.0.
+    Supports native aspect ratios so no post-resize distortion.
+
+    Pricing: free tier available, then per-image pricing.
+    """
+
+    def __init__(self, api_key: Optional[str] = None):
+        self.api_key = api_key or os.getenv("GEMINI_API_KEY") or os.getenv("NANO_BANANA_API_KEY")
+        self._client = None
+        if self.api_key:
+            try:
+                from google import genai
+                self._client = genai.Client(api_key=self.api_key)
+            except Exception:
+                pass
+
+    @property
+    def provider_type(self) -> ProviderType:
+        return ProviderType.GEMINI
+
+    @property
+    def model_name(self) -> str:
+        return "imagen-4.0"
+
+    def is_available(self) -> bool:
+        return self._client is not None
+
+    def _closest_ratio(self, width: int, height: int) -> str:
+        """Find the closest Imagen-supported aspect ratio."""
+        ratio = width / height
+        candidates = {
+            "1:1": 1.0,
+            "16:9": 16 / 9,
+            "9:16": 9 / 16,
+            "4:3": 4 / 3,
+            "3:4": 3 / 4,
+        }
+        return min(candidates, key=lambda k: abs(candidates[k] - ratio))
+
+    def generate(
+        self,
+        prompt: str,
+        width: int,
+        height: int,
+        output_path: Path,
+        style_reference: Optional[Path] = None,
+    ) -> tuple[Image.Image, GenerationMetadata]:
+        from google.genai import types
+
+        start = time.time()
+        aspect_ratio = self._closest_ratio(width, height)
+        console.print(f"  [blue]Calling Imagen 4.0 ({aspect_ratio})…[/blue]")
+
+        response = self._client.models.generate_images(
+            model="imagen-4.0-generate-001",
+            prompt=prompt,
+            config=types.GenerateImagesConfig(
+                number_of_images=1,
+                aspect_ratio=aspect_ratio,
+            ),
+        )
+
+        if not response.generated_images:
+            raise RuntimeError("Imagen returned no images")
+
+        img_bytes = response.generated_images[0].image.image_bytes
+        img = Image.open(io.BytesIO(img_bytes)).convert("RGBA")
+
+        # Resize to exact target dimensions
+        if img.size != (width, height):
+            img = img.resize((width, height), Image.LANCZOS)
+
+        elapsed_ms = int((time.time() - start) * 1000)
+
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        img.save(str(output_path), "PNG")
+
+        meta = GenerationMetadata(
+            provider="gemini",
+            model="imagen-4.0",
+            prompt_used=prompt,
+            generation_time_ms=elapsed_ms,
+            estimated_cost_usd=0.04,
+            aspect_ratio=f"{width}:{height}",
+        )
+
+        return img, meta
+
+
+# ---------------------------------------------------------------------------
 # Mock Provider
 # ---------------------------------------------------------------------------
 
@@ -625,39 +725,52 @@ def get_provider(
     """Resolve the best available image generation provider.
 
     Resolution order:
-      1. Explicit mock flag → MockProvider
-      2. Explicit provider_type → that provider
-      3. FIREFLY_CLIENT_ID set → FireflyProvider
-      4. OPENAI_API_KEY set → DalleProvider
-      5. Fallback → MockProvider (with warning)
+      1. Explicit mock flag or provider_type="mock" → MockProvider
+      2. Explicit provider_type → that provider (error if unavailable)
+      3. Auto-detect: Firefly → Gemini → Mock
+      4. Fallback → MockProvider (with warning)
 
-    This design ensures the pipeline always runs, degrading gracefully
-    from Adobe Firefly → DALL-E → mock images.
+    This design ensures the pipeline always runs, degrading gracefully.
+    Explicit provider selection raises instead of silently falling back.
     """
-    if mock:
+    if mock or provider_type == "mock":
         return MockProvider()
 
+    # Explicit provider selection — fail loudly if unavailable
     if provider_type == "firefly":
         provider = FireflyProvider()
         if provider.is_available():
             return provider
-        console.print("[yellow]⚠ Firefly credentials not found – falling back.[/yellow]")
+        raise RuntimeError(
+            "Firefly provider selected but FIREFLY_CLIENT_ID / FIREFLY_CLIENT_SECRET not set."
+        )
 
-    if provider_type == "dalle" or api_key:
+    if provider_type == "dalle":
         provider = DalleProvider(api_key=api_key)
         if provider.is_available():
             return provider
+        raise RuntimeError(
+            "DALL-E provider selected but OPENAI_API_KEY not set."
+        )
 
-    # Auto-detect: try Firefly first (preferred for Adobe context)
+    if provider_type == "gemini":
+        provider = GeminiProvider(api_key=api_key)
+        if provider.is_available():
+            return provider
+        raise RuntimeError(
+            "Gemini provider selected but GEMINI_API_KEY / NANO_BANANA_API_KEY not set."
+        )
+
+    # Auto-detect: try each provider in preference order
     firefly = FireflyProvider()
     if firefly.is_available():
         console.print("[magenta]Using Adobe Firefly Services[/magenta]")
         return firefly
 
-    dalle = DalleProvider(api_key=api_key)
-    if dalle.is_available():
-        console.print("[cyan]Using OpenAI DALL-E 3[/cyan]")
-        return dalle
+    gemini = GeminiProvider(api_key=api_key)
+    if gemini.is_available():
+        console.print("[blue]Using Google Imagen 4.0[/blue]")
+        return gemini
 
     console.print("[yellow]⚠ No API keys found – using mock mode.[/yellow]")
     return MockProvider()

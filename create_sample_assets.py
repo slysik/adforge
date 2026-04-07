@@ -1,149 +1,123 @@
 """
-Generate sample input assets for testing:
-  - A simple logo (FreshCo brand)
-  - A clean green smoothie product photo (simulating a pre-existing asset)
+Generate fallback sample input assets for testing when real product
+photos are not available.
 
-These assets contain NO text labels or watermarks — they simulate real
-product photography that would come from a DAM or photo shoot.
+Real assets (committed to input_assets/):
+  - logo.png — Blue Beach House Designs logo
+  - resort-shell-handbag.png — Resort shell handbag product photo
+  - bespoke-rattan-cowrie-shell-box.png — Cowrie shell box product photo
+  - painted-shell-art.png — Painted shell art product photo
+
+This script creates placeholder versions only if the real files are missing,
+plus a green_smoothie.jpg needed by legacy test briefs.
 """
 
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
+import math
 
 ASSETS_DIR = Path("input_assets")
 ASSETS_DIR.mkdir(exist_ok=True)
 
 
 def create_logo():
-    """Create a simple FreshCo logo."""
+    """Create a Blue Beach House Designs logo if one doesn't exist."""
+    path = ASSETS_DIR / "logo.png"
+    if path.exists():
+        print(f"  ✓ Logo already exists: {path}")
+        return
+
     size = 400
     img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
 
-    # Circle background
+    # Circle background — ocean blue
     margin = 20
     draw.ellipse(
         [margin, margin, size - margin, size - margin],
-        fill=(0, 168, 107, 255),  # #00A86B
+        fill=(27, 79, 114, 255),  # #1B4F72
     )
 
-    # Inner circle
+    # Inner ring
     inner = 50
     draw.ellipse(
         [inner, inner, size - inner, size - inner],
-        fill=(255, 255, 255, 40),
+        fill=(27, 79, 114, 255),
+        outline=(245, 230, 202, 100),
+        width=3,
     )
 
-    # Text
     try:
-        font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 72)
-        font_sm = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 28)
+        font = ImageFont.truetype("/System/Library/Fonts/Georgia.ttf", 60)
+        font_sm = ImageFont.truetype("/System/Library/Fonts/Georgia.ttf", 22)
     except (OSError, IOError):
         try:
-            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 72)
-            font_sm = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 28)
+            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf", 60)
+            font_sm = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf", 22)
         except (OSError, IOError):
             font = ImageFont.load_default()
             font_sm = font
 
-    # "FC" letters
-    bbox = draw.textbbox((0, 0), "FC", font=font)
+    bbox = draw.textbbox((0, 0), "BB", font=font)
     tw, th = bbox[2] - bbox[0], bbox[3] - bbox[1]
-    draw.text(((size - tw) // 2, (size - th) // 2 - 20), "FC",
-              fill=(255, 255, 255, 255), font=font)
+    draw.text(((size - tw) // 2, (size - th) // 2 - 25), "BB",
+              fill=(245, 230, 202, 255), font=font)
 
-    # "FreshCo" below
-    bbox2 = draw.textbbox((0, 0), "FreshCo", font=font_sm)
+    label = "Blue Beach House"
+    bbox2 = draw.textbbox((0, 0), label, font=font_sm)
     tw2 = bbox2[2] - bbox2[0]
-    draw.text(((size - tw2) // 2, (size + th) // 2 + 5), "FreshCo",
-              fill=(255, 255, 255, 200), font=font_sm)
+    draw.text(((size - tw2) // 2, (size + th) // 2 - 5), label,
+              fill=(245, 230, 202, 200), font=font_sm)
 
-    path = ASSETS_DIR / "logo.png"
     img.save(str(path), "PNG")
     print(f"✓ Created logo: {path}")
 
 
-def create_green_smoothie():
-    """Create a clean green smoothie product image (no text labels)."""
+def _create_placeholder(filename: str, label: str, bg_color: tuple):
+    """Create a simple placeholder product image if the real one is missing."""
+    path = ASSETS_DIR / filename
+    if path.exists():
+        print(f"  ✓ {label} already exists: {path}")
+        return
+
     w, h = 1080, 1080
-    # Rich green background simulating a product photo backdrop
-    img = Image.new("RGB", (w, h), (34, 100, 50))
+    img = Image.new("RGB", (w, h), bg_color)
     draw = ImageDraw.Draw(img)
 
-    # Radial gradient background
     cx, cy = w // 2, h // 2
-    import math
-    for radius in range(600, 0, -3):
-        alpha = int(80 * (1 - radius / 600))
-        r = 34 + alpha // 3
-        g = 100 + alpha
-        b = 50 + alpha // 4
-        draw.ellipse(
-            [cx - radius, cy - radius, cx + radius, cy + radius],
-            fill=(r, min(g, 220), b),
-        )
+    for radius in range(500, 0, -5):
+        alpha = int(40 * (1 - radius / 500))
+        r = min(bg_color[0] + alpha, 255)
+        g = min(bg_color[1] + alpha, 255)
+        b = min(bg_color[2] + alpha, 255)
+        draw.ellipse([cx - radius, cy - radius, cx + radius, cy + radius], fill=(r, g, b))
 
-    # Glass body
-    glass_left = w // 2 - 100
-    glass_right = w // 2 + 100
-    glass_top = h // 4 + 20
-    glass_bottom = h * 3 // 4
+    try:
+        font = ImageFont.truetype("/System/Library/Fonts/Georgia.ttf", 36)
+    except (OSError, IOError):
+        font = ImageFont.load_default()
 
-    # Glass outline
-    draw.rounded_rectangle(
-        [glass_left, glass_top, glass_right, glass_bottom],
-        radius=15,
-        fill=(90, 185, 95),
-        outline=(70, 155, 75),
-        width=3,
-    )
+    bbox = draw.textbbox((0, 0), label, font=font)
+    tw = bbox[2] - bbox[0]
+    draw.text(((w - tw) // 2, h - 120), label, fill=(255, 255, 255), font=font)
 
-    # Smoothie fill gradient
-    for y in range(glass_top + 30, glass_bottom - 5):
-        t = (y - glass_top) / (glass_bottom - glass_top)
-        g_val = int(175 - t * 30)
-        draw.line(
-            [(glass_left + 8, y), (glass_right - 8, y)],
-            fill=(int(70 + t * 20), g_val, int(75 + t * 10)),
-        )
+    ext = Path(filename).suffix.lower()
+    if ext in (".jpg", ".jpeg"):
+        img.save(str(path), "JPEG", quality=90)
+    else:
+        img.save(str(path), "PNG")
+    print(f"✓ Created placeholder: {path}")
 
-    # Glass highlight
-    draw.rectangle(
-        [glass_left + 12, glass_top + 35, glass_left + 22, glass_bottom - 30],
-        fill=(140, 220, 145),
-    )
 
-    # Straw
-    straw_x = w // 2 + 25
-    draw.line(
-        [(straw_x, glass_top - 80), (straw_x + 12, glass_bottom - 80)],
-        fill=(210, 210, 210),
-        width=6,
-    )
-
-    # Decorative leaves (abstract nature elements)
-    leaf_positions = [(180, 250, 70), (820, 350, 55), (220, 720, 60), (780, 680, 45)]
-    for lx, ly, lsz in leaf_positions:
-        draw.ellipse(
-            [lx, ly, lx + lsz, ly + int(lsz * 1.8)],
-            fill=(55, 145, 65),
-        )
-        draw.ellipse(
-            [lx + 5, ly + 5, lx + lsz - 10, ly + int(lsz * 1.4)],
-            fill=(65, 160, 70),
-        )
-
-    # Subtle floor reflection
-    for y in range(h - 100, h):
-        t = (y - (h - 100)) / 100
-        draw.line([(0, y), (w, y)], fill=(25, int(80 - t * 30), int(40 - t * 15)))
-
-    path = ASSETS_DIR / "green_smoothie.jpg"
-    img.save(str(path), "JPEG", quality=90)
-    print(f"✓ Created green smoothie asset: {path}")
+def create_green_smoothie():
+    """Create a green smoothie placeholder (needed by legacy tests)."""
+    _create_placeholder("green_smoothie.jpg", "Green Smoothie", (34, 100, 50))
 
 
 if __name__ == "__main__":
     create_logo()
+    _create_placeholder("resort-shell-handbag.png", "Resort Shell Handbag", (180, 150, 120))
+    _create_placeholder("bespoke-rattan-cowrie-shell-box.png", "Cowrie Shell Box", (160, 140, 110))
+    _create_placeholder("painted-shell-art.png", "Painted Shell Art", (200, 180, 160))
     create_green_smoothie()
     print("\n✅ Sample assets created in input_assets/")

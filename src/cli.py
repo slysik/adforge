@@ -38,7 +38,7 @@ def cli():
 @click.option("--input-dir", "-i", default="input_assets", help="Directory with existing assets")
 @click.option("--output-dir", "-o", default="output", help="Output directory for generated creatives")
 @click.option("--mock", is_flag=True, help="Use mock image generation (no API key needed)")
-@click.option("--provider", "-p", type=click.Choice(["firefly", "dalle", "mock"]),
+@click.option("--provider", "-p", type=click.Choice(["firefly", "dalle", "gemini", "mock"]),
               help="Force a specific image provider")
 @click.option("--template", "-t",
               type=click.Choice(["product_hero", "editorial", "split_panel", "minimal", "bold_type"]),
@@ -139,7 +139,7 @@ def analyze(brief: str, llm: bool):
 @cli.command()
 def providers():
     """List available image generation providers and their status."""
-    from .providers import FireflyProvider, DalleProvider, MockProvider
+    from .providers import FireflyProvider, DalleProvider, GeminiProvider, MockProvider
 
     console.print("\n[bold cyan]━━━ Available Providers ━━━[/bold cyan]\n")
 
@@ -148,6 +148,8 @@ def providers():
          "Production — uses Firefly v3 API (generate, expand, fill)"),
         ("OpenAI DALL-E 3", DalleProvider(), "dalle",
          "Development fallback — three fixed sizes, resized to target"),
+        ("Google Imagen 4.0", GeminiProvider(), "gemini",
+         "Development fallback — native aspect ratios via Gemini API"),
         ("Mock Provider", MockProvider(), "mock",
          "Testing — deterministic procedural images, no API calls"),
     ]
@@ -163,8 +165,9 @@ def providers():
         console.print()
 
     console.print(
-        "[dim]Auto-resolution order: Firefly → DALL-E → Mock\n"
+        "[dim]Auto-resolution order: Firefly → Gemini → Mock\n"
         "Set FIREFLY_CLIENT_ID + FIREFLY_CLIENT_SECRET for Firefly.\n"
+        "Set GEMINI_API_KEY for Imagen 4.0.\n"
         "Set OPENAI_API_KEY for DALL-E.\n"
         "Use --mock to force mock mode.[/dim]\n"
     )

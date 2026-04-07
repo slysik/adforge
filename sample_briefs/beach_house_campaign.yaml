@@ -1,10 +1,10 @@
 campaign:
-  name: "Summer Refresh 2025"
+  name: "Coastal Collection 2025"
   brand: "Blue Beach House Designs"
-  message: "Bring the Coast Home This Summer"
+  message: "The perfect shell handbag for the season, complete with a lined interior, drawstring closure, and room for all your essentials."
   tagline: "Handcrafted Coastal Elegance"
   target_region: "Southern Florida — Naples & Palm Beach"
-  target_audience: "Home decor designers and coastal lifestyle enthusiasts, ages 30-55"
+  target_audience: "Home decor designers, interior stylists, and coastal lifestyle enthusiasts, ages 30-60"
 
   languages:
     - en
@@ -15,7 +15,7 @@ campaign:
       - "#1B4F72"   # Ocean blue
       - "#F5E6CA"   # Sandy beige
       - "#FFFFFF"    # White
-    accent_color: "#D4A574"
+    accent_color: "#D4A574"   # Shell tan / warm sand
     font_family: "Georgia"
     logo_path: "input_assets/logo.png"
     prohibited_words:
@@ -23,7 +23,7 @@ campaign:
       - "fake"
       - "plastic"
       - "mass-produced"
-    required_disclaimer: null
+    required_disclaimer: "Custom orders welcome — bluebeachhousedesigns.com"
 
   products:
     - id: "resort-shell-handbag"
@@ -38,6 +38,7 @@ campaign:
         - resort wear
         - handcrafted
         - seashell
+        - luxury beach bag
 
     - id: "cowrie-shell-box"
       name: "Bespoke Rattan Cowrie Shell Box"
@@ -48,20 +49,24 @@ campaign:
         - rattan box
         - keepsake box
         - coastal decor
+        - home accessories
         - jewelry box
         - handwoven
+        - beach house decor
 
     - id: "painted-shell-art"
       name: "Painted Shell Art"
-      description: "Vibrant hand-painted seashell collection displayed in a gilded bamboo frame, featuring pastel rainbow scallops, starfish, and sand dollars"
-      hero_image: null  # Will be generated via GenAI
+      description: "Vibrant hand-painted seashell collection displayed in a gilded bamboo frame, featuring pastel rainbow scallops, starfish, and sand dollars — a statement piece for coastal interiors"
+      hero_image: "input_assets/painted-shell-art.png"
       keywords:
         - shell art
         - wall art
         - coastal wall decor
         - painted shells
+        - beach house art
         - framed art
         - pastel decor
+        - statement piece
 
   aspect_ratios:
     - name: "instagram_square"

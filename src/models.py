@@ -172,8 +172,8 @@ class PipelineResult(BaseModel):
     """Aggregate result from running the full pipeline."""
     campaign_name: str
     total_assets: int = 0
-    generated_count: int = 0
-    reused_count: int = 0
+    created_count: int = 0
+    hero_reused_count: int = 0
     failed_count: int = 0
     assets: list[GeneratedAsset] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)

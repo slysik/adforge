@@ -82,11 +82,19 @@ class StorageManager:
         d = self.get_ratio_dir(campaign_name, product_id, ratio_name)
         return d / f"creative_{language}.jpg"
 
-    def find_existing_hero(self, product_id: str, hero_path: str | None) -> Path | None:
+    def find_existing_hero(
+        self,
+        product_id: str,
+        hero_path: str | None,
+        auto_discover: bool = True,
+    ) -> Path | None:
         """
         Look for an existing hero image:
-          1. Explicit path from brief
-          2. In input_assets/<product_id>.*
+          1. Explicit path from brief (hero_path is a non-empty string)
+          2. Auto-discover in input_assets/<product_id>.* (only if auto_discover=True)
+
+        When the brief explicitly sets hero_image: null, the caller should
+        pass auto_discover=False to force generation instead of reuse.
         """
         if hero_path:
             p = Path(hero_path)
@@ -98,6 +106,9 @@ class StorageManager:
             if alt.exists():
                 console.print(f"  [green]✓ Found existing hero: {alt}[/green]")
                 return alt
+
+        if not auto_discover:
+            return None
 
         # Auto-discover in input_assets/
         for ext in ("*.png", "*.jpg", "*.jpeg", "*.webp"):

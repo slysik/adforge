@@ -7,7 +7,7 @@ import pytest
 from PIL import Image
 
 from src.providers import (
-    MockProvider, DalleProvider, FireflyProvider,
+    MockProvider, DalleProvider, FireflyProvider, GeminiProvider,
     get_provider, ProviderType, GenerationMetadata,
 )
 
@@ -107,6 +107,25 @@ class TestDalleProvider:
         assert p._closest_size(1080, 1080) == "1024x1024"
 
 
+class TestGeminiProvider:
+    def test_not_available_without_key(self, monkeypatch):
+        monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+        monkeypatch.delenv("NANO_BANANA_API_KEY", raising=False)
+        p = GeminiProvider(api_key=None)
+        assert p.is_available() is False
+
+    def test_provider_type(self):
+        p = GeminiProvider(api_key="fake")
+        assert p.provider_type == ProviderType.GEMINI
+        assert p.model_name == "imagen-4.0"
+
+    def test_closest_ratio_mapping(self):
+        p = GeminiProvider(api_key="fake")
+        assert p._closest_ratio(1080, 1080) == "1:1"
+        assert p._closest_ratio(1920, 1080) == "16:9"
+        assert p._closest_ratio(1080, 1920) == "9:16"
+
+
 class TestProviderFactory:
     def test_mock_flag_overrides_all(self):
         p = get_provider(mock=True)
@@ -115,11 +134,37 @@ class TestProviderFactory:
     def test_fallback_to_mock_without_keys(self, monkeypatch):
         monkeypatch.delenv("OPENAI_API_KEY", raising=False)
         monkeypatch.delenv("FIREFLY_CLIENT_ID", raising=False)
+        monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+        monkeypatch.delenv("NANO_BANANA_API_KEY", raising=False)
         p = get_provider()
         assert p.provider_type == ProviderType.MOCK
 
     def test_explicit_provider_type_mock(self, monkeypatch):
         monkeypatch.delenv("OPENAI_API_KEY", raising=False)
         monkeypatch.delenv("FIREFLY_CLIENT_ID", raising=False)
+        monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+        monkeypatch.delenv("NANO_BANANA_API_KEY", raising=False)
         p = get_provider(provider_type="mock")
         assert p.provider_type == ProviderType.MOCK
+
+    def test_explicit_provider_type_mock_with_keys_set(self):
+        """provider_type='mock' must return mock even when real keys are set."""
+        p = get_provider(provider_type="mock")
+        assert p.provider_type == ProviderType.MOCK
+
+    def test_explicit_dalle_without_key_raises(self, monkeypatch):
+        monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+        with pytest.raises(RuntimeError, match="DALL-E"):
+            get_provider(provider_type="dalle")
+
+    def test_explicit_gemini_without_key_raises(self, monkeypatch):
+        monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+        monkeypatch.delenv("NANO_BANANA_API_KEY", raising=False)
+        with pytest.raises(RuntimeError, match="Gemini"):
+            get_provider(provider_type="gemini")
+
+    def test_explicit_firefly_without_key_raises(self, monkeypatch):
+        monkeypatch.delenv("FIREFLY_CLIENT_ID", raising=False)
+        monkeypatch.delenv("FIREFLY_CLIENT_SECRET", raising=False)
+        with pytest.raises(RuntimeError, match="Firefly"):
+            get_provider(provider_type="firefly")

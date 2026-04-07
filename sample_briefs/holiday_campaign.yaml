@@ -1,10 +1,10 @@
 campaign:
   name: "Holiday Glow 2025"
-  brand: "LuxeBeauty"
-  message: "New Year, New You"
-  tagline: "Glow Into the New Year"
-  target_region: "Europe"
-  target_audience: "Fashion-forward women and men, ages 25-45, interested in premium skincare"
+  brand: "Blue Beach House Designs"
+  message: "Gift the Coast This Holiday Season"
+  tagline: "Handcrafted Treasures from the Shore"
+  target_region: "Southern Florida — Naples & Palm Beach"
+  target_audience: "Gift buyers, interior designers, and home decor enthusiasts, ages 28-60"
 
   languages:
     - en
@@ -13,44 +13,55 @@ campaign:
 
   brand_guidelines:
     primary_colors:
-      - "#C9A96E"   # Gold
-      - "#1A1A2E"   # Deep navy
+      - "#1B4F72"   # Ocean blue
+      - "#F5E6CA"   # Sandy beige
       - "#FFFFFF"    # White
-    accent_color: "#E8D5B7"
+    accent_color: "#D4A574"
     font_family: "Georgia"
-    logo_path: null
+    logo_path: "input_assets/logo.png"
     prohibited_words:
-      - "anti-aging"
-      - "wrinkle-free"
-      - "miracle"
-      - "permanent"
-    required_disclaimer: "Results may vary. Not tested on animals."
+      - "cheap"
+      - "fake"
+      - "plastic"
+      - "mass-produced"
+    required_disclaimer: "Custom orders welcome — bluebeachhousedesigns.com"
 
   products:
-    - id: "radiance-serum"
-      name: "LuxeBeauty Radiance Serum"
-      description: "24K gold-infused vitamin C serum for luminous, hydrated skin with visible radiance in 7 days"
-      hero_image: null
+    - id: "resort-shell-handbag"
+      name: "Resort Shell Handbag"
+      description: "Handcrafted rattan handbag adorned with natural seashells and floral accents — the perfect gift for anyone who loves coastal style"
+      hero_image: "input_assets/resort-shell-handbag.png"
       keywords:
-        - serum
-        - gold
-        - radiance
-        - vitamin C
-        - luxury skincare
-        - glowing skin
-        - dropper bottle
+        - shell handbag
+        - holiday gift
+        - coastal fashion
+        - resort wear
+        - handcrafted
+        - luxury beach bag
 
-    - id: "velvet-moisturizer"
-      name: "LuxeBeauty Velvet Moisturizer"
-      description: "Rich, velvety moisturizer with hyaluronic acid and shea butter for all-day hydration"
-      hero_image: null
+    - id: "cowrie-shell-box"
+      name: "Bespoke Rattan Cowrie Shell Box"
+      description: "Hand-woven rattan keepsake box with cowrie shells and turquoise accents — a meaningful holiday gift for jewelry lovers"
+      hero_image: "input_assets/bespoke-rattan-cowrie-shell-box.png"
       keywords:
-        - moisturizer
-        - velvet texture
-        - hydration
-        - luxury cream
-        - jar
-        - winter skincare
+        - cowrie shell
+        - gift box
+        - holiday gift
+        - coastal decor
+        - keepsake box
+        - handwoven
+
+    - id: "painted-shell-art"
+      name: "Painted Shell Art"
+      description: "Vibrant hand-painted seashell collection in a gilded bamboo frame — a statement piece that brings the beach indoors"
+      hero_image: "input_assets/painted-shell-art.png"
+      keywords:
+        - shell art
+        - wall art
+        - holiday decor
+        - coastal art
+        - framed art
+        - statement piece
 
   aspect_ratios:
     - name: "instagram_square"

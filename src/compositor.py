@@ -42,27 +42,47 @@ class TranslationProvider:
 
     # Pre-approved translations (would come from a TMS in production)
     _APPROVED: dict[str, dict[str, str]] = {
+        # Blue Beach House Designs campaigns
+        "The perfect shell handbag for the season, complete with a lined interior, drawstring closure, and room for all your essentials.": {
+            "es": "El bolso de conchas perfecto para la temporada, con interior forrado, cierre de cordón y espacio para todo lo esencial.",
+            "fr": "Le sac à main coquillage parfait pour la saison, avec intérieur doublé, fermeture à cordon et de la place pour tous vos essentiels.",
+            "de": "Die perfekte Muschel-Handtasche für die Saison, mit gefüttertem Inneren, Kordelzug und Platz für alles Wichtige.",
+        },
+        "Handcrafted Coastal Elegance": {
+            "es": "Elegancia Costera Artesanal",
+            "fr": "Élégance Côtière Artisanale",
+            "de": "Handgefertigte Küsteneleganz",
+        },
+        "Bring the Coast Home This Summer": {
+            "es": "Lleva la Costa a Tu Hogar Este Verano",
+            "fr": "Ramenez la Côte Chez Vous Cet Été",
+            "de": "Bringen Sie die Küste Diesen Sommer Nach Hause",
+        },
+        "Handcrafted Treasures from the Shore": {
+            "es": "Tesoros Artesanales de la Costa",
+            "fr": "Trésors Artisanaux du Rivage",
+            "de": "Handgefertigte Schätze vom Strand",
+        },
+        "Gift the Coast This Holiday Season": {
+            "es": "Regala la Costa Esta Temporada Navideña",
+            "fr": "Offrez la Côte Pour les Fêtes",
+            "de": "Verschenken Sie die Küste in Dieser Festzeit",
+        },
+        # Legacy campaigns
         "Stay Fresh This Summer": {
             "es": "Mantente Fresco Este Verano",
             "fr": "Restez Frais Cet Été",
             "de": "Bleib Frisch Diesen Sommer",
-            "pt": "Fique Fresco Neste Verão",
-            "ja": "この夏、フレッシュに",
-            "zh": "这个夏天，保持清爽",
         },
         "Naturally Refreshing": {
             "es": "Naturalmente Refrescante",
             "fr": "Naturellement Rafraîchissant",
             "de": "Natürlich Erfrischend",
-            "pt": "Naturalmente Refrescante",
         },
         "New Year, New You": {
             "es": "Año Nuevo, Nuevo Tú",
             "fr": "Nouvelle Année, Nouveau Vous",
             "de": "Neues Jahr, Neues Du",
-            "pt": "Ano Novo, Novo Você",
-            "ja": "新年、新しいあなた",
-            "zh": "新年新气象",
         },
         "Glow Into the New Year": {
             "es": "Brilla En El Año Nuevo",
@@ -73,6 +93,7 @@ class TranslationProvider:
 
     def __init__(self):
         self._warnings: list[str] = []
+        self._seen_warnings: set[tuple[str, str]] = set()
 
     @property
     def warnings(self) -> list[str]:
@@ -80,6 +101,7 @@ class TranslationProvider:
 
     def clear_warnings(self):
         self._warnings.clear()
+        self._seen_warnings.clear()
 
     def translate(self, text: str, language: str) -> tuple[str, bool]:
         """
@@ -97,10 +119,14 @@ class TranslationProvider:
         if translated:
             return translated, True
 
-        self._warnings.append(
-            f"No approved translation for '{text}' in '{language}' – "
-            f"using source language. Submit to TMS for review."
-        )
+        # Dedupe: only warn once per (text, language) pair
+        key = (text, language)
+        if key not in self._seen_warnings:
+            self._seen_warnings.add(key)
+            self._warnings.append(
+                f"No approved translation for '{text}' in '{language}' – "
+                f"using source language. Submit to TMS for review."
+            )
         return text, False
 
 

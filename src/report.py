@@ -192,8 +192,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     <div id="tab-overview" class="tab-content active">
         <div class="stats">
             <div class="stat"><div class="num">{{ result.total_assets }}</div><div class="label">Total Assets</div></div>
-            <div class="stat green"><div class="num">{{ result.generated_count }}</div><div class="label">Generated</div></div>
-            <div class="stat blue"><div class="num">{{ result.reused_count }}</div><div class="label">Reused</div></div>
+            <div class="stat green"><div class="num">{{ result.created_count }}</div><div class="label">Created</div></div>
+            <div class="stat blue"><div class="num">{{ result.hero_reused_count }}</div><div class="label">Hero Reused</div></div>
             <div class="stat red"><div class="num">{{ result.failed_count }}</div><div class="label">Failed</div></div>
             <div class="stat purple"><div class="num">{{ "%.1f"|format(result.elapsed_seconds) }}s</div><div class="label">Elapsed</div></div>
             {% if metrics %}
@@ -513,8 +513,8 @@ def print_console_report(result: PipelineResult) -> None:
     console.print(Panel.fit(
         f"[bold white]{result.campaign_name}[/bold white]\n"
         f"Total: {result.total_assets} | "
-        f"[green]Generated: {result.generated_count}[/green] | "
-        f"[blue]Reused: {result.reused_count}[/blue] | "
+        f"[green]Created: {result.created_count}[/green] | "
+        f"[blue]Hero Reused: {result.hero_reused_count}[/blue] | "
         f"[red]Failed: {result.failed_count}[/red] | "
         f"Time: {result.elapsed_seconds:.1f}s",
         title="AdForge Summary",
