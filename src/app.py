@@ -36,6 +36,44 @@ st.set_page_config(
 )
 
 # ---------------------------------------------------------------------------
+# Run log (persists across reruns in session state)
+# ---------------------------------------------------------------------------
+if "run_log" not in st.session_state:
+    st.session_state.run_log = []
+
+
+def _log_run(
+    campaign: str,
+    provider: str,
+    total: int,
+    created: int,
+    failed: int,
+    elapsed: float,
+    time_saved_hrs: float,
+):
+    """Append a pipeline run to the session-level run log."""
+    from datetime import datetime
+    st.session_state.run_log.insert(0, {
+        "timestamp": datetime.now().strftime("%H:%M:%S"),
+        "campaign": campaign,
+        "provider": provider,
+        "total": total,
+        "created": created,
+        "failed": failed,
+        "elapsed": f"{elapsed:.1f}s",
+        "time_saved": f"{time_saved_hrs:.1f}h",
+    })
+
+
+def _render_run_log():
+    """Display the run history table."""
+    log = st.session_state.run_log
+    if not log:
+        st.info("No pipeline runs yet this session. Run a pipeline to see history here.")
+        return
+    st.dataframe(log, use_container_width=True, hide_index=True)
+
+# ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
@@ -598,6 +636,18 @@ with st.sidebar:
             st.info("Generate samples first:\n```\npython -m src.cli generate sample_briefs/beach_house_campaign.yaml -o sample_output --mock\n```")
         run_btn = False
 
+    # Run log in sidebar
+    if st.session_state.run_log:
+        st.divider()
+        st.markdown("#### 📋 Run Log")
+        for entry in st.session_state.run_log[:5]:  # show last 5
+            status = "✅" if entry["failed"] == 0 else "⚠️"
+            st.caption(
+                f"{status} **{entry['campaign']}** — "
+                f"{entry['created']} creatives, {entry['elapsed']}, "
+                f"saved {entry['time_saved']}"
+            )
+
 
 # ---------------------------------------------------------------------------
 # Main content
@@ -668,7 +718,17 @@ if mode == "Build Brief":
                         mock=(builder_provider == "mock"),
                         provider_type=None if builder_provider == "auto" else builder_provider,
                     )
+                    time_saved = (result.created_count * 15 - result.elapsed_seconds / 60) / 60
                     st.success(f"Generated **{result.created_count}** creatives in {result.elapsed_seconds:.1f}s")
+                    _log_run(
+                        campaign=campaign_name,
+                        provider=builder_provider,
+                        total=result.total_assets,
+                        created=result.created_count,
+                        failed=result.failed_count,
+                        elapsed=result.elapsed_seconds,
+                        time_saved_hrs=max(0, time_saved),
+                    )
                     assets_data = [a.model_dump() for a in result.assets]
                     _render_gallery(assets_data)
                 except Exception as e:
@@ -855,6 +915,18 @@ elif mode == "Run Pipeline" and run_btn:
         except RuntimeError as e:
             st.error(f"Pipeline failed: {e}")
             st.stop()
+
+    # Log this run
+    time_saved_hrs = max(0, (result.created_count * 15 - result.elapsed_seconds / 60) / 60)
+    _log_run(
+        campaign=brief.name,
+        provider=provider,
+        total=result.total_assets,
+        created=result.created_count,
+        failed=result.failed_count,
+        elapsed=result.elapsed_seconds,
+        time_saved_hrs=time_saved_hrs,
+    )
 
     with tab_campaign:
         st.markdown("---")
