@@ -25,17 +25,142 @@ import hashlib
 import io
 import math
 import os
+import random
 import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional
 
 from PIL import Image, ImageDraw
 from rich.console import Console
 
 console = Console()
+
+
+# ---------------------------------------------------------------------------
+# Retry utility with exponential backoff
+# ---------------------------------------------------------------------------
+
+def _retry_api_call(
+    func: Callable,
+    *args,
+    max_retries: int = 3,
+    base_delay: float = 1.0,
+    max_delay: float = 30.0,
+    **kwargs,
+):
+    """Execute func with exponential backoff retry on transient failures.
+
+    Retries on transient errors:
+      - ConnectionError, TimeoutError (network issues)
+      - HTTP 429 (rate limit)
+      - HTTP 5xx (server errors)
+
+    Does NOT retry on client errors:
+      - ValueError (bad input)
+      - HTTP 4xx (auth, bad prompt, etc.) — not retried
+      - Other application-level exceptions
+
+    Args:
+        func: Callable to execute (typically an API call)
+        *args: Positional arguments for func
+        max_retries: Maximum number of retry attempts (default 3)
+        base_delay: Initial delay in seconds (default 1.0)
+        max_delay: Maximum delay between retries (default 30.0)
+        **kwargs: Keyword arguments for func
+
+    Returns:
+        The return value of func on success.
+
+    Raises:
+        The original exception if all retries exhausted or if it's a non-transient error.
+
+    Backoff strategy:
+        delay = min(base_delay * (2 ^ attempt) + jitter, max_delay)
+        where jitter is random uniform in [0, base_delay * (2 ^ attempt))
+    """
+    attempt = 0
+    while attempt <= max_retries:
+        try:
+            return func(*args, **kwargs)
+        except (ConnectionError, TimeoutError) as e:
+            # Network errors — always transient
+            if attempt >= max_retries:
+                raise
+            console.print(
+                f"  [yellow]Network error (attempt {attempt + 1}/{max_retries + 1}): {e}[/yellow]"
+            )
+            _exponential_backoff(attempt, base_delay, max_delay)
+            attempt += 1
+        except Exception as e:
+            # Check for HTTP-level transient errors
+            is_transient = _is_transient_error(e)
+            if not is_transient:
+                raise
+            if attempt >= max_retries:
+                raise
+            console.print(
+                f"  [yellow]Transient error (attempt {attempt + 1}/{max_retries + 1}): {e}[/yellow]"
+            )
+            _exponential_backoff(attempt, base_delay, max_delay)
+            attempt += 1
+
+
+def _is_transient_error(exc: Exception) -> bool:
+    """Check if an exception represents a transient (retryable) error.
+
+    Transient errors:
+      - HTTP 429 (rate limit)
+      - HTTP 5xx (server errors)
+      - requests.Timeout, requests.ConnectionError
+
+    Non-transient:
+      - ValueError, TypeError (bad input)
+      - HTTP 4xx except 429 (client errors: auth, bad prompt, etc.)
+      - All other exceptions
+    """
+    exc_name = exc.__class__.__name__
+    exc_str = str(exc)
+
+    # Catch requests library exceptions
+    if exc_name in ("Timeout", "ConnectionError", "HTTPError"):
+        # For requests.HTTPError, check the status code
+        if hasattr(exc, "response") and hasattr(exc.response, "status_code"):
+            status = exc.response.status_code
+            return status == 429 or status >= 500
+        return exc_name in ("Timeout", "ConnectionError")
+
+    # Catch openai library exceptions (APIError, RateLimitError, APIConnectionError)
+    if "openai" in exc_name.lower() or "RateLimit" in exc_name:
+        return True
+
+    # Catch google genai exceptions
+    if "google" in str(type(exc).__module__).lower():
+        # Most google.generativeai errors are transient
+        return "429" in exc_str or "500" in exc_str or "ResourceExhausted" in exc_name
+
+    # Generic HTTP status codes in string representation
+    if "429" in exc_str or "rate limit" in exc_str.lower():
+        return True
+    if any(f"50{i}" in exc_str for i in range(10)):  # 500-509
+        return True
+
+    return False
+
+
+def _exponential_backoff(attempt: int, base_delay: float, max_delay: float):
+    """Sleep with exponential backoff and jitter.
+
+    delay = min(base_delay * (2 ^ attempt) + jitter, max_delay)
+    where jitter is uniformly random in [0, base_delay * (2 ^ attempt))
+    """
+    exp_delay = base_delay * (2 ** attempt)
+    jitter = random.uniform(0, exp_delay)
+    delay = min(exp_delay + jitter, max_delay)
+    console.print(f"  [dim]Retrying in {delay:.1f}s…[/dim]")
+    time.sleep(delay)
 
 
 # ---------------------------------------------------------------------------
@@ -245,18 +370,27 @@ class FireflyProvider(ImageProvider):
 
         console.print(f"  [magenta]Calling Firefly Services ({gen_w}×{gen_h})…[/magenta]")
 
-        response = requests.post(
-            self.GENERATE_ENDPOINT,
-            headers=headers,
-            json=body,
-            timeout=120,
-        )
-        response.raise_for_status()
-        data = response.json()
+        # Retry wrapper for the API call
+        def make_request():
+            response = requests.post(
+                self.GENERATE_ENDPOINT,
+                headers=headers,
+                json=body,
+                timeout=120,
+            )
+            response.raise_for_status()
+            return response.json()
+
+        data = _retry_api_call(make_request)
 
         # Extract image from response
         image_url = data["outputs"][0]["image"]["url"]
-        img_bytes = requests.get(image_url, timeout=120).content
+
+        # Retry wrapper for image download
+        def download_image():
+            return requests.get(image_url, timeout=120).content
+
+        img_bytes = _retry_api_call(download_image)
         img = Image.open(io.BytesIO(img_bytes)).convert("RGBA")
 
         # Resize to exact target dimensions if needed
@@ -412,16 +546,25 @@ class DalleProvider(ImageProvider):
         size = self._closest_size(width, height)
         console.print(f"  [cyan]Calling DALL-E 3 ({size})…[/cyan]")
 
-        response = self._client.images.generate(
-            model="dall-e-3",
-            prompt=prompt,
-            n=1,
-            size=size,
-            quality="standard",
-        )
+        # Retry wrapper for DALL-E generation
+        def generate_image():
+            return self._client.images.generate(
+                model="dall-e-3",
+                prompt=prompt,
+                n=1,
+                size=size,
+                quality="standard",
+            )
+
+        response = _retry_api_call(generate_image)
 
         image_url = response.data[0].url
-        img_bytes = req.get(image_url, timeout=120).content
+
+        # Retry wrapper for image download
+        def download_image():
+            return req.get(image_url, timeout=120).content
+
+        img_bytes = _retry_api_call(download_image)
         img = Image.open(io.BytesIO(img_bytes)).convert("RGBA")
 
         # Resize to exact target dimensions
@@ -508,14 +651,18 @@ class GeminiProvider(ImageProvider):
         aspect_ratio = self._closest_ratio(width, height)
         console.print(f"  [blue]Calling Imagen 4.0 ({aspect_ratio})…[/blue]")
 
-        response = self._client.models.generate_images(
-            model="imagen-4.0-generate-001",
-            prompt=prompt,
-            config=types.GenerateImagesConfig(
-                number_of_images=1,
-                aspect_ratio=aspect_ratio,
-            ),
-        )
+        # Retry wrapper for Imagen generation
+        def generate_image():
+            return self._client.models.generate_images(
+                model="imagen-4.0-generate-001",
+                prompt=prompt,
+                config=types.GenerateImagesConfig(
+                    number_of_images=1,
+                    aspect_ratio=aspect_ratio,
+                ),
+            )
+
+        response = _retry_api_call(generate_image)
 
         if not response.generated_images:
             raise RuntimeError("Imagen returned no images")

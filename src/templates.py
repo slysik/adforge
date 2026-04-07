@@ -31,6 +31,7 @@ from .compositor import (
     _get_font, _get_cjk_font, _needs_cjk,
     _hex_to_rgb, _draw_text_with_shadow, _draw_gradient_overlay,
 )
+from .utils import smart_resize as _smart_resize, luminance
 
 console = Console()
 
@@ -206,10 +207,6 @@ def render_editorial(
     return canvas, rendered
 
 
-def _luminance(rgb: tuple[int, int, int]) -> float:
-    """Compute relative luminance of an RGB color (0.0=black, 1.0=white)."""
-    r, g, b = [c / 255.0 for c in rgb]
-    return 0.2126 * r + 0.7152 * g + 0.0722 * b
 
 
 def _pick_panel_color(brand_colors: list[str]) -> tuple[int, int, int]:
@@ -223,10 +220,10 @@ def _pick_panel_color(brand_colors: list[str]) -> tuple[int, int, int]:
         return (30, 30, 30)
     candidates = [_hex_to_rgb(c) for c in brand_colors]
     # Sort by luminance ascending (darkest first)
-    candidates.sort(key=lambda c: _luminance(c))
+    candidates.sort(key=lambda c: luminance(c))
     # Use the darkest color; if it's still too light, fall back
     darkest = candidates[0]
-    if _luminance(darkest) > 0.6:
+    if luminance(darkest) > 0.6:
         return (30, 30, 30)  # safety fallback for all-light palettes
     return darkest
 
@@ -488,14 +485,4 @@ TEMPLATE_RENDERERS = {
 # ---------------------------------------------------------------------------
 # Utility
 # ---------------------------------------------------------------------------
-
-def _smart_resize(img: Image.Image, tw: int, th: int) -> Image.Image:
-    """Resize + center-crop to target dimensions."""
-    iw, ih = img.size
-    scale = max(tw / iw, th / ih)
-    new_w = int(iw * scale)
-    new_h = int(ih * scale)
-    img = img.resize((new_w, new_h), Image.LANCZOS)
-    left = (new_w - tw) // 2
-    top = (new_h - th) // 2
-    return img.crop((left, top, left + tw, top + th))
+# _smart_resize is imported from .utils above

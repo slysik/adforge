@@ -23,6 +23,8 @@ os.chdir(ROOT)
 from src.pipeline import load_brief, run_pipeline
 from src.analyzer import analyze_brief
 from src.analytics import build_performance_report, export_kpis_csv
+from src.templates import LayoutTemplate, TEMPLATE_RENDERERS, auto_select_template
+from src.compositor import Compositor, _hex_to_rgb
 
 # ---------------------------------------------------------------------------
 # Page config
@@ -49,6 +51,181 @@ COMPLIANCE_EMOJI = {
     "failed": "❌",
     "not_checked": "—",
 }
+
+# Template metadata for UI display
+TEMPLATE_INFO = {
+    LayoutTemplate.PRODUCT_HERO: {
+        "label": "Product Hero",
+        "desc": "Full-bleed hero image with gradient overlay and text at bottom. Universally safe.",
+        "icon": "🖼️",
+    },
+    LayoutTemplate.EDITORIAL: {
+        "label": "Editorial",
+        "desc": "60/40 hero–panel split with magazine-style text block. Best for longer messages.",
+        "icon": "📰",
+    },
+    LayoutTemplate.SPLIT_PANEL: {
+        "label": "Split Panel",
+        "desc": "50/50 image and branded text panel. Auto-adapts orientation to format.",
+        "icon": "📐",
+    },
+    LayoutTemplate.MINIMAL: {
+        "label": "Minimal",
+        "desc": "Centered hero at 60% scale with generous whitespace. Premium feel.",
+        "icon": "✨",
+    },
+    LayoutTemplate.BOLD_TYPE: {
+        "label": "Bold Type",
+        "desc": "Oversized typography over tinted hero background. Punchy and direct.",
+        "icon": "🔤",
+    },
+}
+
+
+def _render_ab_comparison(brief, sample_hero_path: Path | None = None):
+    """Render A/B template comparison for a product using all 5 templates.
+
+    Generates quick previews by compositing the same hero image with each
+    template layout, allowing creatives to compare side-by-side before
+    committing to a full pipeline run.
+    """
+    from PIL import Image as PILImage
+
+    if sample_hero_path is None or not sample_hero_path.exists():
+        st.info("No hero image available for A/B preview. Run the pipeline first or provide a hero asset.")
+        return
+
+    hero = PILImage.open(str(sample_hero_path)).convert("RGBA")
+    bg = brief.brand_guidelines
+
+    # Use first aspect ratio for preview
+    ratio = brief.aspect_ratios[0]
+    st.caption(f"Preview at **{ratio.ratio}** ({ratio.width}×{ratio.height})")
+
+    cols = st.columns(len(TEMPLATE_RENDERERS))
+    for col, (template, renderer) in zip(cols, TEMPLATE_RENDERERS.items()):
+        info = TEMPLATE_INFO.get(template, {"label": template.value, "icon": "📄"})
+        with col:
+            try:
+                canvas, _ = renderer(
+                    hero=hero.copy(),
+                    width=ratio.width,
+                    height=ratio.height,
+                    message=brief.message,
+                    tagline=brief.tagline,
+                    brand_name=brief.brand,
+                    font_family=bg.font_family,
+                    brand_colors=bg.primary_colors,
+                    accent_color=bg.accent_color,
+                )
+                st.image(canvas.convert("RGB"), caption=f"{info['icon']} {info['label']}", use_container_width=True)
+            except Exception as e:
+                st.error(f"{info['label']}: {e}")
+
+        # Show auto-select indicator
+        auto = auto_select_template(ratio.ratio, brief.products[0].keywords, brief.message)
+        if template == auto:
+            with col:
+                st.success("Auto-selected")
+
+
+def _render_brief_builder():
+    """Render an interactive campaign brief builder form.
+
+    Returns a CampaignBrief if the form is valid, or None if incomplete.
+    Persists form state in Streamlit session_state so values survive reruns.
+    """
+    from src.models import CampaignBrief, Product, AspectRatio, BrandGuidelines
+
+    st.markdown("### Build a Campaign Brief")
+    st.caption("Fill in the form below to create a custom campaign brief without writing YAML.")
+
+    # Basic campaign info
+    col1, col2 = st.columns(2)
+    with col1:
+        name = st.text_input("Campaign Name", value="My Campaign 2025", key="bb_name")
+        brand = st.text_input("Brand Name", value="Blue Beach House Designs", key="bb_brand")
+        message = st.text_area("Campaign Message", value="Handcrafted coastal elegance for your home", key="bb_msg", height=80)
+        tagline = st.text_input("Tagline (optional)", value="", key="bb_tagline")
+    with col2:
+        region = st.text_input("Target Region", value="Southern Florida — Naples & Palm Beach", key="bb_region")
+        audience = st.text_input("Target Audience", value="Home decor designers, interior stylists, ages 30-60", key="bb_audience")
+        languages = st.multiselect("Languages", ["en", "es", "fr", "de", "pt", "ja", "zh", "ko"], default=["en"], key="bb_langs")
+
+    # Brand guidelines
+    st.markdown("#### Brand Guidelines")
+    gc1, gc2, gc3 = st.columns(3)
+    with gc1:
+        color1 = st.color_picker("Primary Color", "#1B4F72", key="bb_c1")
+        color2 = st.color_picker("Secondary Color", "#F5E6CA", key="bb_c2")
+    with gc2:
+        color3 = st.color_picker("Tertiary Color", "#FFFFFF", key="bb_c3")
+        accent = st.color_picker("Accent Color", "#D4A574", key="bb_accent")
+    with gc3:
+        font = st.selectbox("Font Family", ["Georgia", "Helvetica", "Arial", "Times"], key="bb_font")
+        prohibited = st.text_input("Prohibited Words (comma-separated)", value="cheap, fake, plastic", key="bb_prohibited")
+
+    disclaimer = st.text_input("Legal Disclaimer (optional)", value="", key="bb_disclaimer")
+
+    # Products (at least 2)
+    st.markdown("#### Products")
+    num_products = st.number_input("Number of Products", min_value=2, max_value=10, value=2, key="bb_nprods")
+
+    products_data = []
+    for i in range(int(num_products)):
+        with st.expander(f"Product {i + 1}", expanded=(i < 2)):
+            pc1, pc2 = st.columns(2)
+            with pc1:
+                p_name = st.text_input("Product Name", value=f"Product {i + 1}", key=f"bb_pname_{i}")
+                p_id = st.text_input("Product ID (lowercase, hyphens)", value=f"product-{i + 1}", key=f"bb_pid_{i}")
+            with pc2:
+                p_desc = st.text_area("Description", value="A beautiful handcrafted product", key=f"bb_pdesc_{i}", height=68)
+                p_kw = st.text_input("Keywords (comma-separated)", value="handcrafted, coastal, design", key=f"bb_pkw_{i}")
+
+            products_data.append({
+                "id": p_id.strip(),
+                "name": p_name.strip(),
+                "description": p_desc.strip(),
+                "keywords": [k.strip() for k in p_kw.split(",") if k.strip()],
+            })
+
+    # Aspect ratios
+    st.markdown("#### Aspect Ratios")
+    default_ratios = [
+        {"name": "instagram_square", "ratio": "1:1", "width": 1080, "height": 1080},
+        {"name": "stories", "ratio": "9:16", "width": 1080, "height": 1920},
+        {"name": "facebook_landscape", "ratio": "16:9", "width": 1920, "height": 1080},
+    ]
+    use_defaults = st.checkbox("Use standard ratios (1:1, 9:16, 16:9)", value=True, key="bb_default_ratios")
+
+    # Build brief dict
+    brief_dict = {
+        "name": name,
+        "brand": brand,
+        "message": message,
+        "tagline": tagline or None,
+        "target_region": region,
+        "target_audience": audience,
+        "languages": languages,
+        "brand_guidelines": {
+            "primary_colors": [color1.upper(), color2.upper(), color3.upper()],
+            "accent_color": accent.upper(),
+            "font_family": font,
+            "prohibited_words": [w.strip() for w in prohibited.split(",") if w.strip()],
+            "required_disclaimer": disclaimer or None,
+        },
+        "products": products_data,
+    }
+    if use_defaults:
+        brief_dict["aspect_ratios"] = default_ratios
+
+    # Validate and return
+    try:
+        brief = CampaignBrief(**brief_dict)
+        return brief
+    except Exception as e:
+        st.warning(f"Brief validation: {e}")
+        return None
 
 
 def _load_sample_report(campaign_dir: Path) -> dict | None:
@@ -365,8 +542,8 @@ with st.sidebar:
 
     mode = st.radio(
         "Mode",
-        ["Run Pipeline", "View Pre-generated Samples"],
-        help="Run the pipeline on a brief, or browse pre-generated outputs",
+        ["Run Pipeline", "Build Brief", "View Pre-generated Samples"],
+        help="Run the pipeline, interactively build a brief, or browse pre-generated outputs",
     )
 
     if mode == "Run Pipeline":
@@ -389,9 +566,27 @@ with st.sidebar:
             help="Mock = no API key. Gemini = Imagen 4.0. Firefly = Adobe Firefly Services.",
         )
 
+        # Template selection — previously CLI-only, now exposed in UI
+        template_options = ["auto"] + [t.value for t in LayoutTemplate]
+        template_choice = st.selectbox(
+            "Layout Template",
+            template_options,
+            help="Auto picks the best template per product. Or force one for all creatives.",
+        )
+        # Show template description
+        if template_choice != "auto":
+            tpl = LayoutTemplate(template_choice)
+            info = TEMPLATE_INFO.get(tpl, {})
+            st.caption(f"{info.get('icon', '')} {info.get('desc', '')}")
+
         use_mock = provider == "mock"
 
         run_btn = st.button("🚀 Run Pipeline", type="primary", use_container_width=True)
+
+    elif mode == "Build Brief":
+        st.markdown("#### Brief Builder")
+        st.caption("Create a campaign brief interactively — no YAML needed.")
+        run_btn = False
 
     else:
         st.markdown("#### Sample Outputs")
@@ -410,7 +605,76 @@ with st.sidebar:
 
 st.title("AdForge — Creative Automation Pipeline")
 
-if mode == "View Pre-generated Samples":
+if mode == "Build Brief":
+    # Interactive brief builder
+    st.title("AdForge — Campaign Brief Builder")
+    built_brief = _render_brief_builder()
+
+    if built_brief:
+        st.divider()
+        st.markdown("#### Brief Preview")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.markdown(f"**Brand:** {built_brief.brand}")
+            st.markdown(f"**Campaign:** {built_brief.name}")
+            st.markdown(f"**Message:** {built_brief.message}")
+        with col2:
+            st.markdown(f"**Region:** {built_brief.target_region}")
+            st.markdown(f"**Audience:** {built_brief.target_audience}")
+            st.markdown(f"**Products:** {len(built_brief.products)}")
+
+        total = len(built_brief.products) * len(built_brief.aspect_ratios) * len(built_brief.languages)
+        st.info(f"Ready to generate **{total} creatives**.")
+
+        # Brief analysis
+        analysis = analyze_brief(built_brief)
+        _render_analysis({
+            "score": {
+                "overall": analysis.score.overall,
+                "completeness": analysis.score.completeness,
+                "clarity": analysis.score.clarity,
+                "brand_strength": analysis.score.brand_strength,
+                "targeting": analysis.score.targeting,
+            },
+            "strengths": analysis.strengths,
+            "weaknesses": analysis.weaknesses,
+        })
+
+        # Export as YAML for use with CLI or pipeline
+        import yaml as _yaml
+        brief_yaml = _yaml.dump({"campaign": built_brief.model_dump(exclude_none=True)}, default_flow_style=False)
+        st.download_button(
+            "Download Brief (YAML)",
+            data=brief_yaml,
+            file_name=f"{built_brief.name.lower().replace(' ', '_')}.yaml",
+            mime="text/yaml",
+        )
+
+        # Run pipeline directly from builder
+        builder_provider = st.selectbox("Provider", ["mock", "gemini", "firefly", "dalle", "auto"], key="bb_provider")
+        if st.button("🚀 Run Pipeline on This Brief", type="primary", key="bb_run"):
+            # Save brief to temp file and run pipeline
+            import tempfile
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False, dir=str(ROOT)) as f:
+                f.write(brief_yaml)
+                tmp_path = f.name
+
+            with st.spinner("Running pipeline..."):
+                try:
+                    result = run_pipeline(
+                        brief_path=tmp_path,
+                        input_dir="input_assets",
+                        output_dir="output",
+                        mock=(builder_provider == "mock"),
+                        provider_type=None if builder_provider == "auto" else builder_provider,
+                    )
+                    st.success(f"Generated **{result.created_count}** creatives in {result.elapsed_seconds:.1f}s")
+                    assets_data = [a.model_dump() for a in result.assets]
+                    _render_gallery(assets_data)
+                except Exception as e:
+                    st.error(f"Pipeline failed: {e}")
+
+elif mode == "View Pre-generated Samples":
     sample_base = ROOT / "sample_output"
     campaigns = _find_sample_campaigns(sample_base)
 
@@ -424,8 +688,8 @@ if mode == "View Pre-generated Samples":
 
         report = _load_sample_report(campaign_dir)
         if report:
-            tab_campaign, tab_gallery, tab_approval, tab_performance, tab_metrics = st.tabs(
-                ["📋 Campaign", "🖼️ Gallery", "✅ Approval Queue", "📈 Performance", "📊 Metrics"]
+            tab_campaign, tab_gallery, tab_approval, tab_ab, tab_performance, tab_metrics = st.tabs(
+                ["📋 Campaign", "🖼️ Gallery", "✅ Approval Queue", "🔀 A/B Compare", "📈 Performance", "📊 Metrics"]
             )
 
             with tab_campaign:
@@ -465,6 +729,34 @@ if mode == "View Pre-generated Samples":
             with tab_approval:
                 _render_approval_queue(patched_assets, session_key=f"sample_{selected_idx}")
 
+            with tab_ab:
+                st.markdown("#### A/B Template Comparison")
+                st.caption("Preview how all 5 layout templates render with the same hero image and brief settings.")
+                # Try to load the brief for this campaign to get brand guidelines
+                try:
+                    # Attempt to find the matching sample brief
+                    brief_for_ab = None
+                    for bname, bpath in SAMPLE_BRIEFS.items():
+                        try:
+                            b = load_brief(bpath)
+                            if b.name.lower().replace(" ", "_") in campaign_dir.name:
+                                brief_for_ab = b
+                                break
+                        except Exception:
+                            continue
+
+                    if brief_for_ab:
+                        # Find a hero image from the output
+                        hero_candidates = list(campaign_dir.rglob("hero*.png")) + list(campaign_dir.rglob("hero*.jpg"))
+                        if not hero_candidates:
+                            hero_candidates = list(campaign_dir.rglob("*.jpg"))
+                        hero_for_ab = hero_candidates[0] if hero_candidates else None
+                        _render_ab_comparison(brief_for_ab, hero_for_ab)
+                    else:
+                        st.info("Could not match a campaign brief for A/B comparison.")
+                except Exception as e:
+                    st.warning(f"A/B comparison unavailable: {e}")
+
             with tab_performance:
                 _render_performance(patched_assets)
 
@@ -486,8 +778,8 @@ elif mode == "Run Pipeline" and run_btn:
         st.error(f"Failed to load brief: {e}")
         st.stop()
 
-    tab_campaign, tab_gallery, tab_approval, tab_performance, tab_metrics = st.tabs(
-        ["📋 Campaign", "🖼️ Gallery", "✅ Approval Queue", "📈 Performance", "📊 Metrics"]
+    tab_campaign, tab_gallery, tab_approval, tab_ab, tab_performance, tab_metrics = st.tabs(
+        ["📋 Campaign", "🖼️ Gallery", "✅ Approval Queue", "🔀 A/B Compare", "📈 Performance", "📊 Metrics"]
     )
 
     with tab_campaign:
@@ -524,7 +816,8 @@ elif mode == "Run Pipeline" and run_btn:
             "weaknesses": analysis.weaknesses,
         })
 
-    # Run pipeline
+    # Run pipeline with template selection
+    forced_template = None if template_choice == "auto" else template_choice
     with st.spinner("Running pipeline... This may take a moment."):
         try:
             result = run_pipeline(
@@ -533,6 +826,7 @@ elif mode == "Run Pipeline" and run_btn:
                 output_dir="output",
                 mock=use_mock,
                 provider_type=None if provider == "auto" else provider,
+                template=forced_template,
             )
         except RuntimeError as e:
             st.error(f"Pipeline failed: {e}")
@@ -569,6 +863,22 @@ elif mode == "Run Pipeline" and run_btn:
                 d["legal_compliance"]["status"] = d["legal_compliance"]["status"].value
             assets_for_approval.append(d)
         _render_approval_queue(assets_for_approval, session_key="pipeline_run")
+
+    with tab_ab:
+        st.markdown("#### A/B Template Comparison")
+        st.caption("Compare all 5 layout templates side-by-side using the generated hero images.")
+        # Find first generated hero for A/B preview
+        from src.storage import StorageManager as _SM, slugify as _slugify
+        _st = _SM(input_dir=Path("input_assets"), output_dir=Path("output"))
+        for product in brief.products:
+            st.markdown(f"**{product.name}**")
+            hero_dir = _st.get_campaign_dir(brief.name) / _slugify(product.id)
+            hero_candidates = list(hero_dir.rglob("hero*.png")) + list(hero_dir.rglob("hero*.jpg"))
+            if hero_candidates:
+                _render_ab_comparison(brief, hero_candidates[0])
+            else:
+                st.info(f"No hero found for {product.name}")
+            st.divider()
 
     with tab_performance:
         _render_performance(assets_data)

@@ -19,6 +19,8 @@ from typing import Optional
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 from rich.console import Console
 
+from .utils import hex_to_rgb as _hex_to_rgb, smart_resize
+
 console = Console()
 
 
@@ -218,10 +220,7 @@ def _needs_cjk(text: str) -> bool:
 # ---------------------------------------------------------------------------
 # Color utilities
 # ---------------------------------------------------------------------------
-
-def _hex_to_rgb(hex_color: str) -> tuple[int, int, int]:
-    hex_color = hex_color.lstrip("#")
-    return tuple(int(hex_color[i:i + 2], 16) for i in (0, 2, 4))
+# _hex_to_rgb is imported from .utils above
 
 
 # ---------------------------------------------------------------------------
@@ -380,15 +379,7 @@ class Compositor:
     # ------------------------------------------------------------------
     def _smart_resize(self, img: Image.Image, tw: int, th: int) -> Image.Image:
         """Resize + center-crop to target dimensions preserving aspect ratio."""
-        iw, ih = img.size
-        scale = max(tw / iw, th / ih)
-        new_w = int(iw * scale)
-        new_h = int(ih * scale)
-        img = img.resize((new_w, new_h), Image.LANCZOS)
-
-        left = (new_w - tw) // 2
-        top = (new_h - th) // 2
-        return img.crop((left, top, left + tw, top + th))
+        return smart_resize(img, tw, th)
 
     # ------------------------------------------------------------------
     def _draw_campaign_text(

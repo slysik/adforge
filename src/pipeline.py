@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import Optional
 
 import yaml
+from PIL import Image as PILImage
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeElapsedColumn
 
@@ -40,6 +41,28 @@ from .report import print_console_report, save_json_report, save_html_report
 
 console = Console()
 logger = logging.getLogger("adforge")
+
+
+# -----------------------------------------------------------------------
+# Hero caching utility
+# -----------------------------------------------------------------------
+
+def _check_cached_hero(hero_out: Path) -> bool:
+    """Check if a cached hero image exists and is valid.
+
+    Validates that the file exists and can be opened as a valid image.
+    If the cache file is corrupt, returns False to trigger regeneration.
+    """
+    if not hero_out.exists():
+        return False
+
+    try:
+        with PILImage.open(str(hero_out)) as img:
+            img.verify()
+        return True
+    except Exception:
+        # Corrupt or invalid cache file
+        return False
 
 
 # -----------------------------------------------------------------------
@@ -263,12 +286,32 @@ def run_pipeline(
                 with tracker.stage(f"hero_gen_{product.id}") as stage:
                     if parallel and len(brief.aspect_ratios) > 1:
                         # Parallel hero generation across ratios
+                        # With hero caching: check for existing valid images before submitting tasks
                         futures = {}
                         with ThreadPoolExecutor(max_workers=max_workers) as pool:
                             for ratio in brief.aspect_ratios:
                                 hero_out = storage.hero_output_path(
                                     brief.name, product.id, ratio.name,
                                 )
+
+                                # Check if cached hero exists and is valid
+                                if _check_cached_hero(hero_out):
+                                    hero_paths[ratio.name] = hero_out
+                                    hero_prompts[ratio.name] = "(cached)"
+                                    # Create a cached metadata entry with zero cost/time
+                                    hero_metas[ratio.name] = GenerationMetadata(
+                                        provider="cached",
+                                        model_name="cache",
+                                        prompt_used="(cached)",
+                                        generation_time_ms=0,
+                                        estimated_cost_usd=0.0,
+                                    )
+                                    stage.items_processed += 1
+                                    console.print(
+                                        f"  [dim]↳ Cached hero ({ratio.ratio}): {hero_out}[/dim]"
+                                    )
+                                    continue
+
                                 f = pool.submit(
                                     _generate_hero_task,
                                     provider, gen_prompt,
@@ -297,11 +340,31 @@ def run_pipeline(
                                     )
                     else:
                         # Sequential fallback
+                        # With hero caching: check for existing valid images before generating
                         for ratio in brief.aspect_ratios:
-                            try:
-                                hero_out = storage.hero_output_path(
-                                    brief.name, product.id, ratio.name,
+                            hero_out = storage.hero_output_path(
+                                brief.name, product.id, ratio.name,
+                            )
+
+                            # Check if cached hero exists and is valid
+                            if _check_cached_hero(hero_out):
+                                hero_paths[ratio.name] = hero_out
+                                hero_prompts[ratio.name] = "(cached)"
+                                # Create a cached metadata entry with zero cost/time
+                                hero_metas[ratio.name] = GenerationMetadata(
+                                    provider="cached",
+                                    model_name="cache",
+                                    prompt_used="(cached)",
+                                    generation_time_ms=0,
+                                    estimated_cost_usd=0.0,
                                 )
+                                stage.items_processed += 1
+                                console.print(
+                                    f"  [dim]↳ Cached hero ({ratio.ratio}): {hero_out}[/dim]"
+                                )
+                                continue
+
+                            try:
                                 _, meta = provider.generate(
                                     prompt=gen_prompt,
                                     width=ratio.width,
