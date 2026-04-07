@@ -46,7 +46,7 @@ Scoring against ADFORGE_INTENT.md criteria (1-5 scale per dimension).
 ✅ Outputs validated (brand + legal compliance)
 ✅ Assumptions and limits documented (LEARNINGS.md)
 ✅ Result presented clearly (interactive HTML dashboard with architecture tab)
-✅ 139 tests proving claims
+✅ 158 tests proving claims
 
 ## Interview Signals Checklist
 
