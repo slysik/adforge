@@ -138,9 +138,21 @@ class HeuristicAnalyzer:
             clarity += 3
             weaknesses.append("Target audience is vague — add age range or psychographic details")
 
-        # Region specificity
-        specific_regions = ["north america", "europe", "asia", "us", "uk", "germany", "france", "japan"]
-        if any(r in brief.target_region.lower() for r in specific_regions):
+        # Region specificity — recognize both country-level and sub-regional targeting
+        broad_regions = ["north america", "europe", "asia", "us", "uk", "germany", "france", "japan"]
+        local_regions = [
+            "florida", "naples", "palm beach", "miami", "charleston",
+            "southern", "california", "new york", "texas", "chicago",
+            "london", "paris", "tokyo", "sydney", "berlin",
+        ]
+        region_lower = brief.target_region.lower()
+        local_match = any(r in region_lower for r in local_regions)
+        broad_match = any(r in region_lower for r in broad_regions)
+
+        if local_match:
+            clarity += 9  # Sub-regional targeting is the strongest signal
+            strengths.append(f"Hyper-local region targeting: {brief.target_region}")
+        elif broad_match:
             clarity += 6
         else:
             clarity += 2
@@ -245,7 +257,12 @@ class HeuristicAnalyzer:
 
         # Audience-informed style
         audience_lower = brief.target_audience.lower()
-        if "millennial" in audience_lower or "gen z" in audience_lower:
+        if "interior design" in audience_lower or "home decor" in audience_lower:
+            parts.append(
+                "curated, editorial home styling aesthetic, "
+                "aspirational interiors photography, warm natural materials"
+            )
+        elif "millennial" in audience_lower or "gen z" in audience_lower:
             parts.append("modern, vibrant, social-media-ready aesthetic")
         elif "premium" in audience_lower or "luxury" in audience_lower:
             parts.append("premium, elegant, aspirational aesthetic")
@@ -254,7 +271,16 @@ class HeuristicAnalyzer:
 
         # Region-informed style
         region_lower = brief.target_region.lower()
-        if "europe" in region_lower:
+        if any(r in region_lower for r in ["florida", "naples", "palm beach", "miami"]):
+            parts.append(
+                "warm coastal Florida aesthetic, tropical luxury feel, "
+                "natural light, ocean-inspired tones, resort-style elegance"
+            )
+        elif any(r in region_lower for r in ["charleston", "southern", "carolina"]):
+            parts.append(
+                "Southern charm aesthetic, warm golden light, elegant yet approachable"
+            )
+        elif "europe" in region_lower:
             parts.append("European design sensibility, sophisticated color palette")
         elif "asia" in region_lower or "japan" in region_lower:
             parts.append("clean composition, attention to white space and detail")
@@ -280,12 +306,16 @@ class HeuristicAnalyzer:
             signals.append("seasonal")
         if any(w in msg_lower for w in ["new", "launch", "discover", "introducing"]):
             signals.append("product launch")
+        if any(w in msg_lower for w in ["coast", "shell", "beach", "ocean", "sea", "coastal"]):
+            signals.append("coastal/nautical")
 
         if not signals:
             signals.append("general campaign")
 
         audience = brief.target_audience.lower()
-        if "gen z" in audience:
+        if "interior design" in audience or "home decor" in audience:
+            signals.append("design-professional visual language")
+        elif "gen z" in audience:
             signals.append("youth-forward visual language")
         elif "25-45" in audience or "30-" in audience:
             signals.append("aspirational lifestyle")

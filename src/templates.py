@@ -206,6 +206,31 @@ def render_editorial(
     return canvas, rendered
 
 
+def _luminance(rgb: tuple[int, int, int]) -> float:
+    """Compute relative luminance of an RGB color (0.0=black, 1.0=white)."""
+    r, g, b = [c / 255.0 for c in rgb]
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+
+def _pick_panel_color(brand_colors: list[str]) -> tuple[int, int, int]:
+    """Pick the darkest brand color for panel backgrounds.
+
+    Uses the color with the lowest luminance so that white text
+    is always readable. Falls back to near-black if no dark color
+    is available.
+    """
+    if not brand_colors:
+        return (30, 30, 30)
+    candidates = [_hex_to_rgb(c) for c in brand_colors]
+    # Sort by luminance ascending (darkest first)
+    candidates.sort(key=lambda c: _luminance(c))
+    # Use the darkest color; if it's still too light, fall back
+    darkest = candidates[0]
+    if _luminance(darkest) > 0.6:
+        return (30, 30, 30)  # safety fallback for all-light palettes
+    return darkest
+
+
 def render_split_panel(
     hero: Image.Image,
     width: int,
@@ -217,9 +242,14 @@ def render_split_panel(
     brand_colors: list[str],
     accent_color: Optional[str],
 ) -> tuple[Image.Image, list[str]]:
-    """50/50 split: image on left/top, branded text panel on right/bottom."""
+    """50/50 split: image on left/top, branded text panel on right/bottom.
+
+    Panel color is the *darkest* brand color so that white text
+    is always readable — avoids the white-on-white bug.
+    """
     rendered = []
     is_vertical = height > width
+    panel_color = _pick_panel_color(brand_colors)
 
     if is_vertical:
         # Top/bottom split for vertical formats
@@ -230,9 +260,7 @@ def render_split_panel(
         hero_resized = _smart_resize(hero, width, img_h)
         canvas.paste(hero_resized, (0, 0))
 
-        # Panel
-        panel_color = _hex_to_rgb(brand_colors[-1]) if brand_colors else (30, 30, 30)
-        # Use darkest brand color for panel
+        # Panel — always uses darkest brand color for contrast
         draw = ImageDraw.Draw(canvas)
         draw.rectangle([(0, img_h), (width, height)], fill=panel_color + (255,))
 
@@ -247,7 +275,6 @@ def render_split_panel(
         hero_resized = _smart_resize(hero, img_w, height)
         canvas.paste(hero_resized, (0, 0))
 
-        panel_color = _hex_to_rgb(brand_colors[-1]) if brand_colors else (30, 30, 30)
         draw = ImageDraw.Draw(canvas)
         draw.rectangle([(img_w, 0), (width, height)], fill=panel_color + (255,))
 
