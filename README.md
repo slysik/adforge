@@ -1,73 +1,66 @@
-<![CDATA[<div align="center">
-
 # 🎨 AdForge
 
-### Creative Automation Pipeline for Localized Social Campaigns
+**Creative automation pipeline for localized social campaigns.**
 
 **Generate dozens of on-brand, localized ad creatives from a single campaign brief — in seconds.**
 
-[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
-[![Tests](https://img.shields.io/badge/tests-158%20passing-brightgreen.svg)](#tests)
-[![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
-
-</div>
+![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)
+![Tests](https://img.shields.io/badge/tests-158%20passing-brightgreen.svg)
+![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg)
 
 ---
 
 ## 🏖️ The Client Scenario
 
-**Client:** [BlueBeachHouseDesigns.com](https://bluebeachhousedesigns.com) — A Charleston, SC handcrafted shell artist launching hundreds of localized social ad campaigns targeted to Southern Florida interior designers monthly.
+> **Client:** [BlueBeachHouseDesigns.com](https://bluebeachhousedesigns.com) — A Charleston, SC handcrafted shell artist launching hundreds of localized social ad campaigns targeted to Southern Florida interior designers monthly.
 
 **Challenge:** Manually creating and localizing creative variants for hundreds of campaigns per month is slow, expensive, and error-prone.
 
 **Solution:** AdForge automates the entire creative pipeline — from campaign brief to validated, localized ad creatives ready for Instagram, Stories/Reels, and Facebook.
 
-<div align="center">
-
-### One Brief → 18 Campaign-Ready Creatives in 4.2 Seconds
-
-</div>
+### ⚡ One Brief → 18 Campaign-Ready Creatives in 4.2 Seconds
 
 ---
 
 ## ✨ Pipeline at a Glance
 
 ```
-                          ┌─────────────────────────────────────┐
-                          │         CAMPAIGN BRIEF (YAML)       │
-                          │  Products • Audience • Brand Rules  │
-                          └──────────────┬──────────────────────┘
-                                         │
-                    ┌────────────────────┐│┌────────────────────┐
-                    │  📂 Input Assets   │││  🤖 GenAI Provider │
-                    │  (reuse existing)  ├┤│  (generate new)    │
-                    └────────────────────┘│└────────────────────┘
-                                         ▼
-┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐
-│ 📋       │  │ 🔍       │  │ 📂       │  │ 🎨       │  │ 🖼️       │  │ ✅       │  │ 📊       │
-│ INGEST   │→ │ ANALYZE  │→ │ RESOLVE  │→ │ GENERATE │→ │ COMPOSE  │→ │ VALIDATE │→ │ REPORT   │
-│          │  │          │  │          │  │          │  │          │  │          │  │          │
-│ Parse &  │  │ Score    │  │ Find     │  │ Create   │  │ Layout   │  │ Brand    │  │ Console  │
-│ validate │  │ brief    │  │ existing │  │ missing  │  │ template │  │ colors   │  │ JSON     │
-│ brief    │  │ quality  │  │ heroes   │  │ heroes   │  │ + text   │  │ logo     │  │ HTML     │
-│          │  │ 92/100   │  │ or mark  │  │ via      │  │ + logo   │  │ legal    │  │ dashboard│
-│          │  │          │  │ for gen  │  │ GenAI    │  │ + i18n   │  │ words    │  │          │
-└──────────┘  └──────────┘  └──────────┘  └──────────┘  └──────────┘  └──────────┘  └──────────┘
+ 📋 INGEST        Parse & validate the campaign brief (YAML/JSON)
+      │
+      ▼
+ 🔍 ANALYZE       Score brief quality (92/100) + suggest improvements
+      │
+      ▼
+ 📂 RESOLVE       Find existing hero images or mark for generation
+      │
+      ▼
+ 🎨 GENERATE      Create missing heroes via GenAI (parallel)
+      │
+      ▼
+ 🖼️ COMPOSE       Apply layout template + text + logo + i18n
+      │
+      ▼
+ ✅ VALIDATE      Check brand colors, logo, prohibited words, legal
+      │
+      ▼
+ 📊 REPORT        Console summary + JSON + interactive HTML dashboard
 ```
 
-**3 products × 3 aspect ratios × 2 languages = 18 creatives** — all brand-compliant, localized, and organized.
+**Input:** 1 YAML brief + product photos
+
+**Output:** 3 products × 3 ratios × 2 languages = **18 creatives**, all brand-compliant and organized
 
 ---
 
 ## 🖼️ Sample Output
 
-> Generated from the Blue Beach House Designs campaign brief using real product photography.
+Generated from the Blue Beach House Designs campaign brief using real product photography.
 
 ### Resort Shell Handbag — All 3 Aspect Ratios (English)
 
 | Instagram 1:1 | Stories/Reels 9:16 | Facebook 16:9 |
 |:---:|:---:|:---:|
-| ![1:1](sample_output/coastal_collection_2025/resort-shell-handbag/instagram_square/creative_en.jpg) | ![9:16](sample_output/coastal_collection_2025/resort-shell-handbag/stories_reels/creative_en.jpg) | ![16:9](sample_output/coastal_collection_2025/resort-shell-handbag/facebook_landscape/creative_en.jpg) |
+| ![1x1](sample_output/coastal_collection_2025/resort-shell-handbag/instagram_square/creative_en.jpg) | ![9x16](sample_output/coastal_collection_2025/resort-shell-handbag/stories_reels/creative_en.jpg) | ![16x9](sample_output/coastal_collection_2025/resort-shell-handbag/facebook_landscape/creative_en.jpg) |
 | Editorial layout | Split panel layout | Editorial layout |
 
 ### Localized Variants — Spanish 🇪🇸
@@ -76,24 +69,26 @@
 |:---:|:---:|
 | ![cowrie-es](sample_output/coastal_collection_2025/cowrie-shell-box/instagram_square/creative_es.jpg) | ![painted-es](sample_output/coastal_collection_2025/painted-shell-art/instagram_square/creative_es.jpg) |
 
+Each creative includes: brand name, campaign message (translated), tagline, logo, legal disclaimer, and accent bar.
+
 <details>
-<summary><b>📁 Full output folder structure</b></summary>
+<summary>📁 Full output folder structure</summary>
 
 ```
 output/coastal_collection_2025/
-├── report.json                    # Machine-readable results + metrics
-├── report.html                    # Interactive HTML dashboard
+├── report.json
+├── report.html
 ├── resort-shell-handbag/
-│   ├── hero_base.png              # Reused from input_assets/ ♻️
+│   ├── hero_base.png              # ♻️ Reused from input
 │   ├── instagram_square/
-│   │   ├── creative_en.jpg        # 1080×1080, English
-│   │   └── creative_es.jpg        # 1080×1080, Spanish
+│   │   ├── creative_en.jpg        # 1080×1080
+│   │   └── creative_es.jpg
 │   ├── stories_reels/
-│   │   ├── creative_en.jpg        # 1080×1920, English
-│   │   └── creative_es.jpg        # 1080×1920, Spanish
+│   │   ├── creative_en.jpg        # 1080×1920
+│   │   └── creative_es.jpg
 │   └── facebook_landscape/
-│       ├── creative_en.jpg        # 1920×1080, English
-│       └── creative_es.jpg        # 1920×1080, Spanish
+│       ├── creative_en.jpg        # 1920×1080
+│       └── creative_es.jpg
 ├── cowrie-shell-box/
 │   └── ... (same structure)
 └── painted-shell-art/
@@ -106,39 +101,38 @@ output/coastal_collection_2025/
 
 ## 🚀 Quick Start (3 Steps)
 
-### Prerequisites
-- Python 3.9+
-- No API keys needed for demo (mock mode works out of the box)
+**Prerequisites:** Python 3.9+ · No API keys needed for demo
 
 ```bash
 # 1. Clone & install
-git clone https://github.com/slysik/adforge.git && cd adforge
+git clone https://github.com/slysik/adforge.git
+cd adforge
 python3 -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
 
-# 2. Generate sample input assets (creates logo + product images)
+# 2. Generate sample input assets
 python create_sample_assets.py
 
 # 3. Run the pipeline
 python -m src.cli generate sample_briefs/beach_house_campaign.yaml --mock
 ```
 
-**That's it.** Open `output/coastal_collection_2025/report.html` in your browser to see the interactive dashboard.
+**That's it.** Open `output/coastal_collection_2025/report.html` in your browser for the interactive dashboard.
 
-### Optional: Web UI
+### Web UI (optional)
 
 ```bash
 streamlit run src/app.py
 ```
 
-### Optional: Real GenAI Providers
+### Real GenAI Providers (optional)
 
 ```bash
-# Google Imagen 4.0 (recommended — free tier available)
+# Google Imagen 4.0 (free tier available)
 export GEMINI_API_KEY=your-key
 python -m src.cli generate sample_briefs/beach_house_campaign.yaml
 
-# Adobe Firefly Services (production)
+# Adobe Firefly Services
 export FIREFLY_CLIENT_ID=your-id
 export FIREFLY_CLIENT_SECRET=your-secret
 python -m src.cli generate sample_briefs/beach_house_campaign.yaml -p firefly
@@ -152,7 +146,7 @@ python -m src.cli generate sample_briefs/beach_house_campaign.yaml -p dalle
 
 ## 📋 Campaign Brief Example
 
-The pipeline accepts YAML or JSON briefs. Here's the Blue Beach House Designs brief ([full file](sample_briefs/beach_house_campaign.yaml)):
+The pipeline accepts YAML or JSON. Here's the Blue Beach House Designs brief:
 
 ```yaml
 campaign:
@@ -175,22 +169,22 @@ campaign:
   products:
     - id: "resort-shell-handbag"
       name: "Resort Shell Handbag"
-      hero_image: "input_assets/resort-shell-handbag.png"   # ♻️ reused
+      hero_image: "input_assets/resort-shell-handbag.png"  # ♻️ reused
       keywords: [shell handbag, rattan bag, coastal fashion]
-
     - id: "cowrie-shell-box"
       name: "Bespoke Rattan Cowrie Shell Box"
       hero_image: "input_assets/bespoke-rattan-cowrie-shell-box.png"
-
     - id: "painted-shell-art"
       name: "Painted Shell Art"
-      hero_image: "input_assets/painted-shell-art.png"
+      hero_image: null  # 🎨 generated via GenAI
 
   aspect_ratios:
-    - { name: instagram_square,    ratio: "1:1",  width: 1080, height: 1080 }
-    - { name: stories_reels,       ratio: "9:16", width: 1080, height: 1920 }
-    - { name: facebook_landscape,  ratio: "16:9", width: 1920, height: 1080 }
+    - { name: instagram_square,   ratio: "1:1",  width: 1080, height: 1080 }
+    - { name: stories_reels,      ratio: "9:16", width: 1080, height: 1920 }
+    - { name: facebook_landscape, ratio: "16:9", width: 1920, height: 1080 }
 ```
+
+Full file: [sample_briefs/beach_house_campaign.yaml](sample_briefs/beach_house_campaign.yaml)
 
 ---
 
@@ -199,30 +193,29 @@ campaign:
 Before generating anything, AdForge scores the brief on 4 dimensions and provides actionable recommendations:
 
 ```
-╭──────────── Brief Analysis ─────────────╮
-│ Brief Quality Score: 92/100 (A)         │
-│   [██████████████████░░]                │
-│                                         │
-│   Completeness:   25/25  ████████████   │
-│   Clarity:        20/25  ████████░░░░   │
-│   Brand Strength: 25/25  ████████████   │
-│   Targeting:      22/25  ██████████░░   │
-╰─────────────────────────────────────────╯
+╭──────────── Brief Analysis ──────────────╮
+│ Brief Quality Score: 92/100 (A)          │
+│   [██████████████████░░]                 │
+│                                          │
+│   Completeness:   25/25  ████████████    │
+│   Clarity:        20/25  ████████░░░░    │
+│   Brand Strength: 25/25  ████████████    │
+│   Targeting:      22/25  ██████████░░    │
+╰──────────────────────────────────────────╯
 
 ✓ Strengths:
   • 3 products defined
   • Multi-language campaign (en, es)
-  • Hyper-local region targeting: Southern Florida — Naples & Palm Beach
+  • Hyper-local region targeting: Southern Florida
   • Brand palette defined (3 colors) + accent color
-  • Logo asset provided
-  • Prohibited words list (4 terms)
-  • Legal disclaimer configured
-  • Full platform coverage: Instagram, Stories/Reels, Facebook/YouTube
+  • Logo, prohibited words, disclaimer configured
+  • Full platform coverage: Instagram, Stories, Facebook
 
-🎨 Creative Direction: seasonal, coastal/nautical, design-professional visual language
+🎨 Creative Direction:
+  seasonal, coastal/nautical, design-professional
 ```
 
-This demonstrates **GenAI as a judgment tool** — the AI evaluates strategy, not just generates pixels.
+This demonstrates **GenAI as a judgment tool** — the AI evaluates strategy quality, not just generates pixels.
 
 ---
 
@@ -230,21 +223,22 @@ This demonstrates **GenAI as a judgment tool** — the AI evaluates strategy, no
 
 5 composition templates, auto-selected by content signals:
 
-| Template | When Auto-Selected | Visual |
-|:---------|:-------------------|:-------|
-| **Product Hero** | Default — universally safe | Full-bleed hero + gradient + bottom text |
+| Template | When Auto-Selected | Visual Style |
+|:---------|:-------------------|:-------------|
+| **Product Hero** | Default | Full-bleed hero + gradient + text overlay |
 | **Editorial** | Long messages (>40 chars) | 60/40 hero/text split with brand panel |
-| **Split Panel** | Vertical formats (9:16) | 50/50 image + branded text panel |
+| **Split Panel** | Vertical 9:16 formats | 50/50 image + dark branded text panel |
 | **Minimal** | Luxury/premium keywords | Centered hero, generous whitespace |
-| **Bold Type** | Short punchy messages (≤20 chars) | Oversized typography on tinted hero |
+| **Bold Type** | Short messages (≤20 chars) | Oversized typography on tinted hero |
+
+Auto-selection logic:
 
 ```python
-# Auto-selection logic (encoded creative judgment)
-if luxury_keywords:    → MINIMAL       # "premium", "gold", "velvet"
-if short_message:      → BOLD_TYPE     # ≤20 characters
-if vertical_format:    → SPLIT_PANEL   # 9:16 stories/reels
-if long_message:       → EDITORIAL     # >40 characters
-else:                  → PRODUCT_HERO  # safe default
+if luxury_keywords:  → MINIMAL       # "premium", "gold", "velvet"
+if short_message:    → BOLD_TYPE     # ≤20 characters
+if vertical_format:  → SPLIT_PANEL   # 9:16 stories/reels
+if long_message:     → EDITORIAL     # >40 characters
+else:                → PRODUCT_HERO  # safe default
 ```
 
 Override with `--template <name>` on the CLI.
@@ -257,20 +251,23 @@ Every generated creative is validated before delivery:
 
 | Check | Method | What It Catches |
 |:------|:-------|:----------------|
-| **Brand Colors** | Pixel sampling (every 10th pixel) | Missing palette colors in final image |
-| **Logo Presence** | Compositor flag + pixel verification in top-right region | Logo file missing, paste failed, region empty |
-| **Prohibited Words** | String match against ALL rendered text | Brief-specific banned terms ("cheap", "fake", etc.) |
-| **Legal Terms** | Regulatory term flagging | "guaranteed", "miracle", "cure", "#1", "risk-free", etc. |
+| **Brand Colors** | Pixel sampling (every 10th pixel) | Missing palette colors |
+| **Logo Presence** | Compositor flag + pixel verification | Logo missing or paste failed |
+| **Prohibited Words** | String match on all rendered text | "cheap", "fake", etc. |
+| **Legal Terms** | Regulatory term flagging | "guaranteed", "miracle", "#1" |
 
-Results are embedded in every asset's metadata:
+Results embedded in every asset's metadata:
+
 ```json
-"brand_compliance": {
-  "status": "passed",
-  "notes": [
-    "[Colors] All brand colors detected in image.",
-    "[Logo] Logo verified in top-right region (16641/16641 opaque pixels).",
-    "[Text] No prohibited words detected. Checked 4 rendered text(s)."
-  ]
+{
+  "brand_compliance": {
+    "status": "passed",
+    "notes": [
+      "[Colors] All brand colors detected in image.",
+      "[Logo] Logo verified in top-right region.",
+      "[Text] No prohibited words detected."
+    ]
+  }
 }
 ```
 
@@ -279,71 +276,73 @@ Results are embedded in every asset's metadata:
 ## 🏗️ Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                    CLI (click)  /  Web UI (Streamlit)                   │
-└───────────────────────────┬─────────────────────────────────────────────┘
-                            │
-┌───────────────────────────▼─────────────────────────────────────────────┐
-│                    Pipeline Orchestrator (pipeline.py)                   │
-│    Ingest → Analyze → Resolve → Generate → Compose → Validate → Report │
-└──┬────┬────┬────┬────┬────┬────┬────────────────────────────────────────┘
-   │    │    │    │    │    │    │
-   ▼    ▼    ▼    ▼    ▼    ▼    ▼
- Models Analyzer Provider Templates Compositor Validator Report
- (Pydantic) (scoring) (abstraction) (5 layouts) (Pillow) (brand+legal) (JSON+HTML)
-                  │
-        ┌─────────┼─────────┬──────────┐
-        ▼         ▼         ▼          ▼
-    Firefly    Imagen    DALL-E 3    Mock
-    Services   4.0                  (testing)
+┌──────────────────────────────────────────────┐
+│       CLI (click)  /  Web UI (Streamlit)     │
+└──────────────────┬───────────────────────────┘
+                   │
+┌──────────────────▼───────────────────────────┐
+│         Pipeline Orchestrator                │
+│  Ingest → Analyze → Resolve → Generate →     │
+│  Compose → Validate → Report                 │
+└─┬────┬────┬────┬────┬────┬────┬──────────────┘
+  │    │    │    │    │    │    │
+  ▼    ▼    ▼    ▼    ▼    ▼    ▼
+Models Analyzer Providers Templates Compositor Validator Report
+(Pydantic) (scoring) (abstraction) (5 layouts) (Pillow) (brand) (JSON+HTML)
+                 │
+       ┌─────────┼─────────┬──────────┐
+       ▼         ▼         ▼          ▼
+   Firefly    Imagen    DALL-E 3    Mock
+   Services   4.0                  (test)
 ```
 
 ### Module Inventory (11 modules, ~2,400 lines)
 
 | Module | Purpose |
 |:-------|:--------|
-| `models.py` | Pydantic schemas — validates briefs, enforces ≥2 products, hex colors, ISO languages |
+| `models.py` | Pydantic schemas — enforces ≥2 products, hex colors, ISO language codes |
 | `pipeline.py` | 7-stage orchestrator — parallel generation, progress bars, metrics |
 | `providers.py` | Provider abstraction — Firefly → Gemini → DALL-E → Mock auto-resolution |
 | `analyzer.py` | Brief quality scoring — heuristic + optional LLM augmentation |
-| `templates.py` | 5 layout templates — auto-selected by content, ratio, and keywords |
+| `templates.py` | 5 layout templates — auto-selected by content, ratio, keywords |
 | `compositor.py` | Image composition — resize, text overlay, logo, gradient, translation |
-| `validator.py` | Brand compliance — color pixels, logo region, prohibited words, legal flags |
+| `validator.py` | Brand compliance — color pixels, logo region, prohibited words, legal |
 | `storage.py` | File management — organized output, hero discovery, asset reuse |
-| `tracker.py` | Performance metrics — per-stage timing, API call counting, cost estimation |
-| `report.py` | Reporting — Rich console, JSON, interactive HTML dashboard |
-| `analytics.py` | Performance analytics — sample KPIs, CTR/CPA calculations, winner detection |
+| `tracker.py` | Performance metrics — per-stage timing, API calls, cost estimation |
+| `report.py` | Reporting — Rich console table, JSON, interactive HTML dashboard |
+| `analytics.py` | Campaign analytics — sample KPIs, CTR/CPA, winner detection |
 
 ---
 
 ## 🔌 Provider Architecture
 
 ```
-┌──────────────────────────────────────────────────────────┐
-│                ImageProvider (ABC)                        │
-│         generate() → (PIL Image, Metadata)               │
-└────────┬────────┬────────┬────────┬──────────────────────┘
-         │        │        │        │
-   ┌─────▼──┐ ┌───▼───┐ ┌──▼────┐ ┌▼──────┐
-   │Firefly │ │Imagen │ │DALL-E │ │ Mock  │
-   │Services│ │4.0    │ │3      │ │       │
-   │        │ │       │ │       │ │$0.00  │
-   │$0.04/  │ │Native │ │$0.04/ │ │       │
-   │image   │ │aspect │ │image  │ │Determ-│
-   │        │ │ratios │ │       │ │inistic│
-   │Generate│ │       │ │3 fixed│ │No API │
-   │Expand  │ │       │ │sizes  │ │needed │
-   │Fill    │ │       │ │       │ │       │
-   └────────┘ └───────┘ └───────┘ └───────┘
+┌────────────────────────────────────────────┐
+│          ImageProvider (ABC)                │
+│     generate() → (PIL Image, Metadata)     │
+└───┬────────┬────────┬────────┬─────────────┘
+    │        │        │        │
+┌───▼──┐ ┌───▼──┐ ┌───▼──┐ ┌──▼───┐
+│Fire- │ │Imagen│ │DALL-E│ │ Mock │
+│fly   │ │4.0   │ │3     │ │      │
+│      │ │      │ │      │ │$0.00 │
+│$0.04/│ │Native│ │$0.04/│ │      │
+│image │ │ratio │ │image │ │No API│
+│      │ │      │ │      │ │needed│
+│v3 API│ │      │ │3 size│ │      │
+│Gen   │ │      │ │      │ │Determ│
+│Expand│ │      │ │      │ │inistc│
+│Fill  │ │      │ │      │ │      │
+└──────┘ └──────┘ └──────┘ └──────┘
 ```
 
-**Auto-resolution:** Firefly → Gemini → Mock (pipeline always runs, degrades gracefully).
+**Auto-resolution:** Firefly → Gemini → Mock. Pipeline always runs.
 
 The `FireflyProvider` models the actual Firefly Services REST API:
-- **Text-to-Image** (`/v3/images/generate`) — primary hero generation
-- **Generative Expand** (`/v3/images/expand`) — aspect-ratio adaptation without crop artifacts
-- **Style Reference** — brand-consistent generation from reference images
-- **IMS Authentication** — `client_credentials` grant with automatic token refresh
+- **Text-to-Image** (`/v3/images/generate`) — hero generation
+- **Generative Expand** (`/v3/images/expand`) — aspect ratio adaptation
+- **Style Reference** — brand-consistent generation
+- **IMS Authentication** — `client_credentials` grant with auto-refresh
 
 ---
 
@@ -352,20 +351,20 @@ The `FireflyProvider` models the actual Firefly Services REST API:
 Every pipeline run tracks timing, cost, and provider details:
 
 ```
-                          Pipeline Performance
-┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━┳━━━━━━━┳━━━━━━━━━━━┳━━━━━━━━━━━┓
-┃ Stage                         ┃ Time ┃ Items ┃ API Calls ┃ Est. Cost ┃
-┡━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━╇━━━━━━━╇━━━━━━━━━━━╇━━━━━━━━━━━┩
-│ brief_ingestion               │  5ms │     1 │         0 │         – │
-│ brief_analysis                │  0ms │     1 │         0 │         – │
-│ compose_resort-shell-handbag  │ 1.4s │     6 │         0 │         – │
-│ validate_resort-shell-handbag │ 1.4s │     6 │         0 │         – │
-│ compose_cowrie-shell-box      │ 1.4s │     6 │         0 │         – │
-│ validate_cowrie-shell-box     │ 1.4s │     6 │         0 │         – │
-│ compose_painted-shell-art     │ 1.4s │     6 │         0 │         – │
-│ validate_painted-shell-art    │ 1.4s │     6 │         0 │         – │
-│ TOTAL                         │ 4.2s │       │         0 │    $0.000 │
-└───────────────────────────────┴──────┴───────┴───────────┴───────────┘
+                    Pipeline Performance
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━┳━━━━━━━┳━━━━━━━━━━━┓
+┃ Stage                     ┃ Time ┃ Items ┃ API Calls ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━╇━━━━━━━╇━━━━━━━━━━━┩
+│ brief_ingestion           │  5ms │     1 │         0 │
+│ brief_analysis            │  0ms │     1 │         0 │
+│ compose_resort-shell-ha…  │ 1.4s │     6 │         0 │
+│ validate_resort-shell-h…  │ 1.4s │     6 │         0 │
+│ compose_cowrie-shell-box  │ 1.4s │     6 │         0 │
+│ validate_cowrie-shell-b…  │ 1.4s │     6 │         0 │
+│ compose_painted-shell-a…  │ 1.4s │     6 │         0 │
+│ validate_painted-shell-…  │ 1.4s │     6 │         0 │
+│ TOTAL                     │ 4.2s │       │         0 │
+└───────────────────────────┴──────┴───────┴───────────┘
 ```
 
 ---
@@ -376,19 +375,20 @@ Every pipeline run tracks timing, cost, and provider details:
 streamlit run src/app.py
 ```
 
-The Streamlit web interface provides:
-- **📋 Campaign overview** — brief metadata, analysis scores, product details
-- **🖼️ Creative gallery** — side-by-side ratio comparison per product with compliance badges
-- **✅ Approval queue** — per-asset approve/reject workflow with comments + JSON export
-- **📈 Performance analytics** — sample KPIs with CTR, CPA, winner detection
-- **📊 Pipeline metrics** — stage timing, cost breakdown, provider info
-- **🚀 Live execution** — run the pipeline from the browser with any provider
+| Feature | Description |
+|:--------|:------------|
+| 📋 Campaign overview | Brief metadata, analysis scores, product details |
+| 🖼️ Creative gallery | Side-by-side ratio comparison per product |
+| ✅ Approval queue | Per-asset approve/reject with comments + JSON export |
+| 📈 Performance analytics | Sample KPIs with CTR, CPA, winner detection |
+| 📊 Pipeline metrics | Stage timing, cost breakdown, provider info |
+| 🚀 Live execution | Run the full pipeline from the browser |
 
 ---
 
 ## 🧪 Tests
 
-**158 tests** across 10 test modules:
+**158 tests** across 10 modules:
 
 ```bash
 python -m pytest tests/ -v
@@ -396,39 +396,39 @@ python -m pytest tests/ -v
 
 | Module | What It Tests | Count |
 |:-------|:-------------|------:|
-| `test_models.py` | Schema enforcement, Pydantic validation | 14 |
-| `test_generator.py` | Mock generation, dimensions, determinism | 7 |
-| `test_compositor.py` | Composition, text rendering, branding | 14 |
-| `test_validator.py` | Brand colors, logo, text, legal | 17 |
+| `test_models.py` | Pydantic schema enforcement | 14 |
+| `test_generator.py` | Mock generation, dimensions | 7 |
+| `test_compositor.py` | Composition, text, branding | 14 |
+| `test_validator.py` | Brand colors, logo, legal | 17 |
 | `test_pipeline.py` | End-to-end integration | 12 |
-| `test_storage.py` | File management, slug generation | 5 |
-| `test_providers.py` | Provider abstraction, factory, fallback | 14 |
-| `test_analyzer.py` | Brief scoring, enrichment, risk flags | 17 |
-| `test_templates.py` | Template rendering, auto-selection | 14 |
-| `test_tracker.py` | Metrics tracking, serialization | 4 |
-| `test_analytics.py` | KPI generation, winner detection | 40 |
+| `test_storage.py` | File management, slugs | 5 |
+| `test_providers.py` | Provider factory, fallback | 14 |
+| `test_analyzer.py` | Brief scoring, enrichment | 17 |
+| `test_templates.py` | Template rendering, selection | 14 |
+| `test_tracker.py` | Metrics tracking | 4 |
+| `test_analytics.py` | KPIs, winner detection | 40 |
 
 ---
 
 ## 🧠 Key Design Decisions
 
-### 1. Firefly-First Provider Architecture
-The provider abstraction models a production deployment where Adobe Firefly Services is the primary generator. Swapping any provider is a config change, not a refactor. The `FireflyProvider` implements the actual v3 API spec.
+**1. Firefly-First Provider Architecture**
+The provider abstraction models a production deployment where Adobe Firefly is the primary generator. Swapping any provider is a config change, not a refactor.
 
-### 2. GenAI as Judgment, Not Just Generation
-The brief analyzer uses AI to evaluate strategy quality before a single image is generated. It scores completeness, identifies weak messaging, suggests improvements, and enriches prompts with audience/region context. This shows GenAI applied thoughtfully.
+**2. GenAI as Judgment, Not Just Generation**
+The brief analyzer uses AI to evaluate strategy quality *before* any image is generated. It scores completeness, flags weak messaging, and enriches prompts with audience/region context.
 
-### 3. Template System Over Single Layout
-Real creative teams use different layouts for different placements. Auto-selection based on content signals (luxury → minimal, vertical → split panel) encodes creative judgment into code.
+**3. Template System Over Single Layout**
+Real creative teams use different layouts for different placements. Auto-selection based on content signals encodes creative judgment into code.
 
-### 4. Composition Over Text-in-Image
-Campaign text is composited via Pillow, not baked into GenAI prompts. This gives exact typographic control, precise message fidelity, and instant language switching without regenerating images.
+**4. Composition Over Text-in-Image**
+Campaign text is composited via Pillow, not baked into GenAI prompts. This gives exact typographic control and instant language switching without regenerating.
 
-### 5. Parallel Generation + Cost Tracking
-Heroes are generated concurrently via ThreadPoolExecutor. Every stage is timed and costed. Client-facing creative automation needs cost visibility from day one.
+**5. Contrast-Safe Panel Colors**
+The split-panel template auto-selects the darkest brand color (by luminance) for text panels, guaranteeing readable white text regardless of palette.
 
-### 6. Contrast-Safe Panel Colors
-The split-panel template automatically selects the darkest brand color (by luminance) for text panels, guaranteeing readable white text regardless of the brand's color palette.
+**6. Cost Tracking From Day One**
+Every stage is timed and costed. Client-facing creative automation needs cost visibility per campaign, per asset, per API call.
 
 ---
 
@@ -451,25 +451,22 @@ The split-panel template automatically selects the darkest brand color (by lumin
 ## 📂 CLI Reference
 
 ```bash
-# Generate creatives from a brief
+# Generate creatives
 python -m src.cli generate <BRIEF> [OPTIONS]
-  --mock                Use mock mode (no API keys needed)
-  -p, --provider        Force: firefly | gemini | dalle | mock
-  -t, --template        Force: product_hero | editorial | split_panel | minimal | bold_type
-  -i, --input-dir       Input assets directory (default: input_assets)
-  -o, --output-dir      Output directory (default: output)
-  --no-analysis         Skip brief analysis
-  --no-parallel         Sequential generation
-  -w, --workers N       Thread pool size (default: 4)
-  -v, --verbose         Debug logging
+  --mock              No API keys needed
+  -p, --provider      firefly | gemini | dalle | mock
+  -t, --template      product_hero | editorial | split_panel | minimal | bold_type
+  -o, --output-dir    Output directory (default: output)
+  --no-analysis       Skip brief analysis
+  -v, --verbose       Debug logging
 
-# Analyze a brief's quality without generating
+# Analyze brief quality
 python -m src.cli analyze <BRIEF> [--llm]
 
 # Validate brief schema
 python -m src.cli validate <BRIEF>
 
-# List available providers and their status
+# List available providers
 python -m src.cli providers
 ```
 
@@ -483,11 +480,6 @@ For the full post-mortem and evolution story, see [LEARNINGS.md](./LEARNINGS.md)
 
 ---
 
-<div align="center">
-
 **Built for the Adobe FDE – Creative Technologist Assessment**
 
 [ADFORGE_INTENT.md](./ADFORGE_INTENT.md) · [LEARNINGS.md](./LEARNINGS.md) · [EVALUATION.md](./EVALUATION.md)
-
-</div>
-]]>
