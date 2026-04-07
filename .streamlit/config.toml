@@ -1,8 +1,13 @@
+[server]
+port = 5000
+address = "0.0.0.0"
+headless = true
+enableCORS = false
+enableXsrfProtection = false
+
 [theme]
-# Warm coastal palette inspired by Blue Beach House Designs
-# Primary: Ocean blue (#1B4F72), Accent: Shell tan (#D4A574), Background: Sandy warmth
-primaryColor = "#1B4F72"           # Ocean blue — buttons, links, active elements
-backgroundColor = "#FDF8F3"        # Warm ivory — main canvas
-secondaryBackgroundColor = "#F5E6CA" # Sandy beige — sidebar, cards
-textColor = "#2C3E50"              # Deep charcoal — body text
-font = "serif"                     # Matches Georgia from brand guidelines
+primaryColor = "#1B4F72"
+backgroundColor = "#FDF8F3"
+secondaryBackgroundColor = "#F5E6CA"
+textColor = "#2C3E50"
+font = "serif"
