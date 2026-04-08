@@ -99,21 +99,25 @@ output/coastal_collection_2025/
 
 ---
 
-## 🚀 Quick Start (3 Steps)
+## 🚀 Quick Start
 
-**Prerequisites:** Python 3.9+ · No API keys needed for demo
+**No API keys needed** — the demo runs fully offline using mock image generation.
+
+### Option A: With uv (fastest — 2 commands)
+
+[uv](https://docs.astral.sh/uv/) handles the virtual environment and dependency install automatically.
 
 ```bash
-# 1. Clone & install
-git clone https://github.com/slysik/adforge.git
-cd adforge
+git clone https://github.com/slysik/adforge.git && cd adforge
+uv run python -m src.cli generate sample_briefs/beach_house_campaign.yaml --mock
+```
+
+### Option B: With Python + pip
+
+```bash
+git clone https://github.com/slysik/adforge.git && cd adforge
 python3 -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
-
-# 2. Generate sample input assets
-python create_sample_assets.py
-
-# 3. Run the pipeline
 python -m src.cli generate sample_briefs/beach_house_campaign.yaml --mock
 ```
 
@@ -122,6 +126,10 @@ python -m src.cli generate sample_briefs/beach_house_campaign.yaml --mock
 ### Web UI (optional)
 
 ```bash
+# With uv:
+uv run streamlit run src/app.py
+
+# Or with pip (venv activated):
 streamlit run src/app.py
 ```
 
@@ -130,16 +138,16 @@ streamlit run src/app.py
 ```bash
 # Google Imagen 4.0 (free tier available)
 export GEMINI_API_KEY=your-key
-python -m src.cli generate sample_briefs/beach_house_campaign.yaml
+uv run python -m src.cli generate sample_briefs/beach_house_campaign.yaml
 
 # Adobe Firefly Services
 export FIREFLY_CLIENT_ID=your-id
 export FIREFLY_CLIENT_SECRET=your-secret
-python -m src.cli generate sample_briefs/beach_house_campaign.yaml -p firefly
+uv run python -m src.cli generate sample_briefs/beach_house_campaign.yaml -p firefly
 
 # OpenAI DALL-E 3
 export OPENAI_API_KEY=sk-your-key
-python -m src.cli generate sample_briefs/beach_house_campaign.yaml -p dalle
+uv run python -m src.cli generate sample_briefs/beach_house_campaign.yaml -p dalle
 ```
 
 ---
