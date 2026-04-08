@@ -101,7 +101,7 @@ output/coastal_collection_2025/
 
 ## 🚀 Quick Start
 
-[▶️ View Installation Demo (MP4)](docs/assets/install-demo.mp4)
+![Installation Demo](docs/assets/install-demo.gif)
 
 **Prerequisites:** [just](https://github.com/casey/just#installation) + Python 3.9+ · No API keys needed for demo
 
