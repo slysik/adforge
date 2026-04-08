@@ -1644,7 +1644,10 @@ if st.session_state.run_log:
     render_section_title("Recent Runs")
     _render_run_log()
 
-current_brief = _render_brief_builder()
+# Collapse Brief Builder when results already exist so the user sees pipeline output first.
+_has_results = st.session_state.active_run_result is not None
+with st.expander("Brief Builder", expanded=not _has_results):
+    current_brief = _render_brief_builder()
 current_brief_path = None
 
 if current_brief is not None and st.session_state.get("_run_triggered"):
