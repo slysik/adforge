@@ -18,8 +18,9 @@ from __future__ import annotations
 import logging
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional
 
 import yaml
 from PIL import Image as PILImage
@@ -27,13 +28,12 @@ from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeElapsedColumn
 
 from .models import (
-    CampaignBrief, PipelineResult, GeneratedAsset,
-    AssetStatus, ComplianceStatus, ComplianceResult,
+    CampaignBrief, PipelineResult, GeneratedAsset, AssetStatus,
 )
 from .providers import get_provider, ImageProvider, GenerationMetadata
-from .analyzer import analyze_brief, print_analysis
-from .templates import LayoutTemplate, auto_select_template, TEMPLATE_RENDERERS
-from .compositor import Compositor, get_translator, _hex_to_rgb
+from .analyzer import analyze_brief
+from .templates import LayoutTemplate, auto_select_template
+from .compositor import Compositor, TranslationProvider, get_translator
 from .validator import BrandComplianceChecker, LegalChecker
 from .storage import StorageManager
 from .tracker import PipelineTracker, AssetMetrics, print_metrics
@@ -139,59 +139,70 @@ def _generate_hero_task(
 
 
 # -----------------------------------------------------------------------
-# Main pipeline
+# Pipeline helpers
 # -----------------------------------------------------------------------
 
-def run_pipeline(
-    brief_path: str | Path,
-    input_dir: str | Path = "input_assets",
-    output_dir: str | Path = "output",
-    mock: bool = False,
-    api_key: str | None = None,
-    provider_type: str | None = None,
-    template: str | None = None,
-    analyze: bool = True,
-    parallel: bool = True,
-    max_workers: int = 4,
-    status_callback: callable = None,
-) -> PipelineResult:
-    """Execute the full creative automation pipeline."""
-    
-    def _report(msg: str):
+@dataclass
+class PipelineServices:
+    """Long-lived collaborators used across pipeline stages."""
+    provider: ImageProvider
+    storage: StorageManager
+    compositor: Compositor
+    brand_checker: BrandComplianceChecker
+    legal_checker: LegalChecker
+    translator: TranslationProvider
+    forced_template: LayoutTemplate | None
+
+
+@dataclass
+class HeroArtifacts:
+    """Per-product hero resolution and generation outputs."""
+    existing_hero: Path | None
+    hero_status: AssetStatus
+    paths: dict[str, Path] = field(default_factory=dict)
+    prompts: dict[str, str] = field(default_factory=dict)
+    metas: dict[str, GenerationMetadata] = field(default_factory=dict)
+
+
+def _build_reporter(
+    status_callback: Optional[Callable[[str], None]],
+) -> Callable[[str], None]:
+    """Create a single reporting sink for CLI and optional callbacks."""
+    def report(msg: str) -> None:
         if status_callback:
             status_callback(msg)
         console.print(f"[bold blue]Pipeline:[/bold blue] {msg}")
 
-    tracker = PipelineTracker()
-    start = time.time()
+    return report
 
-    # ── Stage 1: Brief normalization ──────────────────────────────────
-    _report("Ingesting Brief...")
-    with tracker.stage("brief_ingestion") as stage:
-        brief = load_brief(brief_path)
-        stage.items_processed = 1
-        stage.notes.append(f"Loaded: {brief.name}")
 
-    # ── Stage 2: Brief analysis ───────────────────────────────────────
-    analysis = None
-    enrichments = {}
-    if analyze:
-        _report("Analyzing Brief...")
-        with tracker.stage("brief_analysis") as stage:
-            analysis = analyze_brief(brief)
-            enrichments = analysis.prompt_enrichments
-            stage.items_processed = 1
-            stage.notes.append(f"Score: {analysis.score.overall}/100")
+def _resolve_forced_template(template: str | None) -> LayoutTemplate | None:
+    """Resolve a user-forced template name, falling back to auto-select."""
+    if not template:
+        return None
 
-    # ── Initialize components ─────────────────────────────────────────
-    _report("Initializing...")
-    
+    try:
+        return LayoutTemplate(template)
+    except ValueError:
+        console.print(f"[yellow]⚠ Unknown template '{template}', using auto-select[/yellow]")
+        return None
+
+
+def _initialize_services(
+    brief: CampaignBrief,
+    input_dir: str | Path,
+    output_dir: str | Path,
+    mock: bool,
+    api_key: str | None,
+    provider_type: str | None,
+    template: str | None,
+) -> PipelineServices:
+    """Build shared service objects used throughout the run."""
     provider = get_provider(
         provider_type=provider_type,
         api_key=api_key,
         mock=mock,
     )
-
     storage = StorageManager(input_dir=Path(input_dir), output_dir=Path(output_dir))
     compositor = Compositor(
         brand_colors=brief.brand_guidelines.primary_colors,
@@ -205,308 +216,371 @@ def run_pipeline(
         logo_path=brief.brand_guidelines.logo_path,
         prohibited_words=brief.brand_guidelines.prohibited_words,
     )
-    legal_checker = LegalChecker()
     translator = get_translator()
     translator.clear_warnings()
 
-    # Resolve template
-    forced_template = None
-    if template:
-        try:
-            forced_template = LayoutTemplate(template)
-        except ValueError:
-            console.print(f"[yellow]⚠ Unknown template '{template}', using auto-select[/yellow]")
+    return PipelineServices(
+        provider=provider,
+        storage=storage,
+        compositor=compositor,
+        brand_checker=brand_checker,
+        legal_checker=LegalChecker(),
+        translator=translator,
+        forced_template=_resolve_forced_template(template),
+    )
 
-    result = PipelineResult(campaign_name=brief.name)
-    total_tasks = len(brief.products) * len(brief.aspect_ratios) * len(brief.languages)
 
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        BarColumn(),
-        TextColumn("{task.completed}/{task.total}"),
-        TimeElapsedColumn(),
-        console=console,
-    ) as progress:
-        task = progress.add_task("Generating creatives…", total=total_tasks)
+def _cached_generation_metadata() -> GenerationMetadata:
+    """Synthetic metadata for a hero loaded from the on-disk cache."""
+    return GenerationMetadata(
+        provider="cached",
+        model_name="cache",
+        prompt_used="(cached)",
+        generation_time_ms=0,
+        estimated_cost_usd=0.0,
+    )
 
-        for product in brief.products:
-            console.print(f"\n[bold white]▸ Product: {product.name}[/bold white]")
 
-            # ── Stage 3: Asset resolution ─────────────────────────────
-            _report(f"Resolving assets for {product.name}...")
-            # When hero_image is explicitly null, skip auto-discovery to force generation
-            auto_discover = product.hero_image is not None or "hero_image" not in (product.model_fields_set or set())
-            existing_hero = storage.find_existing_hero(product.id, product.hero_image, auto_discover=auto_discover)
-            hero_status = AssetStatus.REUSED if existing_hero else AssetStatus.GENERATED
+def _resolve_existing_hero(
+    brief: CampaignBrief,
+    product,
+    storage: StorageManager,
+) -> tuple[Path | None, AssetStatus]:
+    """Resolve and copy an existing hero when the brief points to one."""
+    auto_discover = (
+        product.hero_image is not None
+        or "hero_image" not in (product.model_fields_set or set())
+    )
+    existing_hero = storage.find_existing_hero(
+        product.id,
+        product.hero_image,
+        auto_discover=auto_discover,
+    )
+    if not existing_hero:
+        return None, AssetStatus.GENERATED
 
-            if existing_hero:
-                existing_hero = storage.copy_hero_to_output(
-                    existing_hero, brief.name, product.id,
-                )
+    copied = storage.copy_hero_to_output(existing_hero, brief.name, product.id)
+    return copied, AssetStatus.REUSED
 
-            # ── Stage 4: Hero generation ──────────────────────────────
-            if existing_hero is None:
-                _report(f"Generating heroes for {product.name}...")
 
-            hero_paths: dict[str, Path] = {}  # ratio_name → hero_path
-            hero_prompts: dict[str, str] = {}
-            hero_metas: dict[str, GenerationMetadata] = {}
+def _build_product_prompt(
+    brief: CampaignBrief,
+    product,
+    enrichments: dict[str, str],
+) -> str:
+    """Build the hero generation prompt for a single product."""
+    return _build_prompt(
+        product_name=product.name,
+        product_description=product.description,
+        keywords=product.keywords,
+        campaign_message=brief.message,
+        target_audience=brief.target_audience,
+        target_region=brief.target_region,
+        brand_name=brief.brand,
+        enrichment=enrichments.get(product.id, ""),
+    )
 
-            if existing_hero is None:
-                prompt_enrichment = enrichments.get(product.id, "")
-                gen_prompt = _build_prompt(
-                    product_name=product.name,
-                    product_description=product.description,
-                    keywords=product.keywords,
-                    campaign_message=brief.message,
-                    target_audience=brief.target_audience,
-                    target_region=brief.target_region,
-                    brand_name=brief.brand,
-                    enrichment=prompt_enrichment,
-                )
 
-                with tracker.stage(f"hero_gen_{product.id}") as stage:
-                    if parallel and len(brief.aspect_ratios) > 1:
-                        # Parallel hero generation across ratios
-                        # With hero caching: check for existing valid images before submitting tasks
-                        futures = {}
-                        with ThreadPoolExecutor(max_workers=max_workers) as pool:
-                            for ratio in brief.aspect_ratios:
-                                hero_out = storage.hero_output_path(
-                                    brief.name, product.id, ratio.name,
-                                )
+def _record_cached_hero(
+    artifacts: HeroArtifacts,
+    ratio,
+    hero_out: Path,
+    stage,
+) -> None:
+    """Record a cache hit for a ratio-specific hero image."""
+    artifacts.paths[ratio.name] = hero_out
+    artifacts.prompts[ratio.name] = "(cached)"
+    artifacts.metas[ratio.name] = _cached_generation_metadata()
+    stage.items_processed += 1
+    console.print(f"  [dim]↳ Cached hero ({ratio.ratio}): {hero_out}[/dim]")
 
-                                # Check if cached hero exists and is valid
-                                if _check_cached_hero(hero_out):
-                                    hero_paths[ratio.name] = hero_out
-                                    hero_prompts[ratio.name] = "(cached)"
-                                    # Create a cached metadata entry with zero cost/time
-                                    hero_metas[ratio.name] = GenerationMetadata(
-                                        provider="cached",
-                                        model_name="cache",
-                                        prompt_used="(cached)",
-                                        generation_time_ms=0,
-                                        estimated_cost_usd=0.0,
-                                    )
-                                    stage.items_processed += 1
-                                    console.print(
-                                        f"  [dim]↳ Cached hero ({ratio.ratio}): {hero_out}[/dim]"
-                                    )
-                                    continue
 
-                                f = pool.submit(
-                                    _generate_hero_task,
-                                    provider, gen_prompt,
-                                    ratio.width, ratio.height, hero_out,
-                                )
-                                futures[f] = ratio
+def _record_generated_hero(
+    artifacts: HeroArtifacts,
+    ratio,
+    path: Path,
+    meta: GenerationMetadata,
+    stage,
+) -> None:
+    """Record a newly generated hero image and its metrics."""
+    artifacts.paths[ratio.name] = path
+    artifacts.prompts[ratio.name] = meta.prompt_used
+    artifacts.metas[ratio.name] = meta
+    stage.api_calls += 1
+    stage.estimated_cost_usd += meta.estimated_cost_usd
+    stage.items_processed += 1
+    console.print(
+        f"  [green]✓ Hero ({ratio.ratio}): {path} "
+        f"[dim]({meta.generation_time_ms}ms)[/dim][/green]"
+    )
 
-                            for f in as_completed(futures):
-                                ratio = futures[f]
-                                try:
-                                    path, meta = f.result()
-                                    hero_paths[ratio.name] = path
-                                    hero_prompts[ratio.name] = meta.prompt_used
-                                    hero_metas[ratio.name] = meta
-                                    stage.api_calls += 1
-                                    stage.estimated_cost_usd += meta.estimated_cost_usd
-                                    stage.items_processed += 1
-                                    console.print(
-                                        f"  [green]✓ Hero ({ratio.ratio}): {path} "
-                                        f"[dim]({meta.generation_time_ms}ms)[/dim][/green]"
-                                    )
-                                except Exception as exc:
-                                    console.print(f"  [red]✗ Hero gen failed ({ratio.ratio}): {exc}[/red]")
-                                    result.warnings.append(
-                                        f"Hero generation failed for {product.id}/{ratio.ratio}: {exc}"
-                                    )
-                    else:
-                        # Sequential fallback
-                        # With hero caching: check for existing valid images before generating
-                        for ratio in brief.aspect_ratios:
-                            hero_out = storage.hero_output_path(
-                                brief.name, product.id, ratio.name,
-                            )
 
-                            # Check if cached hero exists and is valid
-                            if _check_cached_hero(hero_out):
-                                hero_paths[ratio.name] = hero_out
-                                hero_prompts[ratio.name] = "(cached)"
-                                # Create a cached metadata entry with zero cost/time
-                                hero_metas[ratio.name] = GenerationMetadata(
-                                    provider="cached",
-                                    model_name="cache",
-                                    prompt_used="(cached)",
-                                    generation_time_ms=0,
-                                    estimated_cost_usd=0.0,
-                                )
-                                stage.items_processed += 1
-                                console.print(
-                                    f"  [dim]↳ Cached hero ({ratio.ratio}): {hero_out}[/dim]"
-                                )
-                                continue
+def _record_hero_generation_failure(
+    result: PipelineResult,
+    product_id: str,
+    ratio_label: str,
+    exc: Exception,
+) -> None:
+    """Log and persist a hero generation warning without stopping the run."""
+    console.print(f"  [red]✗ Hero gen failed ({ratio_label}): {exc}[/red]")
+    result.warnings.append(
+        f"Hero generation failed for {product_id}/{ratio_label}: {exc}"
+    )
 
-                            try:
-                                _, meta = provider.generate(
-                                    prompt=gen_prompt,
-                                    width=ratio.width,
-                                    height=ratio.height,
-                                    output_path=hero_out,
-                                )
-                                hero_paths[ratio.name] = hero_out
-                                hero_prompts[ratio.name] = meta.prompt_used
-                                hero_metas[ratio.name] = meta
-                                stage.api_calls += 1
-                                stage.estimated_cost_usd += meta.estimated_cost_usd
-                                stage.items_processed += 1
-                                console.print(
-                                    f"  [green]✓ Hero ({ratio.ratio}): {hero_out} "
-                                    f"[dim]({meta.generation_time_ms}ms)[/dim][/green]"
-                                )
-                            except Exception as exc:
-                                console.print(f"  [red]✗ Hero gen failed ({ratio.ratio}): {exc}[/red]")
-                                result.warnings.append(
-                                    f"Hero generation failed for {product.id}/{ratio.ratio}: {exc}"
-                                )
 
-            # ── Stage 5+6: Composition + validation per language ──────
-            _report("Compositing and Validating...")
-            with tracker.stage(f"compose_{product.id}") as comp_stage, \
-                 tracker.stage(f"validate_{product.id}") as val_stage:
+def _generate_product_heroes(
+    brief: CampaignBrief,
+    product,
+    services: PipelineServices,
+    tracker: PipelineTracker,
+    result: PipelineResult,
+    enrichments: dict[str, str],
+    parallel: bool,
+    max_workers: int,
+    report: Callable[[str], None],
+) -> HeroArtifacts:
+    """Resolve reused heroes or generate the missing ratio-specific ones."""
+    existing_hero, hero_status = _resolve_existing_hero(brief, product, services.storage)
+    artifacts = HeroArtifacts(existing_hero=existing_hero, hero_status=hero_status)
+
+    if existing_hero is not None:
+        return artifacts
+
+    report(f"Generating heroes for {product.name}...")
+    prompt = _build_product_prompt(brief, product, enrichments)
+
+    with tracker.stage(f"hero_gen_{product.id}") as stage:
+        if parallel and len(brief.aspect_ratios) > 1:
+            futures = {}
+            with ThreadPoolExecutor(max_workers=max_workers) as pool:
                 for ratio in brief.aspect_ratios:
-                    hero_path = hero_paths.get(ratio.name) or existing_hero
-
-                    if hero_path is None:
-                        for lang in brief.languages:
-                            progress.advance(task)
-                            result.assets.append(GeneratedAsset(
-                                product_id=product.id,
-                                aspect_ratio=ratio.ratio,
-                                language=lang,
-                                file_path="",
-                                status=AssetStatus.FAILED,
-                                hero_status=AssetStatus.FAILED,
-                            ))
-                            result.failed_count += 1
+                    hero_out = services.storage.hero_output_path(
+                        brief.name, product.id, ratio.name,
+                    )
+                    if _check_cached_hero(hero_out):
+                        _record_cached_hero(artifacts, ratio, hero_out, stage)
                         continue
 
-                    for lang in brief.languages:
-                        progress.update(
-                            task,
-                            description=f"{product.id} / {ratio.ratio} / {lang}",
-                        )
+                    future = pool.submit(
+                        _generate_hero_task,
+                        services.provider,
+                        prompt,
+                        ratio.width,
+                        ratio.height,
+                        hero_out,
+                    )
+                    futures[future] = ratio
 
-                        output_path = storage.creative_output_path(
-                            brief.name, product.id, ratio.name, lang,
-                        )
+                for future in as_completed(futures):
+                    ratio = futures[future]
+                    try:
+                        path, meta = future.result()
+                        _record_generated_hero(artifacts, ratio, path, meta, stage)
+                    except Exception as exc:
+                        _record_hero_generation_failure(result, product.id, ratio.ratio, exc)
+        else:
+            for ratio in brief.aspect_ratios:
+                hero_out = services.storage.hero_output_path(
+                    brief.name, product.id, ratio.name,
+                )
+                if _check_cached_hero(hero_out):
+                    _record_cached_hero(artifacts, ratio, hero_out, stage)
+                    continue
 
-                        comp_start = time.time()
+                try:
+                    _, meta = services.provider.generate(
+                        prompt=prompt,
+                        width=ratio.width,
+                        height=ratio.height,
+                        output_path=hero_out,
+                    )
+                    _record_generated_hero(artifacts, ratio, hero_out, meta, stage)
+                except Exception as exc:
+                    _record_hero_generation_failure(result, product.id, ratio.ratio, exc)
 
-                        try:
-                            # Select layout template
-                            selected_template = forced_template or auto_select_template(
-                                ratio.ratio, product.keywords, brief.message,
-                            )
+    return artifacts
 
-                            # ── Layout rendering with template ────────────
-                            _, rendered_texts = compositor.compose(
-                                hero_path=hero_path,
-                                output_path=output_path,
-                                width=ratio.width,
-                                height=ratio.height,
-                                campaign_message=brief.message,
-                                tagline=brief.tagline,
-                                brand_name=brief.brand,
-                                language=lang,
-                                product_name=product.name,
-                                template=selected_template,
-                            )
 
-                            comp_ms = int((time.time() - comp_start) * 1000)
-                            comp_stage.items_processed += 1
+def _append_failed_asset(
+    result: PipelineResult,
+    product_id: str,
+    aspect_ratio: str,
+    language: str,
+    hero_status: AssetStatus,
+) -> None:
+    """Append a failed asset placeholder to preserve output accounting."""
+    result.assets.append(GeneratedAsset(
+        product_id=product_id,
+        aspect_ratio=aspect_ratio,
+        language=language,
+        file_path="",
+        status=AssetStatus.FAILED,
+        hero_status=hero_status,
+    ))
+    result.failed_count += 1
 
-                            # ── Policy checks ─────────────────────────────
-                            val_start = time.time()
-                            brand_result = brand_checker.full_check(
-                                image_path=output_path,
-                                rendered_texts=rendered_texts,
-                                logo_was_placed=compositor.logo_placed,
-                            )
-                            legal_result = legal_checker.check(rendered_texts)
-                            val_ms = int((time.time() - val_start) * 1000)
-                            val_stage.items_processed += 1
 
-                            # Prompt used for this hero
-                            hero_prompt = hero_prompts.get(ratio.name)
+def _track_asset_metrics(
+    tracker: PipelineTracker,
+    product_id: str,
+    aspect_ratio: str,
+    language: str,
+    meta: GenerationMetadata | None,
+    composition_ms: int,
+    validation_ms: int,
+) -> None:
+    """Capture per-asset timing and provider usage."""
+    tracker.track_asset(AssetMetrics(
+        product_id=product_id,
+        aspect_ratio=aspect_ratio,
+        language=language,
+        provider=meta.provider if meta else "reused",
+        generation_ms=meta.generation_time_ms if meta else 0,
+        composition_ms=composition_ms,
+        validation_ms=validation_ms,
+        estimated_cost_usd=meta.estimated_cost_usd if meta else 0.0,
+    ))
 
-                            asset = GeneratedAsset(
-                                product_id=product.id,
-                                aspect_ratio=ratio.ratio,
-                                language=lang,
-                                file_path=str(output_path),
-                                status=AssetStatus.GENERATED,
-                                hero_status=hero_status,
-                                prompt_used=hero_prompt,
-                                brand_compliance=brand_result,
-                                legal_compliance=legal_result,
-                                rendered_texts=rendered_texts,
-                            )
-                            result.assets.append(asset)
-                            result.created_count += 1
 
-                            # Track per-asset metrics
-                            gen_meta = hero_metas.get(ratio.name)
-                            tracker.track_asset(AssetMetrics(
-                                product_id=product.id,
-                                aspect_ratio=ratio.ratio,
-                                language=lang,
-                                provider=gen_meta.provider if gen_meta else "reused",
-                                generation_ms=gen_meta.generation_time_ms if gen_meta else 0,
-                                composition_ms=comp_ms,
-                                validation_ms=val_ms,
-                                estimated_cost_usd=gen_meta.estimated_cost_usd if gen_meta else 0.0,
-                            ))
+def _compose_product_assets(
+    brief: CampaignBrief,
+    product,
+    artifacts: HeroArtifacts,
+    services: PipelineServices,
+    tracker: PipelineTracker,
+    result: PipelineResult,
+    progress: Progress,
+    task_id: int,
+    report: Callable[[str], None],
+) -> None:
+    """Compose and validate every language/ratio creative for one product."""
+    report("Compositing and Validating...")
+    with tracker.stage(f"compose_{product.id}") as comp_stage, \
+         tracker.stage(f"validate_{product.id}") as val_stage:
+        for ratio in brief.aspect_ratios:
+            hero_path = artifacts.paths.get(ratio.name) or artifacts.existing_hero
 
-                        except Exception as exc:
-                            logger.error(f"Composition failed: {exc}", exc_info=True)
-                            result.assets.append(GeneratedAsset(
-                                product_id=product.id,
-                                aspect_ratio=ratio.ratio,
-                                language=lang,
-                                file_path="",
-                                status=AssetStatus.FAILED,
-                                hero_status=hero_status,
-                            ))
-                            result.failed_count += 1
-                            result.warnings.append(
-                                f"Composition failed for {product.id}/{ratio.ratio}/{lang}: {exc}"
-                            )
+            if hero_path is None:
+                for lang in brief.languages:
+                    progress.advance(task_id)
+                    _append_failed_asset(
+                        result,
+                        product.id,
+                        ratio.ratio,
+                        lang,
+                        AssetStatus.FAILED,
+                    )
+                continue
 
-                        progress.advance(task)
+            for lang in brief.languages:
+                progress.update(
+                    task_id,
+                    description=f"{product.id} / {ratio.ratio} / {lang}",
+                )
+                output_path = services.storage.creative_output_path(
+                    brief.name, product.id, ratio.name, lang,
+                )
+                comp_start = time.time()
 
-    # ── Collect translation warnings ──────────────────────────────────
-    for tw in translator.warnings:
-        result.warnings.append(f"[Translation] {tw}")
+                try:
+                    selected_template = services.forced_template or auto_select_template(
+                        ratio.ratio,
+                        product.keywords,
+                        brief.message,
+                    )
+                    _, rendered_texts = services.compositor.compose(
+                        hero_path=hero_path,
+                        output_path=output_path,
+                        width=ratio.width,
+                        height=ratio.height,
+                        campaign_message=brief.message,
+                        tagline=brief.tagline,
+                        brand_name=brief.brand,
+                        language=lang,
+                        product_name=product.name,
+                        template=selected_template,
+                    )
+                    comp_ms = int((time.time() - comp_start) * 1000)
+                    comp_stage.items_processed += 1
+
+                    val_start = time.time()
+                    brand_result = services.brand_checker.full_check(
+                        image_path=output_path,
+                        rendered_texts=rendered_texts,
+                        logo_was_placed=services.compositor.logo_placed,
+                    )
+                    legal_result = services.legal_checker.check(rendered_texts)
+                    val_ms = int((time.time() - val_start) * 1000)
+                    val_stage.items_processed += 1
+
+                    result.assets.append(GeneratedAsset(
+                        product_id=product.id,
+                        aspect_ratio=ratio.ratio,
+                        language=lang,
+                        file_path=str(output_path),
+                        status=AssetStatus.GENERATED,
+                        hero_status=artifacts.hero_status,
+                        prompt_used=artifacts.prompts.get(ratio.name),
+                        brand_compliance=brand_result,
+                        legal_compliance=legal_result,
+                        rendered_texts=rendered_texts,
+                    ))
+                    result.created_count += 1
+                    _track_asset_metrics(
+                        tracker,
+                        product.id,
+                        ratio.ratio,
+                        lang,
+                        artifacts.metas.get(ratio.name),
+                        comp_ms,
+                        val_ms,
+                    )
+                except Exception as exc:
+                    logger.error(f"Composition failed: {exc}", exc_info=True)
+                    _append_failed_asset(
+                        result,
+                        product.id,
+                        ratio.ratio,
+                        lang,
+                        artifacts.hero_status,
+                    )
+                    result.warnings.append(
+                        f"Composition failed for {product.id}/{ratio.ratio}/{lang}: {exc}"
+                    )
+
+                progress.advance(task_id)
+
+
+def _finalize_result(
+    result: PipelineResult,
+    translator: TranslationProvider,
+    start: float,
+) -> None:
+    """Populate final aggregate counters after asset processing."""
+    for warning in translator.warnings:
+        result.warnings.append(f"[Translation] {warning}")
 
     result.total_assets = len(result.assets)
     result.hero_reused_count = sum(
-        1 for a in result.assets if a.hero_status == AssetStatus.REUSED
+        1 for asset in result.assets if asset.hero_status == AssetStatus.REUSED
     )
     result.elapsed_seconds = time.time() - start
 
-    # ── Finalize metrics ──────────────────────────────────────────────
-    metrics = tracker.finalize()
-    metrics.provider_used = f"{provider.provider_type.value} ({provider.model_name})"
 
-    # ── Stage 7: Reporting ────────────────────────────────────────────
-    _report("Generating Reports...")
-    campaign_dir = storage.get_campaign_dir(brief.name)
+def _write_reports(
+    brief: CampaignBrief,
+    result: PipelineResult,
+    services: PipelineServices,
+    metrics,
+    analysis,
+    report: Callable[[str], None],
+) -> None:
+    """Print, serialize, and package final pipeline outputs."""
+    report("Generating Reports...")
+    campaign_dir = services.storage.get_campaign_dir(brief.name)
     print_console_report(result)
     print_metrics(metrics)
 
-    # Estimate time saved vs manual workflow
-    # Industry benchmark: ~15 min per creative manually (design + resize + text + review)
     manual_minutes_per_creative = 15
     manual_total_minutes = result.created_count * manual_minutes_per_creative
     automated_minutes = result.elapsed_seconds / 60
@@ -532,12 +606,106 @@ def run_pipeline(
         time_saved_minutes=time_saved_minutes,
     )
 
-    # ── Package campaign as ZIP for delivery ──────────────────────────
-    _report("Packaging ZIP...")
-    zip_path = storage.package_campaign_zip(brief.name)
-
+    report("Packaging ZIP...")
+    services.storage.package_campaign_zip(brief.name)
     console.print(
         f"[bold green]✓ Done![/bold green] "
         f"Outputs saved to: [cyan]{campaign_dir}[/cyan]\n"
     )
+
+
+# -----------------------------------------------------------------------
+# Main pipeline
+# -----------------------------------------------------------------------
+
+def run_pipeline(
+    brief_path: str | Path,
+    input_dir: str | Path = "input_assets",
+    output_dir: str | Path = "output",
+    mock: bool = False,
+    api_key: str | None = None,
+    provider_type: str | None = None,
+    template: str | None = None,
+    analyze: bool = True,
+    parallel: bool = True,
+    max_workers: int = 4,
+    status_callback: Callable[[str], None] | None = None,
+) -> PipelineResult:
+    """Execute the full creative automation pipeline."""
+    report = _build_reporter(status_callback)
+    tracker = PipelineTracker()
+    start = time.time()
+
+    report("Ingesting Brief...")
+    with tracker.stage("brief_ingestion") as stage:
+        brief = load_brief(brief_path)
+        stage.items_processed = 1
+        stage.notes.append(f"Loaded: {brief.name}")
+
+    analysis = None
+    enrichments: dict[str, str] = {}
+    if analyze:
+        report("Analyzing Brief...")
+        with tracker.stage("brief_analysis") as stage:
+            analysis = analyze_brief(brief)
+            enrichments = analysis.prompt_enrichments
+            stage.items_processed = 1
+            stage.notes.append(f"Score: {analysis.score.overall}/100")
+
+    report("Initializing...")
+    services = _initialize_services(
+        brief,
+        input_dir,
+        output_dir,
+        mock,
+        api_key,
+        provider_type,
+        template,
+    )
+
+    result = PipelineResult(campaign_name=brief.name)
+    total_tasks = len(brief.products) * len(brief.aspect_ratios) * len(brief.languages)
+
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        TextColumn("{task.completed}/{task.total}"),
+        TimeElapsedColumn(),
+        console=console,
+    ) as progress:
+        task_id = progress.add_task("Generating creatives…", total=total_tasks)
+
+        for product in brief.products:
+            console.print(f"\n[bold white]▸ Product: {product.name}[/bold white]")
+            report(f"Resolving assets for {product.name}...")
+            artifacts = _generate_product_heroes(
+                brief,
+                product,
+                services,
+                tracker,
+                result,
+                enrichments,
+                parallel,
+                max_workers,
+                report,
+            )
+            _compose_product_assets(
+                brief,
+                product,
+                artifacts,
+                services,
+                tracker,
+                result,
+                progress,
+                task_id,
+                report,
+            )
+
+    _finalize_result(result, services.translator, start)
+    metrics = tracker.finalize()
+    metrics.provider_used = (
+        f"{services.provider.provider_type.value} ({services.provider.model_name})"
+    )
+    _write_reports(brief, result, services, metrics, analysis, report)
     return result
