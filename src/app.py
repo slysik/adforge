@@ -899,33 +899,10 @@ def _render_ab_comparison(brief, sample_hero_path: Path | None = None):
 def _render_brief_builder():
     from src.models import CampaignBrief, Product, AspectRatio, BrandGuidelines
 
-    # Wizard step state
-    if "bb_step" not in st.session_state:
-        st.session_state.bb_step = 1
+    tab1, tab2, tab3, tab4 = st.tabs(["1. Campaign Info", "2. Brand Guidelines", "3. Products", "4. Review"])
+    brief = None
 
-    step = st.session_state.bb_step
-
-    wizard_html = '<div class="af-wizard-steps">'
-    steps_def = [
-        (1, "Campaign Info"),
-        (2, "Brand Guidelines"),
-        (3, "Products"),
-        (4, "Review"),
-    ]
-    for s_num, s_label in steps_def:
-        if s_num < step:
-            cls = "done"
-        elif s_num == step:
-            cls = "active"
-        else:
-            cls = ""
-        wizard_html += f'<div class="af-wizard-step {cls}">{"✓ " if s_num < step else f"{s_num}. "}{s_label}</div>'
-    wizard_html += "</div>"
-    st.markdown(wizard_html, unsafe_allow_html=True)
-
-    # --- Step content + consistent nav buttons ---
-
-    if step == 1:
+    with tab1:
         col1, col2 = st.columns(2)
         with col1:
             st.session_state.bb_name     = st.text_input("Campaign Name",    value=st.session_state.get("bb_name", "My Campaign 2025"))
@@ -937,7 +914,7 @@ def _render_brief_builder():
             st.session_state.bb_audience = st.text_input("Target Audience",  value=st.session_state.get("bb_audience", "Home decor designers, interior stylists, ages 30-60"))
             st.session_state.bb_langs    = st.multiselect("Languages", ["en", "es", "fr", "de", "pt", "ja", "zh", "ko"], default=st.session_state.get("bb_langs", ["en"]))
 
-    elif step == 2:
+    with tab2:
         gc1, gc2, gc3 = st.columns(3)
         with gc1:
             st.session_state.bb_c1     = st.color_picker("Primary Color",   st.session_state.get("bb_c1", "#1B4F72"))
@@ -963,7 +940,7 @@ def _render_brief_builder():
 
         st.session_state.bb_disclaimer = st.text_input("Legal Disclaimer (optional)", value=st.session_state.get("bb_disclaimer", ""))
 
-    elif step == 3:
+    with tab3:
         num_products = st.number_input("Number of Products", min_value=2, max_value=10, value=st.session_state.get("bb_nprods", 3), key="bb_nprods")
 
         products_data = []
@@ -986,7 +963,7 @@ def _render_brief_builder():
 
         st.session_state.bb_products_data = products_data
 
-    else:  # step 4 — Review
+    with tab4:
         brief_dict = {
             "name":     st.session_state.get("bb_name", "My Campaign"),
             "brand":    st.session_state.get("bb_brand", "Brand"),
@@ -1018,10 +995,6 @@ def _render_brief_builder():
             brief = CampaignBrief(**brief_dict)
         except Exception as e:
             st.warning(f"Brief validation: {e}")
-            col_back, _ = st.columns(2)
-            if col_back.button("← Back"):
-                st.session_state.bb_step = 3
-                st.rerun()
             return None
 
         # Brief card preview
@@ -1036,35 +1009,7 @@ def _render_brief_builder():
         total = len(brief.products) * 3 * len(brief.languages)
         st.info(f"Ready to generate **{total} creatives** (3 aspect ratios × {len(brief.products)} products × {len(brief.languages)} language(s)).")
 
-    # --- Consistent navigation buttons across all steps ---
-    col_back, col_next = st.columns(2)
-    if step == 1:
-        col_back.write("")  # placeholder to keep layout stable
-        if col_next.button("Next →", type="primary", key="bb_nav_next"):
-            st.session_state.bb_step = 2
-            st.rerun()
-        return None
-    elif step == 2:
-        if col_back.button("← Back", key="bb_nav_back"):
-            st.session_state.bb_step = 1
-            st.rerun()
-        if col_next.button("Next →", type="primary", key="bb_nav_next"):
-            st.session_state.bb_step = 3
-            st.rerun()
-        return None
-    elif step == 3:
-        if col_back.button("← Back", key="bb_nav_back"):
-            st.session_state.bb_step = 2
-            st.rerun()
-        if col_next.button("Next →", type="primary", key="bb_nav_next"):
-            st.session_state.bb_step = 4
-            st.rerun()
-        return None
-    else:  # step 4
-        if col_back.button("← Back", key="bb_nav_back"):
-            st.session_state.bb_step = 3
-            st.rerun()
-        return brief
+    return brief
 
 
 def _load_sample_report(campaign_dir: Path) -> dict | None:
