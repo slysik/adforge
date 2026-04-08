@@ -1699,6 +1699,20 @@ if current_brief is not None and st.session_state.get("_run_triggered"):
     ):
         st.markdown("<hr>", unsafe_allow_html=True)
         render_section_title("4. Results")
+        # Auto-scroll to Results when they appear or when sub-tabs change
+        import streamlit.components.v1 as components
+        components.html(
+            """<script>
+            // Scroll the main Streamlit container to put Results at top
+            const main = window.parent.document.querySelector('section.main');
+            const anchors = window.parent.document.querySelectorAll('hr');
+            const lastHr = anchors[anchors.length - 1];
+            if (main && lastHr) {
+                lastHr.scrollIntoView({behavior: 'smooth', block: 'start'});
+            }
+            </script>""",
+            height=0,
+        )
         _render_pipeline_results(
             st.session_state.active_run_brief,
             st.session_state.active_run_result,
