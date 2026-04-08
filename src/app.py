@@ -900,7 +900,7 @@ def _render_ab_comparison(brief, sample_hero_path: Path | None = None):
 def _render_brief_builder():
     from src.models import CampaignBrief, Product, AspectRatio, BrandGuidelines
 
-    tab1, tab2, tab3, tab4 = st.tabs(["1. Campaign Info", "2. Brand Guidelines", "3. Products", "4. Review"])
+    tab1, tab2, tab3, tab4 = st.tabs(["1. Enter Campaign Info", "2. Brand Guidelines", "3. Products", "4. Review"])
     brief = None
 
     with tab1:
@@ -1009,6 +1009,35 @@ def _render_brief_builder():
 
         total = len(brief.products) * 3 * len(brief.languages)
         st.info(f"Ready to generate **{total} creatives** (3 aspect ratios × {len(brief.products)} products × {len(brief.languages)} language(s)).")
+
+        # --- Run Pipeline controls (only visible on Review tab) ---
+        st.markdown("<hr>", unsafe_allow_html=True)
+        render_section_title("Run Pipeline")
+        options_col, template_col, action_col = st.columns([1.1, 1.1, 0.9])
+        with options_col:
+            provider_choice = st.selectbox(
+                "Image Provider",
+                ["mock", "gemini", "firefly", "dalle", "auto"],
+                help="Mock = no API key. Gemini = Imagen 4.0. Firefly = Adobe Firefly Services.",
+                key="main_provider_choice",
+            )
+        with template_col:
+            template_options = ["auto"] + [template.value for template in LayoutTemplate]
+            template_choice = st.selectbox(
+                "Layout Template",
+                template_options,
+                help="Auto picks the best template per product.",
+                key="main_template_choice",
+            )
+            if template_choice != "auto":
+                info = TEMPLATE_INFO.get(LayoutTemplate(template_choice), {})
+                st.caption(f"{info.get('icon', '')} {info.get('desc', '')}")
+        with action_col:
+            st.markdown("<div style='height:1.8rem'></div>", unsafe_allow_html=True)
+            run_pipeline_now = st.button("🚀 Run Pipeline", type="primary", use_container_width=True, key="main_run_pipeline")
+
+        if run_pipeline_now:
+            st.session_state._run_triggered = True
 
     return brief
 
@@ -1617,39 +1646,14 @@ if st.session_state.run_log:
 current_brief = _render_brief_builder()
 current_brief_path = None
 
-if current_brief is not None:
-    st.markdown("<hr>", unsafe_allow_html=True)
-    render_section_title("Run Pipeline")
+if current_brief is not None and st.session_state.get("_run_triggered"):
+    st.session_state._run_triggered = False
+    provider_choice = st.session_state.get("main_provider_choice", "mock")
+    template_choice = st.session_state.get("main_template_choice", "auto")
 
-    # Keep the run controls visually separate from the review content so the
-    # user sees a clear handoff: define brief -> review -> execute pipeline.
-    options_col, template_col, action_col = st.columns([1.1, 1.1, 0.9])
-    with options_col:
-        provider_choice = st.selectbox(
-            "Image Provider",
-            ["mock", "gemini", "firefly", "dalle", "auto"],
-            help="Mock = no API key. Gemini = Imagen 4.0. Firefly = Adobe Firefly Services.",
-            key="main_provider_choice",
-        )
-    with template_col:
-        template_options = ["auto"] + [template.value for template in LayoutTemplate]
-        template_choice = st.selectbox(
-            "Layout Template",
-            template_options,
-            help="Auto picks the best template per product.",
-            key="main_template_choice",
-        )
-        if template_choice != "auto":
-            info = TEMPLATE_INFO.get(LayoutTemplate(template_choice), {})
-            st.caption(f"{info.get('icon', '')} {info.get('desc', '')}")
-    with action_col:
-        st.markdown("<div style='height:1.8rem'></div>", unsafe_allow_html=True)
-        run_pipeline_now = st.button("🚀 Run Pipeline", type="primary", use_container_width=True, key="main_run_pipeline")
-
-    if run_pipeline_now:
-        run_brief_path = current_brief_path
-        if run_brief_path is None:
-            run_brief_path = _save_generated_brief_yaml(current_brief)
+    run_brief_path = current_brief_path
+    if run_brief_path is None:
+        run_brief_path = _save_generated_brief_yaml(current_brief)
 
         forced_template = None if template_choice == "auto" else template_choice
         stepper_slot = st.empty()
@@ -1701,4 +1705,4 @@ if current_brief is not None:
         )
 
 else:
-    st.info("Complete the brief steps or choose a sample brief to continue.")
+    st.info("Complete all brief steps and go to the Review tab to run the pipeline.")
