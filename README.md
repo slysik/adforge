@@ -101,7 +101,10 @@ output/coastal_collection_2025/
 
 ## 🚀 Quick Start
 
-<img src="docs/assets/install-demo.gif" alt="Installation Demo" width="960"/>
+<video width="960" controls loop muted autoplay>
+  <source src="docs/assets/install-demo.mp4" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
 
 **Prerequisites:** [just](https://github.com/casey/just#installation) + Python 3.9+ · No API keys needed for demo
 
