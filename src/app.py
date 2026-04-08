@@ -1625,7 +1625,7 @@ elif mode == "Run Pipeline" and run_btn:
                         st.markdown(f"**Keywords:** {', '.join(p.keywords)}")
 
     forced_template = None if template_choice == "auto" else template_choice
-    with st.spinner("Running pipeline... This may take a moment."):
+    with st.status("Running pipeline...", expanded=True) as status:
         try:
             result = run_pipeline(
                 brief_path=brief_path,
@@ -1634,8 +1634,11 @@ elif mode == "Run Pipeline" and run_btn:
                 mock=use_mock,
                 provider_type=None if provider == "auto" else provider,
                 template=forced_template,
+                status_callback=lambda msg: status.update(label=msg),
             )
+            status.update(label="Pipeline Complete!", state="complete", expanded=False)
         except RuntimeError as e:
+            status.update(label="Pipeline Failed", state="error", expanded=False)
             st.error(f"Pipeline failed: {e}")
             st.stop()
 
