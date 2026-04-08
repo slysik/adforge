@@ -1613,38 +1613,12 @@ if st.session_state.run_log:
     render_section_title("Recent Runs")
     _render_run_log()
 
-brief_source = st.radio(
-    "Brief Source",
-    ["Build Brief", "Sample Brief"],
-    horizontal=True,
-    key="main_brief_source",
-)
-
-current_brief = None
+current_brief = _render_brief_builder()
 current_brief_path = None
-
-if brief_source == "Build Brief":
-    current_brief = _render_brief_builder()
-
-elif brief_source == "Sample Brief":
-    sample_choice = st.selectbox(
-        "Sample campaign brief",
-        list(SAMPLE_BRIEFS.keys()),
-        key="main_sample_brief",
-    )
-    current_brief_path = SAMPLE_BRIEFS[sample_choice]
-    try:
-        current_brief = load_brief(current_brief_path)
-    except Exception as exc:
-        st.error(f"Failed to load brief: {exc}")
 
 if current_brief is not None:
     st.markdown("<hr>", unsafe_allow_html=True)
-    render_section_title("2. Review Brief")
-    _render_brief_review(current_brief)
-
-    st.markdown("<hr>", unsafe_allow_html=True)
-    render_section_title("3. Run Pipeline")
+    render_section_title("Run Pipeline")
 
     # Keep the run controls visually separate from the review content so the
     # user sees a clear handoff: define brief -> review -> execute pipeline.
