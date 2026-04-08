@@ -1120,17 +1120,18 @@ def _render_analysis(analysis_data: dict):
     ])
 
     if analysis_data.get("strengths") or analysis_data.get("weaknesses"):
-        col1, col2 = st.columns(2)
-        with col1:
-            if analysis_data.get("strengths"):
-                render_section_title("Strengths")
-                for s in analysis_data["strengths"]:
-                    st.markdown(f"✅ {s}")
-        with col2:
-            if analysis_data.get("weaknesses"):
-                render_section_title("Improvements")
-                for w in analysis_data["weaknesses"]:
-                    st.markdown(f"💡 {w}")
+        with st.expander("📊 Brief Insights", expanded=True):
+            col1, col2 = st.columns(2)
+            with col1:
+                if analysis_data.get("strengths"):
+                    render_section_title("Strengths")
+                    for s in analysis_data["strengths"]:
+                        st.markdown(f"✅ {s}")
+            with col2:
+                if analysis_data.get("weaknesses"):
+                    render_section_title("Improvements")
+                    for w in analysis_data["weaknesses"]:
+                        st.markdown(f"💡 {w}")
 
 
 def _render_approval_queue(assets: list[dict], session_key: str = "default"):

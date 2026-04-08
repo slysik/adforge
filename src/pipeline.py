@@ -370,10 +370,10 @@ def run_pipeline(
                                     f"Hero generation failed for {product.id}/{ratio.ratio}: {exc}"
                                 )
 
-    # ── Stage 5+6: Composition + validation per language ──────
-    _report("Compositing and Validating...")
-    with tracker.stage(f"compose_{product.id}") as comp_stage, \
-         tracker.stage(f"validate_{product.id}") as val_stage:
+            # ── Stage 5+6: Composition + validation per language ──────
+            _report("Compositing and Validating...")
+            with tracker.stage(f"compose_{product.id}") as comp_stage, \
+                 tracker.stage(f"validate_{product.id}") as val_stage:
                 for ratio in brief.aspect_ratios:
                     hero_path = hero_paths.get(ratio.name) or existing_hero
 
