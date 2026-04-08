@@ -1396,6 +1396,31 @@ def _analysis_to_payload(analysis) -> dict:
     }
 
 
+def _estimate_time_saved_hours(created_count: int, elapsed_seconds: float) -> float:
+    """Use the same manual-vs-automated assumption everywhere in the UI."""
+    return max(0, (created_count * 15 - elapsed_seconds / 60) / 60)
+
+
+def _build_campaign_summary_cards(
+    total_assets: int,
+    created_count: int,
+    hero_reused_count: int,
+    failed_count: int,
+    elapsed_seconds: float,
+    time_saved_hours: float,
+    created_sub: str,
+) -> list[dict]:
+    """Build the standard summary cards used for pipeline and sample runs."""
+    return [
+        {"label": "Total", "value": str(total_assets), "sub": "planned", "icon": "📁", "bar_pct": 100},
+        {"label": "Created", "value": str(created_count), "sub": created_sub, "icon": "✅", "bar_pct": created_count / max(total_assets, 1) * 100},
+        {"label": "Hero Reused", "value": str(hero_reused_count), "sub": "from cache", "icon": "♻️"},
+        {"label": "Failed", "value": str(failed_count), "sub": "errors", "icon": "⚠️"},
+        {"label": "Time", "value": f"{elapsed_seconds:.1f}s", "sub": "pipeline duration", "icon": "⏱️"},
+        {"label": "Saved", "value": f"{time_saved_hours:.1f}h", "sub": "vs manual", "icon": "🚀"},
+    ]
+
+
 def _render_brief_review(brief):
     """Render a compact brief review panel before pipeline execution."""
     rows = "".join(
@@ -1452,9 +1477,26 @@ def _serialize_result_assets(result) -> list[dict]:
     return assets
 
 
+def _normalize_report_asset_paths(assets: list[dict], campaign_dir: Path) -> list[dict]:
+    """Convert report-relative asset paths into on-disk paths the UI can open."""
+    normalized = []
+    for asset in assets:
+        patched = dict(asset)
+        original = Path(patched["file_path"])
+        if not original.exists():
+            parts = original.parts
+            if parts and parts[0] == "sample_output":
+                patched["file_path"] = str(ROOT / original)
+            else:
+                patched["file_path"] = str(campaign_dir / Path(*parts[1:]))
+        normalized.append(patched)
+    return normalized
+
+
 def _render_pipeline_results(brief, result):
     """Render the post-run tabs and summary for a completed pipeline."""
-    time_saved_hrs = max(0, (result.created_count * 15 - result.elapsed_seconds / 60) / 60)
+    # This view is the shared "what happened?" surface after a successful run.
+    time_saved_hrs = _estimate_time_saved_hours(result.created_count, result.elapsed_seconds)
     assets_data = _serialize_result_assets(result)
 
     tab_campaign, tab_gallery, tab_approval, tab_ab, tab_performance, tab_metrics = st.tabs(
@@ -1462,14 +1504,15 @@ def _render_pipeline_results(brief, result):
     )
 
     with tab_campaign:
-        render_metric_cards([
-            {"label": "Total", "value": str(result.total_assets), "sub": "planned", "icon": "📁", "bar_pct": 100},
-            {"label": "Created", "value": str(result.created_count), "sub": "successfully done", "icon": "✅", "bar_pct": result.created_count / max(result.total_assets, 1) * 100},
-            {"label": "Hero Reused", "value": str(result.hero_reused_count), "sub": "from cache", "icon": "♻️"},
-            {"label": "Failed", "value": str(result.failed_count), "sub": "errors", "icon": "⚠️"},
-            {"label": "Time", "value": f"{result.elapsed_seconds:.1f}s", "sub": "pipeline duration", "icon": "⏱️"},
-            {"label": "Saved", "value": f"{time_saved_hrs:.1f}h", "sub": "vs manual", "icon": "🚀"},
-        ])
+        render_metric_cards(_build_campaign_summary_cards(
+            total_assets=result.total_assets,
+            created_count=result.created_count,
+            hero_reused_count=result.hero_reused_count,
+            failed_count=result.failed_count,
+            elapsed_seconds=result.elapsed_seconds,
+            time_saved_hours=time_saved_hrs,
+            created_sub="successfully done",
+        ))
         if result.warnings:
             with st.expander(f"⚠️ Warnings ({len(result.warnings)})"):
                 for warning in result.warnings:
@@ -1532,30 +1575,22 @@ def _render_sample_library():
         st.info("No report found for the selected sample campaign.")
         return
 
+    # Sample reports are stored as JSON, so file paths may need to be re-rooted.
     sample_tabs = st.tabs(["📋 Campaign", "🖼️ Gallery", "✅ Approval Queue", "🔀 A/B Compare", "📈 Performance", "📊 Metrics"])
-    patched_assets = []
-    for asset in report.get("assets", []):
-        patched = dict(asset)
-        original = Path(patched["file_path"])
-        if not Path(patched["file_path"]).exists():
-            parts = original.parts
-            if parts and parts[0] == "sample_output":
-                patched["file_path"] = str(ROOT / original)
-            else:
-                patched["file_path"] = str(campaign_dir / Path(*parts[1:]))
-        patched_assets.append(patched)
+    patched_assets = _normalize_report_asset_paths(report.get("assets", []), campaign_dir)
 
     with sample_tabs[0]:
         elapsed = report.get("elapsed_seconds", 0)
         efficiency = report.get("efficiency", {})
-        render_metric_cards([
-            {"label": "Total Assets", "value": str(report["total_assets"]), "sub": "generated", "icon": "📁", "bar_pct": 100},
-            {"label": "Created", "value": str(report["created_count"]), "sub": "successfully composed", "icon": "✅", "bar_pct": report["created_count"] / max(report["total_assets"], 1) * 100},
-            {"label": "Hero Reused", "value": str(report["hero_reused_count"]), "sub": "from cache", "icon": "♻️"},
-            {"label": "Failed", "value": str(report["failed_count"]), "sub": "need attention", "icon": "⚠️"},
-            {"label": "Pipeline Time", "value": f"{elapsed:.1f}s", "sub": "end-to-end", "icon": "⏱️"},
-            {"label": "Time Saved", "value": f"{efficiency.get('time_saved_hours', 0):.1f}h", "sub": f"{efficiency.get('speedup_factor', 0):.0f}× speedup", "icon": "🚀"},
-        ])
+        render_metric_cards(_build_campaign_summary_cards(
+            total_assets=report["total_assets"],
+            created_count=report["created_count"],
+            hero_reused_count=report["hero_reused_count"],
+            failed_count=report["failed_count"],
+            elapsed_seconds=elapsed,
+            time_saved_hours=efficiency.get("time_saved_hours", 0),
+            created_sub="successfully composed",
+        ))
         analysis_data = report.get("brief_analysis")
         if analysis_data:
             render_section_title("Brief Analysis")
@@ -1598,9 +1633,9 @@ def _render_sample_library():
 
 
 def _save_uploaded_brief(uploaded) -> str:
+    """Persist an uploaded brief under an ignored per-session directory."""
     safe_name   = Path(uploaded.name).name
-    session_dir = ROOT / "temp_brief_upload" / uuid.uuid4().hex[:8]
-    session_dir.mkdir(parents=True, exist_ok=True)
+    session_dir = _create_temp_brief_dir()
     dest = session_dir / safe_name
     if not dest.resolve().is_relative_to(session_dir.resolve()):
         raise ValueError("Invalid filename")
@@ -1608,13 +1643,19 @@ def _save_uploaded_brief(uploaded) -> str:
     return str(dest)
 
 
+def _create_temp_brief_dir() -> Path:
+    """Create an ignored workspace for transient brief files."""
+    session_dir = ROOT / "temp_brief_upload" / uuid.uuid4().hex[:8]
+    session_dir.mkdir(parents=True, exist_ok=True)
+    return session_dir
+
+
 def _save_generated_brief_yaml(brief) -> str:
     """Persist a built brief to the ignored temp upload area."""
     import tempfile
     import yaml as _yaml
 
-    session_dir = ROOT / "temp_brief_upload" / uuid.uuid4().hex[:8]
-    session_dir.mkdir(parents=True, exist_ok=True)
+    session_dir = _create_temp_brief_dir()
     brief_yaml = _yaml.dump(
         {"campaign": brief.model_dump(exclude_none=True)},
         default_flow_style=False,
@@ -1701,6 +1742,8 @@ if current_brief is not None:
     st.markdown("<hr>", unsafe_allow_html=True)
     render_section_title("3. Run Pipeline")
 
+    # Keep the run controls visually separate from the review content so the
+    # user sees a clear handoff: define brief -> review -> execute pipeline.
     options_col, template_col, action_col = st.columns([1.1, 1.1, 0.9])
     with options_col:
         provider_choice = st.selectbox(
@@ -1750,7 +1793,10 @@ if current_brief is not None:
                 st.session_state.active_run_brief = current_brief
                 st.session_state.active_run_campaign = current_brief.name
                 st.session_state.active_run_provider = provider_choice
-                time_saved_hrs = max(0, (result.created_count * 15 - result.elapsed_seconds / 60) / 60)
+                time_saved_hrs = _estimate_time_saved_hours(
+                    result.created_count,
+                    result.elapsed_seconds,
+                )
                 _log_run(
                     campaign=current_brief.name,
                     provider=provider_choice,

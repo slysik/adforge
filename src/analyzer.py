@@ -70,6 +70,9 @@ class HeuristicAnalyzer:
     """
 
     def analyze(self, brief: CampaignBrief) -> BriefAnalysis:
+        # The analyzer scores the brief in four buckets that mirror how a
+        # creative team would review intake quality: is the brief complete,
+        # clear, on-brand, and targeted enough to produce useful assets?
         score = BriefScore()
         strengths = []
         weaknesses = []
@@ -109,8 +112,6 @@ class HeuristicAnalyzer:
             else:
                 enrichments[p.id] = self._enrich_prompt(p.name, p.description, p.keywords, brief)
 
-        # Check product descriptions quality
-        for p in brief.products:
             if len(p.description) < 20:
                 weaknesses.append(f"Product '{p.name}' description is thin — may produce generic heroes")
             elif len(p.description) > 50:
