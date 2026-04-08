@@ -262,8 +262,8 @@ html, body, [class*="css"] {
   white-space: nowrap;
 }
 .af-hero p {
-  color: rgba(255,255,255,.75) !important;
-  font-size: .85rem !important;
+  color: rgba(255,255,255,.9) !important;
+  font-size: 1.05rem !important;
   margin: 0 !important;
 }
 .af-hero-badge {
@@ -1702,7 +1702,3 @@ if current_brief is not None:
 
 else:
     st.info("Complete the brief steps or choose a sample brief to continue.")
-
-st.markdown("<hr>", unsafe_allow_html=True)
-with st.expander("Browse Pre-generated Samples"):
-    _render_sample_library()
