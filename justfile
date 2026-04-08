@@ -50,13 +50,16 @@ start-app:
 restart-app:
     #!/usr/bin/env bash
     set -euo pipefail
-    pkill -f "streamlit run src/app.py" 2>/dev/null || true
+    just stop-app
     sleep 1
     just start-app
 
 # Stop the Streamlit web UI
 stop-app:
-    pkill -f "streamlit run src/app.py" 2>/dev/null || echo "Not running"
+    #!/usr/bin/env bash
+    pkill -f "streamlit run src/app.py" 2>/dev/null || true
+    lsof -ti :8501 | xargs kill -9 2>/dev/null || true
+    echo "✓ Stopped"
 
 # Run the test suite
 test:
