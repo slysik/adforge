@@ -72,9 +72,17 @@ html, body, [class*="css"] {
 }
 
 .main .block-container {
-  padding-top: 1.5rem;
-  padding-bottom: 3rem;
+  padding-top: .5rem;
+  padding-bottom: 2rem;
   max-width: 1400px;
+}
+/* Reduce Streamlit's default vertical gaps between elements */
+.main .block-container [data-testid="stVerticalBlock"] > div {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+.main .block-container [data-testid="stVerticalBlock"] > div:has(> [data-testid="stRadio"]) {
+  margin-bottom: -.5rem;
 }
 
 /* ── Sidebar ──────────────────────────────────────────────────────────── */
@@ -915,10 +923,7 @@ def _render_brief_builder():
     wizard_html += "</div>"
     st.markdown(wizard_html, unsafe_allow_html=True)
 
-    # --- Fixed-height step content container + consistent nav buttons ---
-    # Wrap each step's content in a min-height div so the Back/Next buttons
-    # stay in the same vertical position regardless of step content height.
-    st.markdown('<div style="min-height:340px">', unsafe_allow_html=True)
+    # --- Step content + consistent nav buttons ---
 
     if step == 1:
         col1, col2 = st.columns(2)
@@ -1013,7 +1018,6 @@ def _render_brief_builder():
             brief = CampaignBrief(**brief_dict)
         except Exception as e:
             st.warning(f"Brief validation: {e}")
-            st.markdown('</div>', unsafe_allow_html=True)
             col_back, _ = st.columns(2)
             if col_back.button("← Back"):
                 st.session_state.bb_step = 3
@@ -1031,9 +1035,6 @@ def _render_brief_builder():
 
         total = len(brief.products) * 3 * len(brief.languages)
         st.info(f"Ready to generate **{total} creatives** (3 aspect ratios × {len(brief.products)} products × {len(brief.languages)} language(s)).")
-
-    # Close the fixed-height container
-    st.markdown('</div>', unsafe_allow_html=True)
 
     # --- Consistent navigation buttons across all steps ---
     col_back, col_next = st.columns(2)
@@ -1780,7 +1781,7 @@ if current_brief is not None:
         )
 
 else:
-    st.info("Complete the brief steps, choose a sample brief, or upload a brief to continue.")
+    st.info("Complete the brief steps or choose a sample brief to continue.")
 
 st.markdown("<hr>", unsafe_allow_html=True)
 with st.expander("Browse Pre-generated Samples"):
