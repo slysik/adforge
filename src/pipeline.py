@@ -234,7 +234,7 @@ def _cached_generation_metadata() -> GenerationMetadata:
     """Synthetic metadata for a hero loaded from the on-disk cache."""
     return GenerationMetadata(
         provider="cached",
-        model_name="cache",
+        model="cache",
         prompt_used="(cached)",
         generation_time_ms=0,
         estimated_cost_usd=0.0,
