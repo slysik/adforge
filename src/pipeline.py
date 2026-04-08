@@ -185,7 +185,12 @@ def run_pipeline(
 
     # ── Initialize components ─────────────────────────────────────────
     _report("Initializing...")
-
+    
+    provider = get_provider(
+        provider_type=provider_type,
+        api_key=api_key,
+        mock=mock,
+    )
 
     storage = StorageManager(input_dir=Path(input_dir), output_dir=Path(output_dir))
     compositor = Compositor(
