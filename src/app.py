@@ -71,8 +71,12 @@ html, body, [class*="css"] {
   color: var(--charcoal);
 }
 
+/* Hide Streamlit header toolbar (Deploy button) and kill top gap */
+[data-testid="stHeader"] {
+  display: none !important;
+}
 .main .block-container {
-  padding-top: .5rem;
+  padding-top: 0rem;
   padding-bottom: 2rem;
   max-width: 1400px;
 }
@@ -80,9 +84,6 @@ html, body, [class*="css"] {
 .main .block-container [data-testid="stVerticalBlock"] > div {
   padding-top: 0;
   padding-bottom: 0;
-}
-.main .block-container [data-testid="stVerticalBlock"] > div:has(> [data-testid="stRadio"]) {
-  margin-bottom: -.5rem;
 }
 
 /* ── Sidebar ──────────────────────────────────────────────────────────── */
@@ -1605,7 +1606,7 @@ if "active_run_provider" not in st.session_state:
 
 render_hero_header(
     "AdForge",
-    "Creative automation for social campaigns. Build a brief, run the pipeline, and review campaign outputs in one place.",
+    "Creative automation for social campaigns. Build a brief, run the workflow, and review campaign outputs in one place.",
     badge="Pipeline Studio",
 )
 
