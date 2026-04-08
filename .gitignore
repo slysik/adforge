@@ -15,6 +15,17 @@ output/
 temp_brief_upload/
 tmp*.yaml
 
+# Replit
+.replit
+attached_assets/
+
+# Test cache
+.pytest_cache/
+pytest-cache-files-*/
+
+# Sample output (generated at runtime)
+sample_output/
+
 # IDE
 .idea/
 .vscode/
