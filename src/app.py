@@ -948,6 +948,11 @@ def _render_brief_builder():
     wizard_html += "</div>"
     st.markdown(wizard_html, unsafe_allow_html=True)
 
+    # --- Fixed-height step content container + consistent nav buttons ---
+    # Wrap each step's content in a min-height div so the Back/Next buttons
+    # stay in the same vertical position regardless of step content height.
+    st.markdown('<div style="min-height:420px">', unsafe_allow_html=True)
+
     if step == 1:
         render_section_title("Campaign Info")
         col1, col2 = st.columns(2)
@@ -960,10 +965,6 @@ def _render_brief_builder():
             st.session_state.bb_region   = st.text_input("Target Region",    value=st.session_state.get("bb_region", "Southern Florida — Naples & Palm Beach"))
             st.session_state.bb_audience = st.text_input("Target Audience",  value=st.session_state.get("bb_audience", "Home decor designers, interior stylists, ages 30-60"))
             st.session_state.bb_langs    = st.multiselect("Languages", ["en", "es", "fr", "de", "pt", "ja", "zh", "ko"], default=st.session_state.get("bb_langs", ["en"]))
-        if st.button("Next →", type="primary"):
-            st.session_state.bb_step = 2
-            st.rerun()
-        return None
 
     elif step == 2:
         render_section_title("Brand Guidelines")
@@ -992,15 +993,6 @@ def _render_brief_builder():
 
         st.session_state.bb_disclaimer = st.text_input("Legal Disclaimer (optional)", value=st.session_state.get("bb_disclaimer", ""))
 
-        col_back, col_next = st.columns(2)
-        if col_back.button("← Back"):
-            st.session_state.bb_step = 1
-            st.rerun()
-        if col_next.button("Next →", type="primary"):
-            st.session_state.bb_step = 3
-            st.rerun()
-        return None
-
     elif step == 3:
         render_section_title("Products")
         num_products = st.number_input("Number of Products", min_value=2, max_value=10, value=st.session_state.get("bb_nprods", 3), key="bb_nprods")
@@ -1024,15 +1016,6 @@ def _render_brief_builder():
                 products_data.append({"id": p_id.strip(), "name": p_name.strip(), "description": p_desc.strip(), "keywords": [k.strip() for k in p_kw.split(",") if k.strip()]})
 
         st.session_state.bb_products_data = products_data
-
-        col_back, col_next = st.columns(2)
-        if col_back.button("← Back"):
-            st.session_state.bb_step = 2
-            st.rerun()
-        if col_next.button("Review →", type="primary"):
-            st.session_state.bb_step = 4
-            st.rerun()
-        return None
 
     else:  # step 4 — Review
         render_section_title("Review & Confirm")
@@ -1067,7 +1050,9 @@ def _render_brief_builder():
             brief = CampaignBrief(**brief_dict)
         except Exception as e:
             st.warning(f"Brief validation: {e}")
-            if st.button("← Back"):
+            st.markdown('</div>', unsafe_allow_html=True)
+            col_back, _ = st.columns(2)
+            if col_back.button("← Back"):
                 st.session_state.bb_step = 3
                 st.rerun()
             return None
@@ -1084,11 +1069,37 @@ def _render_brief_builder():
         total = len(brief.products) * 3 * len(brief.languages)
         st.info(f"Ready to generate **{total} creatives** (3 aspect ratios × {len(brief.products)} products × {len(brief.languages)} language(s)).")
 
-        col_back, _ = st.columns(2)
-        if col_back.button("← Back"):
+    # Close the fixed-height container
+    st.markdown('</div>', unsafe_allow_html=True)
+
+    # --- Consistent navigation buttons across all steps ---
+    col_back, col_next = st.columns(2)
+    if step == 1:
+        col_back.write("")  # placeholder to keep layout stable
+        if col_next.button("Next →", type="primary", key="bb_nav_next"):
+            st.session_state.bb_step = 2
+            st.rerun()
+        return None
+    elif step == 2:
+        if col_back.button("← Back", key="bb_nav_back"):
+            st.session_state.bb_step = 1
+            st.rerun()
+        if col_next.button("Next →", type="primary", key="bb_nav_next"):
             st.session_state.bb_step = 3
             st.rerun()
-
+        return None
+    elif step == 3:
+        if col_back.button("← Back", key="bb_nav_back"):
+            st.session_state.bb_step = 2
+            st.rerun()
+        if col_next.button("Next →", type="primary", key="bb_nav_next"):
+            st.session_state.bb_step = 4
+            st.rerun()
+        return None
+    else:  # step 4
+        if col_back.button("← Back", key="bb_nav_back"):
+            st.session_state.bb_step = 3
+            st.rerun()
         return brief
 
 
@@ -1696,7 +1707,7 @@ if st.session_state.run_log:
 render_section_title("1. Brief Source")
 brief_source = st.radio(
     "Choose how to start",
-    ["Build Brief", "Sample Brief", "Upload Brief"],
+    ["Build Brief", "Sample Brief"],
     horizontal=True,
     label_visibility="collapsed",
     key="main_brief_source",
@@ -1720,19 +1731,6 @@ elif brief_source == "Sample Brief":
         current_brief = load_brief(current_brief_path)
     except Exception as exc:
         st.error(f"Failed to load brief: {exc}")
-
-else:
-    uploaded_brief = st.file_uploader(
-        "Upload a custom brief (YAML/JSON)",
-        type=["yaml", "yml", "json"],
-        key="main_uploaded_brief",
-    )
-    if uploaded_brief:
-        current_brief_path = _save_uploaded_brief(uploaded_brief)
-        try:
-            current_brief = load_brief(current_brief_path)
-        except Exception as exc:
-            st.error(f"Failed to load brief: {exc}")
 
 if current_brief is not None:
     st.markdown("<hr>", unsafe_allow_html=True)
