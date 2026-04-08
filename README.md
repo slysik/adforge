@@ -24,26 +24,14 @@
 
 ## ✨ Pipeline at a Glance
 
-```
- 📋 INGEST        Parse & validate the campaign brief (YAML/JSON)
-      │
-      ▼
- 🔍 ANALYZE       Score brief quality (92/100) + suggest improvements
-      │
-      ▼
- 📂 RESOLVE       Find existing hero images or mark for generation
-      │
-      ▼
- 🎨 GENERATE      Create missing heroes via GenAI (parallel)
-      │
-      ▼
- 🖼️ COMPOSE       Apply layout template + text + logo + i18n
-      │
-      ▼
- ✅ VALIDATE      Check brand colors, logo, prohibited words, legal
-      │
-      ▼
- 📊 REPORT        Console summary + JSON + interactive HTML dashboard
+```mermaid
+graph TD
+    A[📋 INGEST: Parse & Validate Brief] --> B[🔍 ANALYZE: Score Quality & Enrich Prompts]
+    B --> C[📂 RESOLVE: Hero Images]
+    C --> D[🎨 GENERATE: GenAI Hero Creation]
+    D --> E[🖼️ COMPOSE: Layout + Text + I18n]
+    E --> F[✅ VALIDATE: Brand & Legal]
+    F --> G[📊 REPORT: Summary & Dashboard]
 ```
 
 **Input:** 1 YAML brief + product photos
@@ -278,25 +266,21 @@ Results embedded in every asset's metadata:
 
 ## 🏗️ Architecture
 
-```
-┌──────────────────────────────────────────────┐
-│       CLI (click)  /  Web UI (Streamlit)     │
-└──────────────────┬───────────────────────────┘
-                   │
-┌──────────────────▼───────────────────────────┐
-│         Pipeline Orchestrator                │
-│  Ingest → Analyze → Resolve → Generate →     │
-│  Compose → Validate → Report                 │
-└─┬────┬────┬────┬────┬────┬────┬──────────────┘
-  │    │    │    │    │    │    │
-  ▼    ▼    ▼    ▼    ▼    ▼    ▼
-Models Analyzer Providers Templates Compositor Validator Report
-(Pydantic) (scoring) (abstraction) (5 layouts) (Pillow) (brand) (JSON+HTML)
-                 │
-       ┌─────────┼─────────┬──────────┐
-       ▼         ▼         ▼          ▼
-   Firefly    Imagen    DALL-E 3    Mock
-   Services   4.0                  (test)
+```mermaid
+graph TD
+    CLI[CLI / Web UI] --> Pipeline[Pipeline Orchestrator]
+    
+    subgraph Core_Modules [Core Modules]
+    Pipeline --> Models[Models / Pydantic]
+    Pipeline --> Analyzer[Analyzer]
+    Pipeline --> Providers[Providers]
+    Pipeline --> Templates[Templates]
+    Pipeline --> Compositor[Compositor]
+    Pipeline --> Validator[Validator]
+    Pipeline --> Report[Report Engine]
+    end
+    
+    Providers --> GenAI[GenAI APIs / Mock]
 ```
 
 ### Module Inventory (11 modules, ~2,400 lines)
