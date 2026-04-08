@@ -231,78 +231,47 @@ html, body, [class*="css"] {
 }
 .af-card-ocean * { color: #fff !important; }
 
-/* ── Hero banner ──────────────────────────────────────────────────────── */
+/* ── Hero banner (compact) ────────────────────────────────────────────── */
 .af-hero {
   background: linear-gradient(135deg, var(--ocean-blue) 0%, var(--ocean-light) 55%, #4AA3DF 100%);
   border-radius: var(--radius-lg);
-  padding: 2.5rem 2.5rem 2rem;
-  margin-bottom: 1.75rem;
+  padding: .9rem 1.5rem;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
   position: relative;
   overflow: hidden;
 }
-.af-hero::before {
-  content: '';
-  position: absolute;
-  top: -40px; right: -40px;
-  width: 200px; height: 200px;
-  background: rgba(255,255,255,.06);
-  border-radius: 50%;
-}
-.af-hero::after {
-  content: '';
-  position: absolute;
-  bottom: -60px; left: 30%;
-  width: 280px; height: 280px;
-  background: rgba(255,255,255,.04);
-  border-radius: 50%;
-}
+.af-hero::before, .af-hero::after { display: none; }
 .af-hero h1 {
   color: #fff !important;
-  font-size: 2.1rem !important;
+  font-size: 1.3rem !important;
   font-weight: 700 !important;
-  margin: 0 0 .4rem !important;
+  margin: 0 !important;
   line-height: 1.2 !important;
+  white-space: nowrap;
 }
 .af-hero p {
-  color: rgba(255,255,255,.82) !important;
-  font-size: 1rem !important;
+  color: rgba(255,255,255,.75) !important;
+  font-size: .85rem !important;
   margin: 0 !important;
-  max-width: 560px;
 }
 .af-hero-badge {
   display: inline-block;
   background: rgba(255,255,255,.15);
   color: #fff;
-  font-size: .75rem;
+  font-size: .65rem;
   font-weight: 600;
   letter-spacing: .05em;
   text-transform: uppercase;
-  padding: .25rem .75rem;
+  padding: .15rem .55rem;
   border-radius: 100px;
-  margin-bottom: .85rem;
 }
-.af-hero-meta {
-  display: flex;
-  gap: 2rem;
-  margin-top: 1.25rem;
-  flex-wrap: wrap;
-}
-.af-hero-meta-item {
-  display: flex;
-  flex-direction: column;
-}
-.af-hero-meta-label {
-  font-size: .72rem;
-  color: rgba(255,255,255,.6);
-  text-transform: uppercase;
-  letter-spacing: .06em;
-  margin-bottom: .1rem;
-}
-.af-hero-meta-value {
-  font-size: .92rem;
-  color: #fff;
-  font-weight: 600;
-}
+.af-hero-meta { display: none; }
+.af-hero-meta-item { display: none; }
+.af-hero-meta-label { display: none; }
+.af-hero-meta-value { display: none; }
 
 /* ── Pipeline stepper ─────────────────────────────────────────────────── */
 .af-stepper {
@@ -539,7 +508,7 @@ html, body, [class*="css"] {
 .af-wizard-steps {
   display: flex;
   gap: 0;
-  margin-bottom: 2rem;
+  margin-bottom: .75rem;
   border-bottom: 2px solid var(--sandy-beige);
 }
 .af-wizard-step {
@@ -598,7 +567,7 @@ html, body, [class*="css"] {
   font-size: 1.05rem;
   font-weight: 700;
   color: var(--ocean-blue);
-  margin: 1.5rem 0 .75rem;
+  margin: .75rem 0 .5rem;
   display: flex;
   align-items: center;
   gap: .4rem;
@@ -797,10 +766,8 @@ def render_hero_header(title: str, subtitle: str, meta: list[tuple[str, str]] | 
     st.markdown(
         f"""
         <div class="af-hero">
-          {badge_html}
           <h1>🎨 {title}</h1>
           <p>{subtitle}</p>
-          {meta_html}
         </div>
         """,
         unsafe_allow_html=True,
@@ -951,10 +918,9 @@ def _render_brief_builder():
     # --- Fixed-height step content container + consistent nav buttons ---
     # Wrap each step's content in a min-height div so the Back/Next buttons
     # stay in the same vertical position regardless of step content height.
-    st.markdown('<div style="min-height:420px">', unsafe_allow_html=True)
+    st.markdown('<div style="min-height:340px">', unsafe_allow_html=True)
 
     if step == 1:
-        render_section_title("Campaign Info")
         col1, col2 = st.columns(2)
         with col1:
             st.session_state.bb_name     = st.text_input("Campaign Name",    value=st.session_state.get("bb_name", "My Campaign 2025"))
@@ -967,7 +933,6 @@ def _render_brief_builder():
             st.session_state.bb_langs    = st.multiselect("Languages", ["en", "es", "fr", "de", "pt", "ja", "zh", "ko"], default=st.session_state.get("bb_langs", ["en"]))
 
     elif step == 2:
-        render_section_title("Brand Guidelines")
         gc1, gc2, gc3 = st.columns(3)
         with gc1:
             st.session_state.bb_c1     = st.color_picker("Primary Color",   st.session_state.get("bb_c1", "#1B4F72"))
@@ -994,7 +959,6 @@ def _render_brief_builder():
         st.session_state.bb_disclaimer = st.text_input("Legal Disclaimer (optional)", value=st.session_state.get("bb_disclaimer", ""))
 
     elif step == 3:
-        render_section_title("Products")
         num_products = st.number_input("Number of Products", min_value=2, max_value=10, value=st.session_state.get("bb_nprods", 3), key="bb_nprods")
 
         products_data = []
@@ -1018,7 +982,6 @@ def _render_brief_builder():
         st.session_state.bb_products_data = products_data
 
     else:  # step 4 — Review
-        render_section_title("Review & Confirm")
         brief_dict = {
             "name":     st.session_state.get("bb_name", "My Campaign"),
             "brand":    st.session_state.get("bb_brand", "Brand"),
@@ -1704,12 +1667,10 @@ if st.session_state.run_log:
     render_section_title("Recent Runs")
     _render_run_log()
 
-render_section_title("1. Brief Source")
 brief_source = st.radio(
-    "Choose how to start",
+    "Brief Source",
     ["Build Brief", "Sample Brief"],
     horizontal=True,
-    label_visibility="collapsed",
     key="main_brief_source",
 )
 
@@ -1717,7 +1678,6 @@ current_brief = None
 current_brief_path = None
 
 if brief_source == "Build Brief":
-    render_section_title("Build Brief")
     current_brief = _render_brief_builder()
 
 elif brief_source == "Sample Brief":
