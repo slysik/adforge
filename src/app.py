@@ -33,6 +33,7 @@ st.set_page_config(
     page_title="AdForge — Creative Automation",
     page_icon="🎨",
     layout="wide",
+    initial_sidebar_state="collapsed",
 )
 
 # ---------------------------------------------------------------------------
@@ -77,6 +78,9 @@ html, body, [class*="css"] {
 }
 
 /* ── Sidebar ──────────────────────────────────────────────────────────── */
+[data-testid="collapsedControl"] {
+  display: none !important;
+}
 [data-testid="stSidebar"] {
   background: var(--ocean-blue) !important;
   border-right: none;
@@ -677,9 +681,23 @@ def _log_run(
 def _render_run_log():
     log = st.session_state.run_log
     if not log:
-        st.info("No pipeline runs yet this session. Run a pipeline to see history here.")
+        st.info("No pipeline runs yet this session.")
         return
-    st.dataframe(log, use_container_width=True, hide_index=True)
+    entries = log[:3]
+    cols = st.columns(len(entries))
+    for col, entry in zip(cols, entries):
+        with col:
+            st.markdown(
+                f'<div class="af-card">'
+                f'<div class="af-brief-label">Campaign</div>'
+                f'<div class="af-brief-value">{entry["campaign"]}</div>'
+                f'<div class="af-brief-label">Result</div>'
+                f'<div class="af-brief-value">{entry["created"]} creatives · {entry["elapsed"]}</div>'
+                f'<div class="af-brief-label">Efficiency</div>'
+                f'<div class="af-brief-value">saved {entry["time_saved"]}</div>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -688,9 +706,29 @@ def _render_run_log():
 
 SAMPLE_BRIEFS = {
     "Coastal Collection 2025 (Blue Beach House Designs)": "sample_briefs/beach_house_campaign.yaml",
-    "Summer Refresh 2025 (FreshCo)": "sample_briefs/summer_campaign.yaml",
     "Holiday Glow 2025 (LuxeBeauty)": "sample_briefs/holiday_campaign.yaml",
 }
+
+DEFAULT_BUILDER_PRODUCTS = [
+    {
+        "id": "resort-shell-handbag",
+        "name": "Resort Shell Handbag",
+        "description": "Handcrafted rattan handbag adorned with natural seashells and floral accents, featuring a lined interior, drawstring closure, and room for all your essentials",
+        "keywords": "shell handbag, rattan bag, coastal fashion, beach accessory, resort wear, handcrafted, seashell",
+    },
+    {
+        "id": "cowrie-shell-box",
+        "name": "Bespoke Rattan Cowrie Shell Box",
+        "description": "Hand-woven rattan keepsake box embellished with cowrie shells and turquoise accents, perfect for jewelry storage or coastal home decor",
+        "keywords": "cowrie shell, rattan box, keepsake box, coastal decor, jewelry box, handwoven",
+    },
+    {
+        "id": "painted-shell-art",
+        "name": "Painted Shell Art",
+        "description": "Vibrant hand-painted seashell collection displayed in a gilded bamboo frame, featuring pastel rainbow scallops, starfish, and sand dollars",
+        "keywords": "shell art, wall art, coastal wall decor, painted shells, framed art, pastel decor",
+    },
+]
 
 COMPLIANCE_EMOJI = {
     "passed":      "✅",
@@ -769,7 +807,11 @@ def render_hero_header(title: str, subtitle: str, meta: list[tuple[str, str]] | 
     )
 
 
-def render_pipeline_stepper(active_stage: int = 0, done_stages: int = 0):
+def render_pipeline_stepper(
+    active_stage: int = 0,
+    done_stages: int = 0,
+    target=None,
+):
     """
     Render a horizontal 7-step pipeline progress indicator.
     active_stage: 1-indexed stage currently running (0 = not started).
@@ -794,7 +836,8 @@ def render_pipeline_stepper(active_stage: int = 0, done_stages: int = 0):
             f'<div class="af-step-label">{label_safe}</div>'
             f'</div>'
         )
-    st.markdown(
+    render_target = target or st
+    render_target.markdown(
         f'<div class="af-stepper">{steps_html}</div>',
         unsafe_allow_html=True,
     )
@@ -960,18 +1003,24 @@ def _render_brief_builder():
 
     elif step == 3:
         render_section_title("Products")
-        num_products = st.number_input("Number of Products", min_value=2, max_value=10, value=st.session_state.get("bb_nprods", 2), key="bb_nprods")
+        num_products = st.number_input("Number of Products", min_value=2, max_value=10, value=st.session_state.get("bb_nprods", 3), key="bb_nprods")
 
         products_data = []
         for i in range(int(num_products)):
+            default_product = DEFAULT_BUILDER_PRODUCTS[i] if i < len(DEFAULT_BUILDER_PRODUCTS) else {
+                "id": f"product-{i + 1}",
+                "name": f"Product {i + 1}",
+                "description": "A beautiful handcrafted coastal product",
+                "keywords": "handcrafted, coastal, design",
+            }
             with st.expander(f"📦 Product {i + 1}", expanded=(i < 2)):
                 pc1, pc2 = st.columns(2)
                 with pc1:
-                    p_name = st.text_input("Product Name", value=st.session_state.get(f"bb_pname_{i}", f"Product {i + 1}"), key=f"bb_pname_{i}")
-                    p_id   = st.text_input("Product ID (lowercase, hyphens)", value=st.session_state.get(f"bb_pid_{i}", f"product-{i + 1}"), key=f"bb_pid_{i}")
+                    p_name = st.text_input("Product Name", value=st.session_state.get(f"bb_pname_{i}", default_product["name"]), key=f"bb_pname_{i}")
+                    p_id   = st.text_input("Product ID (lowercase, hyphens)", value=st.session_state.get(f"bb_pid_{i}", default_product["id"]), key=f"bb_pid_{i}")
                 with pc2:
-                    p_desc = st.text_area("Description", value=st.session_state.get(f"bb_pdesc_{i}", "A beautiful handcrafted product"), key=f"bb_pdesc_{i}", height=68)
-                    p_kw   = st.text_input("Keywords (comma-separated)", value=st.session_state.get(f"bb_pkw_{i}", "handcrafted, coastal, design"), key=f"bb_pkw_{i}")
+                    p_desc = st.text_area("Description", value=st.session_state.get(f"bb_pdesc_{i}", default_product["description"]), key=f"bb_pdesc_{i}", height=68)
+                    p_kw   = st.text_input("Keywords (comma-separated)", value=st.session_state.get(f"bb_pkw_{i}", default_product["keywords"]), key=f"bb_pkw_{i}")
                 products_data.append({"id": p_id.strip(), "name": p_name.strip(), "description": p_desc.strip(), "keywords": [k.strip() for k in p_kw.split(",") if k.strip()]})
 
         st.session_state.bb_products_data = products_data
@@ -1252,7 +1301,7 @@ def _render_approval_queue(assets: list[dict], session_key: str = "default"):
         )
 
 
-def _render_performance(assets: list[dict]):
+def _render_performance(assets: list[dict], session_key: str = "default"):
     if not assets:
         st.info("No assets to analyze.")
         return
@@ -1294,7 +1343,13 @@ def _render_performance(assets: list[dict]):
 
     csv_data   = [f"{k.creative_id},{k.product_id},{k.aspect_ratio},{k.language},{k.spend_usd:.2f},{k.impressions},{k.clicks},{k.conversions},{k.ctr:.2f},{k.cpa:.2f},{k.cpc:.2f}" for k in perf.kpis]
     csv_header = "creative_id,product_id,aspect_ratio,language,spend_usd,impressions,clicks,conversions,ctr_pct,cpa_usd,cpc_usd"
-    st.download_button("Download KPIs (CSV)", data=csv_header + "\n" + "\n".join(csv_data), file_name="creative_kpis.csv", mime="text/csv")
+    st.download_button(
+        "Download KPIs (CSV)",
+        data=csv_header + "\n" + "\n".join(csv_data),
+        file_name="creative_kpis.csv",
+        mime="text/csv",
+        key=f"download_kpis_{session_key}",
+    )
     st.caption("*Sample data generated for demo purposes. In production, this would ingest real ad platform metrics.*")
 
 
@@ -1326,6 +1381,222 @@ def _render_metrics(report: dict):
     st.markdown(f"**Provider:** `{provider}`")
 
 
+def _analysis_to_payload(analysis) -> dict:
+    """Normalize analyzer output for the shared UI components."""
+    return {
+        "score": {
+            "overall": analysis.score.overall,
+            "completeness": analysis.score.completeness,
+            "clarity": analysis.score.clarity,
+            "brand_strength": analysis.score.brand_strength,
+            "targeting": analysis.score.targeting,
+        },
+        "strengths": analysis.strengths,
+        "weaknesses": analysis.weaknesses,
+    }
+
+
+def _render_brief_review(brief):
+    """Render a compact brief review panel before pipeline execution."""
+    rows = "".join(
+        f'<div><div class="af-brief-label">{label}</div><div class="af-brief-value">{value}</div></div>'
+        for label, value in [
+            ("Brand", brief.brand),
+            ("Campaign", brief.name),
+            ("Message", brief.message),
+            ("Region", brief.target_region),
+            ("Audience", brief.target_audience),
+            ("Languages", ", ".join(brief.languages)),
+            ("Products", str(len(brief.products))),
+        ]
+    )
+    st.markdown(f'<div class="af-card"><div class="af-brief-grid">{rows}</div></div>', unsafe_allow_html=True)
+
+    total = len(brief.products) * len(brief.aspect_ratios) * len(brief.languages)
+    st.info(
+        f"Ready to generate **{total} creatives** "
+        f"({len(brief.aspect_ratios)} aspect ratios × {len(brief.products)} products × {len(brief.languages)} languages)."
+    )
+
+    render_section_title("Pipeline Overview")
+    render_pipeline_stepper(active_stage=0)
+
+    render_section_title("Brief Analysis")
+    _render_analysis(_analysis_to_payload(analyze_brief(brief)))
+
+    render_section_title("Products")
+    for product in brief.products:
+        with st.expander(f"📦 {product.name}"):
+            col_left, col_right = st.columns(2)
+            with col_left:
+                st.markdown(f"**ID:** `{product.id}`")
+                st.markdown(f"**Description:** {product.description}")
+            with col_right:
+                hero_text = "Will be generated via GenAI" if not product.hero_image else f"Existing: `{product.hero_image}`"
+                st.markdown(f"**Hero Image:** {hero_text}")
+                if product.keywords:
+                    st.markdown(f"**Keywords:** {', '.join(product.keywords)}")
+
+
+def _serialize_result_assets(result) -> list[dict]:
+    """Prepare assets for gallery and approval queue rendering."""
+    assets = []
+    for asset in result.assets:
+        data = asset.model_dump()
+        data["hero_status"] = data["hero_status"].value if hasattr(data["hero_status"], "value") else data["hero_status"]
+        if data.get("brand_compliance") and hasattr(data["brand_compliance"].get("status", ""), "value"):
+            data["brand_compliance"]["status"] = data["brand_compliance"]["status"].value
+        if data.get("legal_compliance") and hasattr(data["legal_compliance"].get("status", ""), "value"):
+            data["legal_compliance"]["status"] = data["legal_compliance"]["status"].value
+        assets.append(data)
+    return assets
+
+
+def _render_pipeline_results(brief, result):
+    """Render the post-run tabs and summary for a completed pipeline."""
+    time_saved_hrs = max(0, (result.created_count * 15 - result.elapsed_seconds / 60) / 60)
+    assets_data = _serialize_result_assets(result)
+
+    tab_campaign, tab_gallery, tab_approval, tab_ab, tab_performance, tab_metrics = st.tabs(
+        ["📋 Campaign", "🖼️ Gallery", "✅ Approval Queue", "🔀 A/B Compare", "📈 Performance", "📊 Metrics"]
+    )
+
+    with tab_campaign:
+        render_metric_cards([
+            {"label": "Total", "value": str(result.total_assets), "sub": "planned", "icon": "📁", "bar_pct": 100},
+            {"label": "Created", "value": str(result.created_count), "sub": "successfully done", "icon": "✅", "bar_pct": result.created_count / max(result.total_assets, 1) * 100},
+            {"label": "Hero Reused", "value": str(result.hero_reused_count), "sub": "from cache", "icon": "♻️"},
+            {"label": "Failed", "value": str(result.failed_count), "sub": "errors", "icon": "⚠️"},
+            {"label": "Time", "value": f"{result.elapsed_seconds:.1f}s", "sub": "pipeline duration", "icon": "⏱️"},
+            {"label": "Saved", "value": f"{time_saved_hrs:.1f}h", "sub": "vs manual", "icon": "🚀"},
+        ])
+        if result.warnings:
+            with st.expander(f"⚠️ Warnings ({len(result.warnings)})"):
+                for warning in result.warnings:
+                    st.warning(warning)
+
+    with tab_gallery:
+        _render_gallery(assets_data)
+
+    with tab_approval:
+        _render_approval_queue(assets_data, session_key="pipeline_run")
+
+    with tab_ab:
+        render_section_title("A/B Template Comparison")
+        st.caption("Compare all 5 layout templates side-by-side using the generated hero images.")
+        from src.storage import StorageManager as _SM, slugify as _slugify
+        storage = _SM(input_dir=Path("input_assets"), output_dir=Path("output"))
+        for product in brief.products:
+            st.markdown(f"**{product.name}**")
+            hero_dir = storage.get_campaign_dir(brief.name) / _slugify(product.id)
+            hero_candidates = list(hero_dir.rglob("hero*.png")) + list(hero_dir.rglob("hero*.jpg"))
+            if hero_candidates:
+                _render_ab_comparison(brief, hero_candidates[0])
+            else:
+                st.info(f"No hero found for {product.name}")
+            st.divider()
+
+    with tab_performance:
+        _render_performance(assets_data, session_key="pipeline_run")
+
+    with tab_metrics:
+        from src.storage import StorageManager
+        storage = StorageManager(input_dir=Path("input_assets"), output_dir=Path("output"))
+        campaign_dir = storage.get_campaign_dir(brief.name)
+        report = _load_sample_report(campaign_dir)
+        if report:
+            _render_metrics(report)
+        else:
+            st.info("Metrics available in the JSON report.")
+
+
+def _render_sample_library():
+    """Render pre-generated sample outputs as a secondary discovery section."""
+    sample_base = ROOT / "sample_output"
+    campaigns = _find_sample_campaigns(sample_base)
+
+    if not campaigns:
+        st.info("No pre-generated samples found in `sample_output/`.")
+        return
+
+    selected_name = st.selectbox(
+        "Sample campaign",
+        [campaign.name.replace("_", " ").title() for campaign in campaigns],
+        key="sample_library_select",
+    )
+    selected_idx = [campaign.name.replace("_", " ").title() for campaign in campaigns].index(selected_name)
+    campaign_dir = campaigns[selected_idx]
+    report = _load_sample_report(campaign_dir)
+
+    if not report:
+        st.info("No report found for the selected sample campaign.")
+        return
+
+    sample_tabs = st.tabs(["📋 Campaign", "🖼️ Gallery", "✅ Approval Queue", "🔀 A/B Compare", "📈 Performance", "📊 Metrics"])
+    patched_assets = []
+    for asset in report.get("assets", []):
+        patched = dict(asset)
+        original = Path(patched["file_path"])
+        if not Path(patched["file_path"]).exists():
+            parts = original.parts
+            if parts and parts[0] == "sample_output":
+                patched["file_path"] = str(ROOT / original)
+            else:
+                patched["file_path"] = str(campaign_dir / Path(*parts[1:]))
+        patched_assets.append(patched)
+
+    with sample_tabs[0]:
+        elapsed = report.get("elapsed_seconds", 0)
+        efficiency = report.get("efficiency", {})
+        render_metric_cards([
+            {"label": "Total Assets", "value": str(report["total_assets"]), "sub": "generated", "icon": "📁", "bar_pct": 100},
+            {"label": "Created", "value": str(report["created_count"]), "sub": "successfully composed", "icon": "✅", "bar_pct": report["created_count"] / max(report["total_assets"], 1) * 100},
+            {"label": "Hero Reused", "value": str(report["hero_reused_count"]), "sub": "from cache", "icon": "♻️"},
+            {"label": "Failed", "value": str(report["failed_count"]), "sub": "need attention", "icon": "⚠️"},
+            {"label": "Pipeline Time", "value": f"{elapsed:.1f}s", "sub": "end-to-end", "icon": "⏱️"},
+            {"label": "Time Saved", "value": f"{efficiency.get('time_saved_hours', 0):.1f}h", "sub": f"{efficiency.get('speedup_factor', 0):.0f}× speedup", "icon": "🚀"},
+        ])
+        analysis_data = report.get("brief_analysis")
+        if analysis_data:
+            render_section_title("Brief Analysis")
+            _render_analysis(analysis_data)
+
+    with sample_tabs[1]:
+        _render_gallery(patched_assets)
+
+    with sample_tabs[2]:
+        _render_approval_queue(patched_assets, session_key=f"sample_{selected_idx}")
+
+    with sample_tabs[3]:
+        render_section_title("A/B Template Comparison")
+        try:
+            brief_for_ab = None
+            for _, brief_path in SAMPLE_BRIEFS.items():
+                try:
+                    candidate = load_brief(brief_path)
+                    if candidate.name.lower().replace(" ", "_") in campaign_dir.name:
+                        brief_for_ab = candidate
+                        break
+                except Exception:
+                    continue
+
+            if brief_for_ab:
+                hero_candidates = list(campaign_dir.rglob("hero*.png")) + list(campaign_dir.rglob("hero*.jpg"))
+                if not hero_candidates:
+                    hero_candidates = list(campaign_dir.rglob("*.jpg"))
+                _render_ab_comparison(brief_for_ab, hero_candidates[0] if hero_candidates else None)
+            else:
+                st.info("Could not match a campaign brief for A/B comparison.")
+        except Exception as exc:
+            st.warning(f"A/B comparison unavailable: {exc}")
+
+    with sample_tabs[4]:
+        _render_performance(patched_assets, session_key=f"sample_{selected_idx}")
+
+    with sample_tabs[5]:
+        _render_metrics(report)
+
+
 def _save_uploaded_brief(uploaded) -> str:
     safe_name   = Path(uploaded.name).name
     session_dir = ROOT / "temp_brief_upload" / uuid.uuid4().hex[:8]
@@ -1338,414 +1609,163 @@ def _save_uploaded_brief(uploaded) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Sidebar
-# ---------------------------------------------------------------------------
-
-with st.sidebar:
-    st.markdown(
-        '<div style="font-size:1.6rem;font-weight:700;color:#fff;margin-bottom:.1rem">🎨 AdForge</div>'
-        '<div style="font-size:.78rem;color:rgba(255,255,255,.6);margin-bottom:1rem">Creative automation for social campaigns</div>',
-        unsafe_allow_html=True,
-    )
-    st.divider()
-
-    mode = st.radio(
-        "Mode",
-        ["Run Pipeline", "Build Brief", "View Pre-generated Samples"],
-        help="Run the pipeline, interactively build a brief, or browse pre-generated outputs",
-    )
-
-    if mode == "Run Pipeline":
-        st.markdown('<div style="font-size:.82rem;font-weight:700;color:rgba(255,255,255,.7);text-transform:uppercase;letter-spacing:.08em;margin:1rem 0 .4rem">Campaign Brief</div>', unsafe_allow_html=True)
-        brief_choice = st.selectbox("Select a sample brief", list(SAMPLE_BRIEFS.keys()))
-        brief_path   = SAMPLE_BRIEFS[brief_choice]
-
-        uploaded = st.file_uploader("Or upload a custom brief (YAML/JSON)", type=["yaml", "yml", "json"])
-
-        st.markdown('<div style="font-size:.82rem;font-weight:700;color:rgba(255,255,255,.7);text-transform:uppercase;letter-spacing:.08em;margin:1rem 0 .4rem">Options</div>', unsafe_allow_html=True)
-        provider = st.selectbox(
-            "Image Provider",
-            ["mock", "gemini", "firefly", "dalle", "auto"],
-            help="Mock = no API key. Gemini = Imagen 4.0. Firefly = Adobe Firefly Services.",
-        )
-
-        template_options = ["auto"] + [t.value for t in LayoutTemplate]
-        template_choice  = st.selectbox("Layout Template", template_options, help="Auto picks the best template per product.")
-        if template_choice != "auto":
-            tpl  = LayoutTemplate(template_choice)
-            info = TEMPLATE_INFO.get(tpl, {})
-            st.caption(f"{info.get('icon', '')} {info.get('desc', '')}")
-
-        use_mock = provider == "mock"
-        run_btn  = st.button("🚀 Run Pipeline", type="primary", use_container_width=True)
-
-    elif mode == "Build Brief":
-        st.markdown('<div style="font-size:.82rem;color:rgba(255,255,255,.65);margin-top:.5rem">Build a brief step-by-step — no YAML needed.</div>', unsafe_allow_html=True)
-        run_btn = False
-
-    else:
-        st.markdown('<div style="font-size:.82rem;font-weight:700;color:rgba(255,255,255,.7);text-transform:uppercase;letter-spacing:.08em;margin:1rem 0 .4rem">Sample Outputs</div>', unsafe_allow_html=True)
-        sample_base = ROOT / "sample_output"
-        campaigns   = _find_sample_campaigns(sample_base)
-        if not campaigns:
-            st.warning("No pre-generated samples found in `sample_output/`.")
-            st.info("Generate samples first:\n```\npython -m src.cli generate sample_briefs/beach_house_campaign.yaml -o sample_output --mock\n```")
-        run_btn = False
-
-    # Run log
-    if st.session_state.run_log:
-        st.divider()
-        st.markdown('<div style="font-size:.78rem;font-weight:700;color:rgba(255,255,255,.7);text-transform:uppercase;letter-spacing:.08em;margin-bottom:.5rem">📋 Run Log</div>', unsafe_allow_html=True)
-        for entry in st.session_state.run_log[:5]:
-            status_icon = "✅" if entry["failed"] == 0 else "⚠️"
-            st.markdown(
-                f'<div class="af-log-entry">'
-                f'{status_icon} <strong>{entry["campaign"]}</strong><br>'
-                f'{entry["created"]} creatives · {entry["elapsed"]} · saved {entry["time_saved"]}'
-                f'</div>',
-                unsafe_allow_html=True,
-            )
-
-
-# ---------------------------------------------------------------------------
 # Main content
 # ---------------------------------------------------------------------------
 
-if mode == "Build Brief":
-    render_hero_header(
-        "Campaign Brief Builder",
-        "Create a custom campaign brief step-by-step — no YAML or JSON needed.",
-        badge="Brief Builder",
+if "active_run_result" not in st.session_state:
+    st.session_state.active_run_result = None
+if "active_run_brief" not in st.session_state:
+    st.session_state.active_run_brief = None
+if "active_run_campaign" not in st.session_state:
+    st.session_state.active_run_campaign = None
+if "active_run_provider" not in st.session_state:
+    st.session_state.active_run_provider = "mock"
+
+render_hero_header(
+    "AdForge",
+    "Creative automation for social campaigns. Build a brief, run the pipeline, and review campaign outputs in one place.",
+    badge="Pipeline Studio",
+)
+
+if st.session_state.run_log:
+    render_section_title("Recent Runs")
+    _render_run_log()
+
+render_section_title("1. Brief Source")
+brief_source = st.radio(
+    "Choose how to start",
+    ["Build Brief", "Sample Brief", "Upload Brief"],
+    horizontal=True,
+    label_visibility="collapsed",
+    key="main_brief_source",
+)
+
+current_brief = None
+current_brief_path = None
+
+if brief_source == "Build Brief":
+    render_section_title("Build Brief")
+    current_brief = _render_brief_builder()
+
+elif brief_source == "Sample Brief":
+    sample_choice = st.selectbox(
+        "Sample campaign brief",
+        list(SAMPLE_BRIEFS.keys()),
+        key="main_sample_brief",
     )
-    built_brief = _render_brief_builder()
-
-    if built_brief:
-        st.markdown("<hr>", unsafe_allow_html=True)
-        render_section_title("Brief Quality Analysis")
-        analysis = analyze_brief(built_brief)
-        _render_analysis({
-            "score": {
-                "overall":       analysis.score.overall,
-                "completeness":  analysis.score.completeness,
-                "clarity":       analysis.score.clarity,
-                "brand_strength": analysis.score.brand_strength,
-                "targeting":     analysis.score.targeting,
-            },
-            "strengths":  analysis.strengths,
-            "weaknesses": analysis.weaknesses,
-        })
-
-        import yaml as _yaml
-        brief_yaml = _yaml.dump({"campaign": built_brief.model_dump(exclude_none=True)}, default_flow_style=False)
-        st.download_button("Download Brief (YAML)", data=brief_yaml, file_name=f"{built_brief.name.lower().replace(' ', '_')}.yaml", mime="text/yaml")
-
-        builder_provider = st.selectbox("Provider", ["mock", "gemini", "firefly", "dalle", "auto"], key="bb_provider")
-        if st.button("🚀 Run Pipeline on This Brief", type="primary", key="bb_run"):
-            import tempfile
-            with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False, dir=str(ROOT)) as f:
-                f.write(brief_yaml)
-                tmp_path = f.name
-
-            render_pipeline_stepper(active_stage=1)
-            with st.spinner("Running pipeline..."):
-                try:
-                    result = run_pipeline(
-                        brief_path=tmp_path,
-                        input_dir="input_assets",
-                        output_dir="output",
-                        mock=(builder_provider == "mock"),
-                        provider_type=None if builder_provider == "auto" else builder_provider,
-                    )
-                    render_pipeline_stepper(done_stages=7)
-                    time_saved = (result.created_count * 15 - result.elapsed_seconds / 60) / 60
-                    st.success(f"Generated **{result.created_count}** creatives in {result.elapsed_seconds:.1f}s")
-                    _log_run(
-                        campaign=built_brief.name,
-                        provider=builder_provider,
-                        total=result.total_assets,
-                        created=result.created_count,
-                        failed=result.failed_count,
-                        elapsed=result.elapsed_seconds,
-                        time_saved_hrs=max(0, time_saved),
-                    )
-                    assets_data = [a.model_dump() for a in result.assets]
-                    _render_gallery(assets_data)
-                except Exception as e:
-                    st.error(f"Pipeline failed: {e}")
-
-elif mode == "View Pre-generated Samples":
-    render_hero_header(
-        "Pre-generated Samples",
-        "Browse previously generated campaign creatives — no pipeline run needed.",
-        badge="Sample Library",
-    )
-    sample_base = ROOT / "sample_output"
-    campaigns   = _find_sample_campaigns(sample_base)
-
-    if campaigns:
-        selected_name = st.selectbox("Select a campaign", [c.name.replace("_", " ").title() for c in campaigns])
-        selected_idx  = [c.name.replace("_", " ").title() for c in campaigns].index(selected_name)
-        campaign_dir  = campaigns[selected_idx]
-
-        report = _load_sample_report(campaign_dir)
-        if report:
-            tab_campaign, tab_gallery, tab_approval, tab_ab, tab_performance, tab_metrics = st.tabs(
-                ["📋 Campaign", "🖼️ Gallery", "✅ Approval Queue", "🔀 A/B Compare", "📈 Performance", "📊 Metrics"]
-            )
-
-            with tab_campaign:
-                elapsed    = report.get("elapsed_seconds", 0)
-                efficiency = report.get("efficiency", {})
-                render_metric_cards([
-                    {"label": "Total Assets", "value": str(report["total_assets"]),       "sub": "generated",             "icon": "📁", "bar_pct": 100},
-                    {"label": "Created",      "value": str(report["created_count"]),       "sub": "successfully composed", "icon": "✅", "bar_pct": report["created_count"] / max(report["total_assets"],1) * 100},
-                    {"label": "Hero Reused",  "value": str(report["hero_reused_count"]),   "sub": "from cache",            "icon": "♻️"},
-                    {"label": "Failed",       "value": str(report["failed_count"]),         "sub": "need attention",        "icon": "⚠️"},
-                    {"label": "Pipeline Time","value": f"{elapsed:.1f}s",                  "sub": "end-to-end",            "icon": "⏱️"},
-                    {"label": "Time Saved",   "value": f"{efficiency.get('time_saved_hours', 0):.1f}h", "sub": f"{efficiency.get('speedup_factor', 0):.0f}× speedup", "icon": "🚀"},
-                ])
-
-                zip_path = campaign_dir / f"{campaign_dir.name}.zip"
-                if not zip_path.exists():
-                    zip_path = campaign_dir.parent / f"{campaign_dir.name}.zip"
-                if zip_path.exists():
-                    with open(zip_path, "rb") as zf:
-                        st.download_button("📦 Download Campaign ZIP", data=zf.read(), file_name=zip_path.name, mime="application/zip", key=f"zip_sample_{selected_idx}")
-
-                analysis_data = report.get("brief_analysis")
-                if analysis_data:
-                    render_section_title("Brief Analysis")
-                    _render_analysis(analysis_data)
-
-            with tab_gallery:
-                assets = report.get("assets", [])
-                patched_assets = []
-                for asset in assets:
-                    patched  = dict(asset)
-                    original = Path(patched["file_path"])
-                    if not Path(patched["file_path"]).exists():
-                        parts = original.parts
-                        if parts and parts[0] == "sample_output":
-                            patched["file_path"] = str(ROOT / original)
-                        else:
-                            patched["file_path"] = str(campaign_dir / Path(*parts[1:]))
-                    patched_assets.append(patched)
-                _render_gallery(patched_assets)
-
-            with tab_approval:
-                _render_approval_queue(patched_assets, session_key=f"sample_{selected_idx}")
-
-            with tab_ab:
-                render_section_title("A/B Template Comparison")
-                st.caption("Preview how all 5 layout templates render with the same hero image and brief settings.")
-                try:
-                    brief_for_ab = None
-                    for bname, bpath in SAMPLE_BRIEFS.items():
-                        try:
-                            b = load_brief(bpath)
-                            if b.name.lower().replace(" ", "_") in campaign_dir.name:
-                                brief_for_ab = b
-                                break
-                        except Exception:
-                            continue
-
-                    if brief_for_ab:
-                        hero_candidates = list(campaign_dir.rglob("hero*.png")) + list(campaign_dir.rglob("hero*.jpg"))
-                        if not hero_candidates:
-                            hero_candidates = list(campaign_dir.rglob("*.jpg"))
-                        hero_for_ab = hero_candidates[0] if hero_candidates else None
-                        _render_ab_comparison(brief_for_ab, hero_for_ab)
-                    else:
-                        st.info("Could not match a campaign brief for A/B comparison.")
-                except Exception as e:
-                    st.warning(f"A/B comparison unavailable: {e}")
-
-            with tab_performance:
-                _render_performance(patched_assets)
-
-            with tab_metrics:
-                _render_metrics(report)
-
-    else:
-        st.info("No pre-generated samples found. Run the pipeline with `-o sample_output` first.")
-
-elif mode == "Run Pipeline" and run_btn:
-    if uploaded:
-        brief_path = _save_uploaded_brief(uploaded)
-
+    current_brief_path = SAMPLE_BRIEFS[sample_choice]
     try:
-        brief = load_brief(brief_path)
-    except Exception as e:
-        st.error(f"Failed to load brief: {e}")
-        st.stop()
+        current_brief = load_brief(current_brief_path)
+    except Exception as exc:
+        st.error(f"Failed to load brief: {exc}")
 
-    render_hero_header(
-        brief.brand,
-        brief.message,
-        meta=[
-            ("Campaign",   brief.name),
-            ("Region",     brief.target_region),
-            ("Languages",  ", ".join(brief.languages)),
-            ("Products",   str(len(brief.products))),
-        ],
-        badge="Pipeline Running",
+else:
+    uploaded_brief = st.file_uploader(
+        "Upload a custom brief (YAML/JSON)",
+        type=["yaml", "yml", "json"],
+        key="main_uploaded_brief",
     )
-
-    render_pipeline_stepper(active_stage=1)
-
-    tab_campaign, tab_gallery, tab_approval, tab_ab, tab_performance, tab_metrics = st.tabs(
-        ["📋 Campaign", "🖼️ Gallery", "✅ Approval Queue", "🔀 A/B Compare", "📈 Performance", "📊 Metrics"]
-    )
-
-    with tab_campaign:
-        render_section_title("Brief Analysis")
-        analysis = analyze_brief(brief)
-        _render_analysis({
-            "score": {
-                "overall":        analysis.score.overall,
-                "completeness":   analysis.score.completeness,
-                "clarity":        analysis.score.clarity,
-                "brand_strength": analysis.score.brand_strength,
-                "targeting":      analysis.score.targeting,
-            },
-            "strengths":  analysis.strengths,
-            "weaknesses": analysis.weaknesses,
-        })
-
-        render_section_title("Products")
-        for p in brief.products:
-            with st.expander(f"📦 {p.name}"):
-                c1, c2 = st.columns(2)
-                with c1:
-                    st.markdown(f"**ID:** `{p.id}`")
-                    st.markdown(f"**Description:** {p.description}")
-                with c2:
-                    hero_txt = "Will be generated via GenAI" if not p.hero_image else f"Existing: `{p.hero_image}`"
-                    st.markdown(f"**Hero Image:** {hero_txt}")
-                    if p.keywords:
-                        st.markdown(f"**Keywords:** {', '.join(p.keywords)}")
-
-    forced_template = None if template_choice == "auto" else template_choice
-    with st.status("Running pipeline...", expanded=True) as status:
+    if uploaded_brief:
+        current_brief_path = _save_uploaded_brief(uploaded_brief)
         try:
-            result = run_pipeline(
-                brief_path=brief_path,
-                input_dir="input_assets",
-                output_dir="output",
-                mock=use_mock,
-                provider_type=None if provider == "auto" else provider,
-                template=forced_template,
-                status_callback=lambda msg: status.update(label=msg),
+            current_brief = load_brief(current_brief_path)
+        except Exception as exc:
+            st.error(f"Failed to load brief: {exc}")
+
+if current_brief is not None:
+    st.markdown("<hr>", unsafe_allow_html=True)
+    render_section_title("2. Review Brief")
+    _render_brief_review(current_brief)
+
+    st.markdown("<hr>", unsafe_allow_html=True)
+    render_section_title("3. Run Pipeline")
+
+    options_col, template_col, action_col = st.columns([1.1, 1.1, 0.9])
+    with options_col:
+        provider_choice = st.selectbox(
+            "Image Provider",
+            ["mock", "gemini", "firefly", "dalle", "auto"],
+            help="Mock = no API key. Gemini = Imagen 4.0. Firefly = Adobe Firefly Services.",
+            key="main_provider_choice",
+        )
+    with template_col:
+        template_options = ["auto"] + [template.value for template in LayoutTemplate]
+        template_choice = st.selectbox(
+            "Layout Template",
+            template_options,
+            help="Auto picks the best template per product.",
+            key="main_template_choice",
+        )
+        if template_choice != "auto":
+            info = TEMPLATE_INFO.get(LayoutTemplate(template_choice), {})
+            st.caption(f"{info.get('icon', '')} {info.get('desc', '')}")
+    with action_col:
+        st.markdown("<div style='height:1.8rem'></div>", unsafe_allow_html=True)
+        run_pipeline_now = st.button("🚀 Run Pipeline", type="primary", use_container_width=True, key="main_run_pipeline")
+
+    if run_pipeline_now:
+        run_brief_path = current_brief_path
+        if run_brief_path is None:
+            import tempfile
+            import yaml as _yaml
+
+            brief_yaml = _yaml.dump(
+                {"campaign": current_brief.model_dump(exclude_none=True)},
+                default_flow_style=False,
             )
-            status.update(label="Pipeline Complete!", state="complete", expanded=False)
-            render_pipeline_stepper(done_stages=7)
-        except RuntimeError as e:
-            status.update(label="Pipeline Failed", state="error", expanded=False)
-            st.error(f"Pipeline failed: {e}")
-            st.stop()
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False, dir=str(ROOT)) as handle:
+                handle.write(brief_yaml)
+                run_brief_path = handle.name
 
-    time_saved_hrs = max(0, (result.created_count * 15 - result.elapsed_seconds / 60) / 60)
-    _log_run(campaign=brief.name, provider=provider, total=result.total_assets, created=result.created_count, failed=result.failed_count, elapsed=result.elapsed_seconds, time_saved_hrs=time_saved_hrs)
+        forced_template = None if template_choice == "auto" else template_choice
+        stepper_slot = st.empty()
+        render_pipeline_stepper(active_stage=1, target=stepper_slot)
 
-    with tab_campaign:
+        with st.status("Running pipeline...", expanded=True) as status:
+            try:
+                result = run_pipeline(
+                    brief_path=run_brief_path,
+                    input_dir="input_assets",
+                    output_dir="output",
+                    mock=(provider_choice == "mock"),
+                    provider_type=None if provider_choice == "auto" else provider_choice,
+                    template=forced_template,
+                    status_callback=lambda msg: status.update(label=msg),
+                )
+                status.update(label="Pipeline Complete!", state="complete", expanded=False)
+                render_pipeline_stepper(done_stages=7, target=stepper_slot)
+                st.session_state.active_run_result = result
+                st.session_state.active_run_brief = current_brief
+                st.session_state.active_run_campaign = current_brief.name
+                st.session_state.active_run_provider = provider_choice
+                time_saved_hrs = max(0, (result.created_count * 15 - result.elapsed_seconds / 60) / 60)
+                _log_run(
+                    campaign=current_brief.name,
+                    provider=provider_choice,
+                    total=result.total_assets,
+                    created=result.created_count,
+                    failed=result.failed_count,
+                    elapsed=result.elapsed_seconds,
+                    time_saved_hrs=time_saved_hrs,
+                )
+            except RuntimeError as exc:
+                status.update(label="Pipeline Failed", state="error", expanded=False)
+                st.error(f"Pipeline failed: {exc}")
+
+    if (
+        st.session_state.active_run_result is not None
+        and st.session_state.active_run_campaign == current_brief.name
+    ):
         st.markdown("<hr>", unsafe_allow_html=True)
-        render_section_title("Results")
-        render_metric_cards([
-            {"label": "Total",      "value": str(result.total_assets),    "sub": "planned",          "icon": "📁", "bar_pct": 100},
-            {"label": "Created",    "value": str(result.created_count),   "sub": "successfully done","icon": "✅", "bar_pct": result.created_count / max(result.total_assets,1) * 100},
-            {"label": "Hero Reused","value": str(result.hero_reused_count),"sub": "from cache",       "icon": "♻️"},
-            {"label": "Failed",     "value": str(result.failed_count),    "sub": "errors",           "icon": "⚠️"},
-            {"label": "Time",       "value": f"{result.elapsed_seconds:.1f}s","sub": "pipeline duration","icon": "⏱️"},
-            {"label": "Saved",      "value": f"{time_saved_hrs:.1f}h",    "sub": "vs manual",        "icon": "🚀"},
-        ])
-        if result.warnings:
-            with st.expander(f"⚠️ Warnings ({len(result.warnings)})"):
-                for w in result.warnings:
-                    st.warning(w)
+        render_section_title("4. Results")
+        _render_pipeline_results(
+            st.session_state.active_run_brief,
+            st.session_state.active_run_result,
+        )
 
-    with tab_gallery:
-        assets_data = [a.model_dump() for a in result.assets]
-        _render_gallery(assets_data)
+else:
+    st.info("Complete the brief steps, choose a sample brief, or upload a brief to continue.")
 
-    with tab_approval:
-        assets_for_approval = []
-        for a in result.assets:
-            d = a.model_dump()
-            d["hero_status"] = d["hero_status"].value if hasattr(d["hero_status"], "value") else d["hero_status"]
-            if d.get("brand_compliance") and hasattr(d["brand_compliance"].get("status", ""), "value"):
-                d["brand_compliance"]["status"] = d["brand_compliance"]["status"].value
-            if d.get("legal_compliance") and hasattr(d["legal_compliance"].get("status", ""), "value"):
-                d["legal_compliance"]["status"] = d["legal_compliance"]["status"].value
-            assets_for_approval.append(d)
-        _render_approval_queue(assets_for_approval, session_key="pipeline_run")
-
-    with tab_ab:
-        render_section_title("A/B Template Comparison")
-        st.caption("Compare all 5 layout templates side-by-side using the generated hero images.")
-        from src.storage import StorageManager as _SM, slugify as _slugify
-        _st = _SM(input_dir=Path("input_assets"), output_dir=Path("output"))
-        for product in brief.products:
-            st.markdown(f"**{product.name}**")
-            hero_dir = _st.get_campaign_dir(brief.name) / _slugify(product.id)
-            hero_candidates = list(hero_dir.rglob("hero*.png")) + list(hero_dir.rglob("hero*.jpg"))
-            if hero_candidates:
-                _render_ab_comparison(brief, hero_candidates[0])
-            else:
-                st.info(f"No hero found for {product.name}")
-            st.divider()
-
-    with tab_performance:
-        _render_performance(assets_data)
-
-    with tab_metrics:
-        from src.storage import StorageManager
-        storage      = StorageManager(input_dir=Path("input_assets"), output_dir=Path("output"))
-        campaign_dir = storage.get_campaign_dir(brief.name)
-        report       = _load_sample_report(campaign_dir)
-        if report:
-            _render_metrics(report)
-        else:
-            st.info("Metrics available in the JSON report.")
-
-elif mode == "Run Pipeline":
-    # Landing state — show brief preview
-    brief_path_current = SAMPLE_BRIEFS[brief_choice] if not uploaded else None
-    if brief_path_current:
-        try:
-            brief = load_brief(brief_path_current)
-            total = len(brief.products) * len(brief.aspect_ratios) * len(brief.languages)
-            render_hero_header(
-                brief.brand,
-                brief.message,
-                meta=[
-                    ("Campaign",  brief.name),
-                    ("Region",    brief.target_region),
-                    ("Audience",  brief.target_audience[:50] + "…" if len(brief.target_audience) > 50 else brief.target_audience),
-                    ("Languages", ", ".join(brief.languages)),
-                    ("Products",  str(len(brief.products))),
-                ],
-                badge="Ready to Run",
-            )
-
-            st.info(f"Ready to generate **{total} creatives** across {len(brief.aspect_ratios)} aspect ratios. Click **Run Pipeline** in the sidebar.")
-
-            render_section_title("Pipeline Overview")
-            render_pipeline_stepper(active_stage=0)
-
-            render_section_title("Products")
-            for p in brief.products:
-                with st.expander(f"📦 {p.name}"):
-                    c1, c2 = st.columns(2)
-                    with c1:
-                        st.markdown(f"**ID:** `{p.id}`")
-                        st.markdown(f"**Description:** {p.description}")
-                    with c2:
-                        hero = "Will be generated via GenAI" if not p.hero_image else f"Existing: `{p.hero_image}`"
-                        st.markdown(f"**Hero Image:** {hero}")
-                        if p.keywords:
-                            st.markdown(f"**Keywords:** {', '.join(p.keywords)}")
-
-        except Exception:
-            st.info("Select a brief and click **Run Pipeline** to begin.")
-    else:
-        st.info("Upload a brief file and click **Run Pipeline** to begin.")
+st.markdown("<hr>", unsafe_allow_html=True)
+with st.expander("Browse Pre-generated Samples"):
+    _render_sample_library()
