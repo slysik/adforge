@@ -1,0 +1,120 @@
+# AdForge Frontend Design Improvement Prompt
+
+Use the prompt below with Claude, ChatGPT, or any LLM to generate targeted frontend improvements for the AdForge Streamlit app.
+
+---
+
+## The Prompt
+
+```
+You are an expert UI/UX designer and Streamlit developer. I'm building a creative automation tool called "AdForge" for a technical interview at Adobe. The app generates social ad campaign creatives using GenAI. I need you to dramatically improve the frontend design to make it feel like a polished, production-grade creative tool — not a data science prototype.
+
+## CONTEXT
+
+**What the app does:**
+AdForge is a 7-stage creative automation pipeline that takes a campaign brief (YAML/JSON), generates hero images via GenAI (Adobe Firefly, DALL-E, Gemini, or mock), composites them into finished social ad creatives with text overlays and brand compliance, then produces a report with metrics. The Streamlit UI has 3 modes:
+1. **Run Pipeline** — select a brief, pick a provider + template, run the pipeline, browse results across 6 tabs (Campaign, Gallery, Approval Queue, A/B Compare, Performance, Metrics)
+2. **Build Brief** — interactive form to create campaign briefs without writing YAML
+3. **View Pre-generated Samples** — browse previously generated campaigns
+
+**Tech stack:** Streamlit 1.32+, Python, Pillow for image composition, Pydantic for validation.
+
+**Brand identity (already configured in .streamlit/config.toml):**
+- Primary: Ocean Blue `#1B4F72`
+- Background: Warm Ivory `#FDF8F3`
+- Secondary Background: Sandy Beige `#F5E6CA`
+- Accent: Shell Tan `#D4A574`
+- Text: Deep Charcoal `#2C3E50`
+- Font: Serif (Georgia)
+
+**Client brand:** Blue Beach House Designs — a Charleston, SC handcrafted shell artist targeting Southern Florida interior designers.
+
+## CURRENT PAIN POINTS
+
+1. **Generic Streamlit look** — The app uses default Streamlit widgets with no custom CSS. It looks like every other Streamlit demo. For an Adobe interview, it needs to feel like a creative tool, not a data dashboard.
+
+2. **Dense, text-heavy layout** — Campaign info is displayed as plain markdown (`**Brand:** Blue Beach House Designs`). No visual hierarchy, no cards, no breathing room.
+
+3. **No visual pipeline flow** — Users can't see the 7-stage pipeline visually. There's no progress indicator showing which stage is running during execution.
+
+4. **Gallery is basic** — Creatives are shown in simple Streamlit columns with `st.image()`. No lightbox, no hover effects, no zoom, no side-by-side comparison slider.
+
+5. **Approval queue is utilitarian** — Radio buttons and text inputs. No drag-and-drop, no visual status cards, no kanban-style workflow.
+
+6. **No branded hero section** — The app opens with a plain `st.title("AdForge — Creative Automation Pipeline")`. No hero banner, no brand visual identity.
+
+7. **Brief Builder form is plain** — Standard Streamlit inputs with no visual grouping, progress indicator, or form validation feedback beyond error messages.
+
+8. **Metrics/Performance tabs lack data viz** — Pipeline metrics are displayed as `st.metric()` widgets in columns. No charts, no visual pipeline flow diagram, no sparklines.
+
+## WHAT I NEED
+
+Generate a comprehensive `st.markdown()` CSS injection block (using Streamlit's `unsafe_allow_html=True` pattern) and refactored UI component code that addresses ALL of the following:
+
+### 1. Custom CSS Theme Layer
+- A `<style>` block injected via `st.markdown(css, unsafe_allow_html=True)` that overrides default Streamlit styling
+- Custom card components with subtle shadows, rounded corners (12px), and the brand color palette
+- Styled tab bar that looks like a modern creative tool's navigation
+- Custom button styles (primary buttons with Ocean Blue, secondary with Shell Tan)
+- Typography hierarchy: use font-size/weight/spacing to create clear visual levels
+- Subtle hover animations on interactive elements (200ms transitions)
+- A branded header/hero section with gradient background using brand colors
+
+### 2. Visual Pipeline Flow
+- A horizontal pipeline stage indicator (like a stepper component) showing the 7 stages:
+  Brief Ingestion → Analysis → Asset Resolution → Hero Generation → Layout Rendering → Policy Checks → Reporting
+- Active stage highlighted, completed stages checked, pending stages dimmed
+- Render this as an HTML/CSS component injected via st.markdown
+
+### 3. Enhanced Gallery
+- CSS grid layout for creative thumbnails instead of st.columns
+- Overlay badges for compliance status (passed/warning/failed) positioned on the image itself
+- Visual aspect-ratio indicators on each card
+- Hover effect that shows metadata overlay
+
+### 4. Styled Metrics Dashboard
+- Replace plain st.metric with custom HTML metric cards that include:
+  - Large number with brand-colored accents
+  - Subtle background icons (using Unicode/emoji)
+  - Mini progress bars or trend indicators
+- A visual cost breakdown bar chart using pure HTML/CSS (no external charting library needed)
+
+### 5. Brief Builder Improvements
+- Step-by-step wizard UI with progress dots (Step 1: Campaign Info → Step 2: Brand Guidelines → Step 3: Products → Step 4: Review)
+- Visual color palette preview that shows the selected brand colors as actual swatches
+- Product cards with visual previews instead of plain expanders
+
+### 6. Approval Queue Visual Upgrade
+- Status cards with color-coded borders (green=approved, red=rejected, amber=pending)
+- Large image preview with overlaid approve/reject buttons
+- Batch progress bar showing approval completion percentage
+
+## CONSTRAINTS
+
+- Must work within Streamlit's rendering model (no React components, no iframe hacks)
+- All styling via `st.markdown("<style>...</style>", unsafe_allow_html=True)` or `st.html()`
+- Keep the existing Python logic — only change presentation layer
+- Must be accessible (sufficient color contrast ratios)
+- Must be responsive (Streamlit's default responsive behavior should not break)
+- No external CSS frameworks (no Bootstrap, no Tailwind CDN) — pure custom CSS
+- The CSS should be maintainable — use CSS custom properties (variables) for the brand palette
+
+## OUTPUT FORMAT
+
+Give me:
+1. A single CSS injection block I can paste at the top of `app.py` as `CUSTOM_CSS = """..."""`
+2. Refactored helper functions for each major UI component (hero header, pipeline stepper, metric cards, gallery grid, approval cards)
+3. Brief code showing how to integrate each component into the existing app.py structure
+4. Before/after descriptions of each change so I can explain them in my interview
+
+Focus on visual impact over complexity. Every change should make an interviewer think "this person understands creative tooling, not just Python scripting."
+```
+
+---
+
+## Usage Tips
+
+- **Paste the prompt above directly into Claude or ChatGPT** and iterate on the output
+- **Start with the CSS injection block** — it gives the biggest visual lift with the least code change
+- **Test incrementally** — add the CSS first, then swap components one at a time
+- **Screenshot before/after** — for your interview demo video, showing the transformation is powerful

@@ -153,62 +153,39 @@ def run_pipeline(
     analyze: bool = True,
     parallel: bool = True,
     max_workers: int = 4,
+    status_callback: callable = None,
 ) -> PipelineResult:
-    """Execute the full creative automation pipeline.
+    """Execute the full creative automation pipeline."""
+    
+    def _report(msg: str):
+        if status_callback:
+            status_callback(msg)
+        console.print(f"[bold blue]Pipeline:[/bold blue] {msg}")
 
-    Args:
-        brief_path: Path to YAML/JSON campaign brief
-        input_dir: Directory with existing assets
-        output_dir: Output directory for generated creatives
-        mock: Force mock image generation
-        api_key: API key for image provider
-        provider_type: Force a specific provider ("firefly", "dalle", "mock")
-        template: Force a specific layout template name
-        analyze: Run brief analysis (default True)
-        parallel: Parallelize hero generation (default True)
-        max_workers: Thread pool size for parallel generation
-    """
     tracker = PipelineTracker()
     start = time.time()
 
     # ── Stage 1: Brief normalization ──────────────────────────────────
-    console.print("\n[bold cyan]━━━ AdForge ━━━[/bold cyan]\n")
-
+    _report("Ingesting Brief...")
     with tracker.stage("brief_ingestion") as stage:
         brief = load_brief(brief_path)
         stage.items_processed = 1
         stage.notes.append(f"Loaded: {brief.name}")
 
-    console.print(f"[bold]Campaign:[/bold] {brief.name}")
-    console.print(f"[bold]Brand:[/bold]    {brief.brand}")
-    console.print(f"[bold]Region:[/bold]   {brief.target_region}")
-    console.print(f"[bold]Audience:[/bold] {brief.target_audience}")
-    console.print(f"[bold]Products:[/bold] {len(brief.products)}")
-    console.print(f"[bold]Ratios:[/bold]   {', '.join(r.ratio for r in brief.aspect_ratios)}")
-    console.print(f"[bold]Languages:[/bold] {', '.join(brief.languages)}")
-    if brief.brand_guidelines.required_disclaimer:
-        console.print(f"[bold]Disclaimer:[/bold] {brief.brand_guidelines.required_disclaimer}")
-
     # ── Stage 2: Brief analysis ───────────────────────────────────────
     analysis = None
     enrichments = {}
     if analyze:
+        _report("Analyzing Brief...")
         with tracker.stage("brief_analysis") as stage:
             analysis = analyze_brief(brief)
             enrichments = analysis.prompt_enrichments
             stage.items_processed = 1
             stage.notes.append(f"Score: {analysis.score.overall}/100")
 
-        print_analysis(analysis)
-
     # ── Initialize components ─────────────────────────────────────────
-    provider = get_provider(
-        provider_type=provider_type,
-        api_key=api_key,
-        mock=mock,
-    )
-    console.print(f"[bold]Provider:[/bold] {provider.provider_type.value} ({provider.model_name})")
-    console.print()
+    _report("Initializing...")
+
 
     storage = StorageManager(input_dir=Path(input_dir), output_dir=Path(output_dir))
     compositor = Compositor(
@@ -252,6 +229,7 @@ def run_pipeline(
             console.print(f"\n[bold white]▸ Product: {product.name}[/bold white]")
 
             # ── Stage 3: Asset resolution ─────────────────────────────
+            _report(f"Resolving assets for {product.name}...")
             # When hero_image is explicitly null, skip auto-discovery to force generation
             auto_discover = product.hero_image is not None or "hero_image" not in (product.model_fields_set or set())
             existing_hero = storage.find_existing_hero(product.id, product.hero_image, auto_discover=auto_discover)
@@ -262,10 +240,10 @@ def run_pipeline(
                     existing_hero, brief.name, product.id,
                 )
 
+            # ── Stage 4: Hero generation ──────────────────────────────
             if existing_hero is None:
-                console.print(f"  [yellow]↳ No existing hero – will generate per ratio[/yellow]")
+                _report(f"Generating heroes for {product.name}...")
 
-            # ── Stage 4: Hero generation (parallel when possible) ─────
             hero_paths: dict[str, Path] = {}  # ratio_name → hero_path
             hero_prompts: dict[str, str] = {}
             hero_metas: dict[str, GenerationMetadata] = {}
@@ -387,9 +365,10 @@ def run_pipeline(
                                     f"Hero generation failed for {product.id}/{ratio.ratio}: {exc}"
                                 )
 
-            # ── Stage 5+6: Composition + validation per language ──────
-            with tracker.stage(f"compose_{product.id}") as comp_stage, \
-                 tracker.stage(f"validate_{product.id}") as val_stage:
+    # ── Stage 5+6: Composition + validation per language ──────
+    _report("Compositing and Validating...")
+    with tracker.stage(f"compose_{product.id}") as comp_stage, \
+         tracker.stage(f"validate_{product.id}") as val_stage:
                 for ratio in brief.aspect_ratios:
                     hero_path = hero_paths.get(ratio.name) or existing_hero
 
@@ -516,6 +495,7 @@ def run_pipeline(
     metrics.provider_used = f"{provider.provider_type.value} ({provider.model_name})"
 
     # ── Stage 7: Reporting ────────────────────────────────────────────
+    _report("Generating Reports...")
     campaign_dir = storage.get_campaign_dir(brief.name)
     print_console_report(result)
     print_metrics(metrics)
@@ -548,6 +528,7 @@ def run_pipeline(
     )
 
     # ── Package campaign as ZIP for delivery ──────────────────────────
+    _report("Packaging ZIP...")
     zip_path = storage.package_campaign_zip(brief.name)
 
     console.print(
