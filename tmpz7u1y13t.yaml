@@ -1,0 +1,48 @@
+campaign:
+  aspect_ratios:
+  - height: 1080
+    name: instagram_square
+    ratio: '1:1'
+    width: 1080
+  - height: 1920
+    name: stories
+    ratio: '9:16'
+    width: 1080
+  - height: 1080
+    name: facebook_landscape
+    ratio: '16:9'
+    width: 1920
+  brand: Blue Beach House Designs
+  brand_guidelines:
+    accent_color: '#A7D474'
+    font_family: Georgia
+    primary_colors:
+    - '#1B4F72'
+    - '#F5E6CA'
+    - '#CE6464'
+    prohibited_words:
+    - cheap
+    - fake
+    - plastic
+    - inexpensive
+  languages:
+  - en
+  message: Handcrafted coastal elegance for your home
+  name: Spring Campaign 2026
+  products:
+  - description: A beautiful handcrafted product
+    id: product-1
+    keywords:
+    - handcrafted
+    - coastal
+    - design
+    name: Product 1
+  - description: A beautiful handcrafted product
+    id: product-2
+    keywords:
+    - handcrafted
+    - coastal
+    - design
+    name: Product 2
+  target_audience: Home decor designers, interior stylists, ages 30-60
+  target_region: 'Southern Florida : Naples & Palm Beach'

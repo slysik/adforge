@@ -1642,8 +1642,6 @@ elif mode == "Run Pipeline" and run_btn:
             st.error(f"Pipeline failed: {e}")
             st.stop()
 
-    render_pipeline_stepper(done_stages=7)
-
     time_saved_hrs = max(0, (result.created_count * 15 - result.elapsed_seconds / 60) / 60)
     _log_run(campaign=brief.name, provider=provider, total=result.total_assets, created=result.created_count, failed=result.failed_count, elapsed=result.elapsed_seconds, time_saved_hrs=time_saved_hrs)
 
