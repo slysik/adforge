@@ -77,9 +77,20 @@ html, body, [class*="css"] {
   display: none !important;
 }
 .main .block-container {
-  padding-top: 0rem;
+  padding-top: 0 !important;
   padding-bottom: 2rem;
   max-width: 1400px;
+}
+/* Kill the top margin Streamlit adds above the first element */
+.main .block-container > div:first-child {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+[data-testid="stAppViewContainer"] {
+  padding-top: 0 !important;
+}
+[data-testid="stAppViewBlockContainer"] {
+  padding-top: 0 !important;
 }
 /* Reduce Streamlit's default vertical gaps between elements */
 .main .block-container [data-testid="stVerticalBlock"] > div {
@@ -246,7 +257,8 @@ html, body, [class*="css"] {
   background: linear-gradient(135deg, var(--ocean-blue) 0%, var(--ocean-light) 55%, #4AA3DF 100%);
   border-radius: var(--radius-lg);
   padding: .9rem 1.5rem;
-  margin-bottom: 1rem;
+  margin-top: 0 !important;
+  margin-bottom: .5rem;
   display: flex;
   align-items: center;
   gap: 1rem;
@@ -288,9 +300,9 @@ html, body, [class*="css"] {
   display: flex;
   align-items: flex-start;
   gap: 0;
-  margin: 1.5rem 0;
+  margin: .5rem 0;
   overflow-x: auto;
-  padding-bottom: .5rem;
+  padding-bottom: .25rem;
 }
 .af-step {
   display: flex;
@@ -1645,8 +1657,11 @@ if st.session_state.run_log:
     _render_run_log()
 
 # Collapse Brief Builder when results already exist so the user sees pipeline output first.
+# Use a dynamic key so Streamlit re-creates the widget (and respects expanded=False)
+# after a pipeline run instead of remembering the old toggle state.
 _has_results = st.session_state.active_run_result is not None
-with st.expander("Brief Builder", expanded=not _has_results):
+_expander_key = "brief_builder_done" if _has_results else "brief_builder_open"
+with st.expander("Brief Builder", expanded=not _has_results, key=_expander_key):
     current_brief = _render_brief_builder()
 current_brief_path = None
 
@@ -1660,10 +1675,13 @@ if current_brief is not None and st.session_state.get("_run_triggered"):
         run_brief_path = _save_generated_brief_yaml(current_brief)
 
         forced_template = None if template_choice == "auto" else template_choice
-        stepper_slot = st.empty()
+        # Use a single row: status badge on the left, stepper on the right.
+        status_col, stepper_col = st.columns([0.2, 0.8])
+        stepper_slot = stepper_col.empty()
+        status_slot = status_col.empty()
         render_pipeline_stepper(active_stage=1, target=stepper_slot)
 
-        with st.status("Running pipeline...", expanded=True) as status:
+        with status_slot.status("Running pipeline...", expanded=True) as status:
             try:
                 result = run_pipeline(
                     brief_path=run_brief_path,
