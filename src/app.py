@@ -770,34 +770,8 @@ def render_hero_header(title: str, subtitle: str, meta: list[tuple[str, str]] | 
 
 
 def render_pipeline_stepper(active_stage: int = 0, done_stages: int = 0):
-    """
-    Render a horizontal 7-step pipeline progress indicator.
-    active_stage: 1-indexed stage currently running (0 = not started).
-    done_stages:  count of completed stages.
-    """
-    steps_html = ""
-    for idx, (num, label) in enumerate(PIPELINE_STAGES):
-        stage_num = idx + 1
-        if stage_num < active_stage or stage_num <= done_stages:
-            cls = "done"
-            circle = "✓"
-        elif stage_num == active_stage:
-            cls = "active"
-            circle = num
-        else:
-            cls = ""
-            circle = num
-        label_safe = label.replace("\n", "<br>")
-        steps_html += (
-            f'<div class="af-step {cls}">'
-            f'<div class="af-step-circle">{circle}</div>'
-            f'<div class="af-step-label">{label_safe}</div>'
-            f'</div>'
-        )
-    st.markdown(
-        f'<div class="af-stepper">{steps_html}</div>',
-        unsafe_allow_html=True,
-    )
+    """(DEPRECATED) Pipeline steps visualization removed in favor of st.status."""
+    pass
 
 
 def render_metric_cards(metrics: list[dict]):
