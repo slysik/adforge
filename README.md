@@ -470,45 +470,6 @@ python -m src.cli validate <BRIEF>
 python -m src.cli providers
 ```
 
----
-
-## 🎬 Demo Script (2–3 Minute Video)
-
-Follow these steps for the required demo video:
-
-**Setup (30 sec)**
-1. Show terminal: `git clone`, `pip install`, `python create_sample_assets.py`
-2. Show `sample_briefs/beach_house_campaign.yaml` — point out products, region, brand rules
-3. Show `input_assets/` — real product photos that will be reused
-
-**Run the Pipeline (60 sec)**
-1. Run: `python -m src.cli generate sample_briefs/beach_house_campaign.yaml --mock`
-2. Walk through the console output:
-   - Brief analysis score: **92/100**
-   - Asset resolution: 3 heroes reused from input
-   - Composition progress bar
-   - Brand compliance: all ✓ passed
-   - Performance table: **18 creatives in 4.2 seconds**
-   - Time saved: **4.4 hours** vs manual
-   - ZIP package created
-
-**Show the Output (60 sec)**
-1. Open `output/coastal_collection_2025/report.html` in browser
-   - Overview tab: stats, pipeline flow, warnings
-   - Assets tab: filter by product, see all 18 creatives
-   - Analysis tab: brief score breakdown + recommendations
-   - Performance tab: per-stage timing, per-asset metrics
-2. Open the output folder — show organized `product/ratio/creative_lang.jpg`
-3. Show a 1:1 vs 9:16 vs 16:9 side-by-side — different templates auto-selected
-4. Show English vs Spanish variants — same image, translated text
-
-**Bonus (if time permits)**
-- `streamlit run src/app.py` — show the web UI with approval queue
-- `python -m src.cli analyze sample_briefs/summer_campaign.yaml` — brief scoring standalone
-- `python -m pytest tests/ -v` — flash the 158 passing tests
-
----
-
 ## 📄 License
 
 MIT

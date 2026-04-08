@@ -13,6 +13,7 @@ venv/
 # Output (generated assets – don't commit these)
 output/
 temp_brief_upload/
+tmp*.yaml
 
 # IDE
 .idea/

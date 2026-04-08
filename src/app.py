@@ -1608,6 +1608,27 @@ def _save_uploaded_brief(uploaded) -> str:
     return str(dest)
 
 
+def _save_generated_brief_yaml(brief) -> str:
+    """Persist a built brief to the ignored temp upload area."""
+    import tempfile
+    import yaml as _yaml
+
+    session_dir = ROOT / "temp_brief_upload" / uuid.uuid4().hex[:8]
+    session_dir.mkdir(parents=True, exist_ok=True)
+    brief_yaml = _yaml.dump(
+        {"campaign": brief.model_dump(exclude_none=True)},
+        default_flow_style=False,
+    )
+    with tempfile.NamedTemporaryFile(
+        mode="w",
+        suffix=".yaml",
+        delete=False,
+        dir=str(session_dir),
+    ) as handle:
+        handle.write(brief_yaml)
+        return handle.name
+
+
 # ---------------------------------------------------------------------------
 # Main content
 # ---------------------------------------------------------------------------
@@ -1706,16 +1727,7 @@ if current_brief is not None:
     if run_pipeline_now:
         run_brief_path = current_brief_path
         if run_brief_path is None:
-            import tempfile
-            import yaml as _yaml
-
-            brief_yaml = _yaml.dump(
-                {"campaign": current_brief.model_dump(exclude_none=True)},
-                default_flow_style=False,
-            )
-            with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False, dir=str(ROOT)) as handle:
-                handle.write(brief_yaml)
-                run_brief_path = handle.name
+            run_brief_path = _save_generated_brief_yaml(current_brief)
 
         forced_template = None if template_choice == "auto" else template_choice
         stepper_slot = st.empty()
