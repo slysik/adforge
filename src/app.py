@@ -14,6 +14,7 @@ import uuid
 from pathlib import Path
 
 import streamlit as st
+import streamlit.components.v1 as components
 
 # Ensure project root is importable
 ROOT = Path(__file__).resolve().parent.parent
@@ -1700,13 +1701,18 @@ if current_brief is not None and st.session_state.get("_run_triggered"):
         st.markdown("<hr>", unsafe_allow_html=True)
         st.markdown('<div id="af-results-top"></div>', unsafe_allow_html=True)
         render_section_title("4. Results")
-        # Auto-scroll to Results section via img onerror trick (works in Streamlit)
-        st.markdown(
-            '<img src="" onerror="'
-            "var el = document.getElementById(\'af-results-top\');"
-            "if (el) { el.scrollIntoView({behavior: \'smooth\', block: \'start\'}); }"
-            '" style="display:none">',
-            unsafe_allow_html=True,
+        # Auto-scroll to Results section via components.html (runs JS in
+        # an iframe that can reach the parent Streamlit document).
+        components.html(
+            """
+            <script>
+                var el = window.parent.document.getElementById('af-results-top');
+                if (el) {
+                    el.scrollIntoView({behavior: 'smooth', block: 'start'});
+                }
+            </script>
+            """,
+            height=0,
         )
         _render_pipeline_results(
             st.session_state.active_run_brief,
