@@ -101,53 +101,46 @@ output/coastal_collection_2025/
 
 ## 🚀 Quick Start
 
-**No API keys needed** — the demo runs fully offline using mock image generation.
-
-### Option A: With uv (fastest — 2 commands)
-
-[uv](https://docs.astral.sh/uv/) handles the virtual environment and dependency install automatically.
+**Prerequisites:** [just](https://github.com/casey/just#installation) + Python 3.9+ · No API keys needed for demo
 
 ```bash
 git clone https://github.com/slysik/adforge.git && cd adforge
-uv run python -m src.cli generate sample_briefs/beach_house_campaign.yaml --mock
-```
-
-### Option B: With Python + pip
-
-```bash
-git clone https://github.com/slysik/adforge.git && cd adforge
-python3 -m venv venv && source venv/bin/activate
-pip install -r requirements.txt
-python -m src.cli generate sample_briefs/beach_house_campaign.yaml --mock
+just install
+just demo
 ```
 
 **That's it.** Open `output/coastal_collection_2025/report.html` in your browser for the interactive dashboard.
 
-### Web UI (optional)
+### Web UI
 
 ```bash
-# With uv:
-uv run streamlit run src/app.py
+just start-app      # launch Streamlit UI
+just restart-app    # kill + relaunch
+just stop-app       # shut down
+```
 
-# Or with pip (venv activated):
-streamlit run src/app.py
+### All Commands
+
+```bash
+just                # list available commands
+just install        # install dependencies (auto-detects uv or pip)
+just demo           # run pipeline with mock images — no API keys needed
+just start-app      # launch the Streamlit web UI
+just restart-app    # restart the web UI
+just stop-app       # stop the web UI
+just test           # run the test suite (158 tests)
+just analyze        # score a campaign brief
+just generate       # generate with a real provider (gemini, dalle, firefly)
 ```
 
 ### Real GenAI Providers (optional)
 
 ```bash
-# Google Imagen 4.0 (free tier available)
-export GEMINI_API_KEY=your-key
-uv run python -m src.cli generate sample_briefs/beach_house_campaign.yaml
+export GEMINI_API_KEY=your-key        # Google Imagen 4.0 (free tier)
+just generate
 
-# Adobe Firefly Services
-export FIREFLY_CLIENT_ID=your-id
-export FIREFLY_CLIENT_SECRET=your-secret
-uv run python -m src.cli generate sample_briefs/beach_house_campaign.yaml -p firefly
-
-# OpenAI DALL-E 3
-export OPENAI_API_KEY=sk-your-key
-uv run python -m src.cli generate sample_briefs/beach_house_campaign.yaml -p dalle
+export OPENAI_API_KEY=sk-your-key     # OpenAI DALL-E 3
+just generate provider=dalle
 ```
 
 ---

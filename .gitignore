@@ -23,9 +23,6 @@ attached_assets/
 .pytest_cache/
 pytest-cache-files-*/
 
-# Sample output (generated at runtime)
-sample_output/
-
 # IDE
 .idea/
 .vscode/

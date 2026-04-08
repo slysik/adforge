@@ -1,0 +1,832 @@
+{
+  "campaign_name": "Coastal Collection 2025",
+  "total_assets": 18,
+  "created_count": 18,
+  "hero_reused_count": 18,
+  "failed_count": 0,
+  "assets": [
+    {
+      "product_id": "resort-shell-handbag",
+      "aspect_ratio": "1:1",
+      "language": "en",
+      "file_path": "output/coastal_collection_2025/resort-shell-handbag/instagram_square/creative_en.jpg",
+      "status": "generated",
+      "hero_status": "reused",
+      "prompt_used": null,
+      "brand_compliance": {
+        "status": "passed",
+        "notes": [
+          "[Colors] All brand colors detected in image.",
+          "[Logo] Logo verified in top-right region (16641/16641 opaque pixels, 147 distinct colors).",
+          "[Text] No prohibited words detected. Checked 4 rendered text(s)."
+        ]
+      },
+      "legal_compliance": {
+        "status": "passed",
+        "notes": [
+          "No legal flags raised. Checked 4 text(s)."
+        ]
+      },
+      "rendered_texts": [
+        "BLUE BEACH HOUSE DESIGNS",
+        "The perfect shell handbag for the season, complete with a lined interior, drawstring closure, and room for all your essentials.",
+        "Handcrafted Coastal Elegance",
+        "Custom orders welcome \u2014 bluebeachhousedesigns.com"
+      ]
+    },
+    {
+      "product_id": "resort-shell-handbag",
+      "aspect_ratio": "1:1",
+      "language": "es",
+      "file_path": "output/coastal_collection_2025/resort-shell-handbag/instagram_square/creative_es.jpg",
+      "status": "generated",
+      "hero_status": "reused",
+      "prompt_used": null,
+      "brand_compliance": {
+        "status": "passed",
+        "notes": [
+          "[Colors] All brand colors detected in image.",
+          "[Logo] Logo verified in top-right region (16641/16641 opaque pixels, 147 distinct colors).",
+          "[Text] No prohibited words detected. Checked 4 rendered text(s)."
+        ]
+      },
+      "legal_compliance": {
+        "status": "passed",
+        "notes": [
+          "No legal flags raised. Checked 4 text(s)."
+        ]
+      },
+      "rendered_texts": [
+        "BLUE BEACH HOUSE DESIGNS",
+        "El bolso de conchas perfecto para la temporada, con interior forrado, cierre de cord\u00f3n y espacio para todo lo esencial.",
+        "Elegancia Costera Artesanal",
+        "Custom orders welcome \u2014 bluebeachhousedesigns.com"
+      ]
+    },
+    {
+      "product_id": "resort-shell-handbag",
+      "aspect_ratio": "9:16",
+      "language": "en",
+      "file_path": "output/coastal_collection_2025/resort-shell-handbag/stories_reels/creative_en.jpg",
+      "status": "generated",
+      "hero_status": "reused",
+      "prompt_used": null,
+      "brand_compliance": {
+        "status": "passed",
+        "notes": [
+          "[Colors] All brand colors detected in image.",
+          "[Logo] Logo verified in top-right region (16641/16641 opaque pixels, 115 distinct colors).",
+          "[Text] No prohibited words detected. Checked 4 rendered text(s)."
+        ]
+      },
+      "legal_compliance": {
+        "status": "passed",
+        "notes": [
+          "No legal flags raised. Checked 4 text(s)."
+        ]
+      },
+      "rendered_texts": [
+        "BLUE BEACH HOUSE DESIGNS",
+        "The perfect shell handbag for the season, complete with a lined interior, drawstring closure, and room for all your essentials.",
+        "Handcrafted Coastal Elegance",
+        "Custom orders welcome \u2014 bluebeachhousedesigns.com"
+      ]
+    },
+    {
+      "product_id": "resort-shell-handbag",
+      "aspect_ratio": "9:16",
+      "language": "es",
+      "file_path": "output/coastal_collection_2025/resort-shell-handbag/stories_reels/creative_es.jpg",
+      "status": "generated",
+      "hero_status": "reused",
+      "prompt_used": null,
+      "brand_compliance": {
+        "status": "passed",
+        "notes": [
+          "[Colors] All brand colors detected in image.",
+          "[Logo] Logo verified in top-right region (16641/16641 opaque pixels, 115 distinct colors).",
+          "[Text] No prohibited words detected. Checked 4 rendered text(s)."
+        ]
+      },
+      "legal_compliance": {
+        "status": "passed",
+        "notes": [
+          "No legal flags raised. Checked 4 text(s)."
+        ]
+      },
+      "rendered_texts": [
+        "BLUE BEACH HOUSE DESIGNS",
+        "El bolso de conchas perfecto para la temporada, con interior forrado, cierre de cord\u00f3n y espacio para todo lo esencial.",
+        "Elegancia Costera Artesanal",
+        "Custom orders welcome \u2014 bluebeachhousedesigns.com"
+      ]
+    },
+    {
+      "product_id": "resort-shell-handbag",
+      "aspect_ratio": "16:9",
+      "language": "en",
+      "file_path": "output/coastal_collection_2025/resort-shell-handbag/facebook_landscape/creative_en.jpg",
+      "status": "generated",
+      "hero_status": "reused",
+      "prompt_used": null,
+      "brand_compliance": {
+        "status": "passed",
+        "notes": [
+          "[Colors] All brand colors detected in image.",
+          "[Logo] Logo verified in top-right region (16641/16641 opaque pixels, 84 distinct colors).",
+          "[Text] No prohibited words detected. Checked 4 rendered text(s)."
+        ]
+      },
+      "legal_compliance": {
+        "status": "passed",
+        "notes": [
+          "No legal flags raised. Checked 4 text(s)."
+        ]
+      },
+      "rendered_texts": [
+        "BLUE BEACH HOUSE DESIGNS",
+        "The perfect shell handbag for the season, complete with a lined interior, drawstring closure, and room for all your essentials.",
+        "Handcrafted Coastal Elegance",
+        "Custom orders welcome \u2014 bluebeachhousedesigns.com"
+      ]
+    },
+    {
+      "product_id": "resort-shell-handbag",
+      "aspect_ratio": "16:9",
+      "language": "es",
+      "file_path": "output/coastal_collection_2025/resort-shell-handbag/facebook_landscape/creative_es.jpg",
+      "status": "generated",
+      "hero_status": "reused",
+      "prompt_used": null,
+      "brand_compliance": {
+        "status": "passed",
+        "notes": [
+          "[Colors] All brand colors detected in image.",
+          "[Logo] Logo verified in top-right region (16641/16641 opaque pixels, 84 distinct colors).",
+          "[Text] No prohibited words detected. Checked 4 rendered text(s)."
+        ]
+      },
+      "legal_compliance": {
+        "status": "passed",
+        "notes": [
+          "No legal flags raised. Checked 4 text(s)."
+        ]
+      },
+      "rendered_texts": [
+        "BLUE BEACH HOUSE DESIGNS",
+        "El bolso de conchas perfecto para la temporada, con interior forrado, cierre de cord\u00f3n y espacio para todo lo esencial.",
+        "Elegancia Costera Artesanal",
+        "Custom orders welcome \u2014 bluebeachhousedesigns.com"
+      ]
+    },
+    {
+      "product_id": "cowrie-shell-box",
+      "aspect_ratio": "1:1",
+      "language": "en",
+      "file_path": "output/coastal_collection_2025/cowrie-shell-box/instagram_square/creative_en.jpg",
+      "status": "generated",
+      "hero_status": "reused",
+      "prompt_used": null,
+      "brand_compliance": {
+        "status": "passed",
+        "notes": [
+          "[Colors] All brand colors detected in image.",
+          "[Logo] Logo verified in top-right region (16641/16641 opaque pixels, 107 distinct colors).",
+          "[Text] No prohibited words detected. Checked 4 rendered text(s)."
+        ]
+      },
+      "legal_compliance": {
+        "status": "passed",
+        "notes": [
+          "No legal flags raised. Checked 4 text(s)."
+        ]
+      },
+      "rendered_texts": [
+        "BLUE BEACH HOUSE DESIGNS",
+        "The perfect shell handbag for the season, complete with a lined interior, drawstring closure, and room for all your essentials.",
+        "Handcrafted Coastal Elegance",
+        "Custom orders welcome \u2014 bluebeachhousedesigns.com"
+      ]
+    },
+    {
+      "product_id": "cowrie-shell-box",
+      "aspect_ratio": "1:1",
+      "language": "es",
+      "file_path": "output/coastal_collection_2025/cowrie-shell-box/instagram_square/creative_es.jpg",
+      "status": "generated",
+      "hero_status": "reused",
+      "prompt_used": null,
+      "brand_compliance": {
+        "status": "passed",
+        "notes": [
+          "[Colors] All brand colors detected in image.",
+          "[Logo] Logo verified in top-right region (16641/16641 opaque pixels, 107 distinct colors).",
+          "[Text] No prohibited words detected. Checked 4 rendered text(s)."
+        ]
+      },
+      "legal_compliance": {
+        "status": "passed",
+        "notes": [
+          "No legal flags raised. Checked 4 text(s)."
+        ]
+      },
+      "rendered_texts": [
+        "BLUE BEACH HOUSE DESIGNS",
+        "El bolso de conchas perfecto para la temporada, con interior forrado, cierre de cord\u00f3n y espacio para todo lo esencial.",
+        "Elegancia Costera Artesanal",
+        "Custom orders welcome \u2014 bluebeachhousedesigns.com"
+      ]
+    },
+    {
+      "product_id": "cowrie-shell-box",
+      "aspect_ratio": "9:16",
+      "language": "en",
+      "file_path": "output/coastal_collection_2025/cowrie-shell-box/stories_reels/creative_en.jpg",
+      "status": "generated",
+      "hero_status": "reused",
+      "prompt_used": null,
+      "brand_compliance": {
+        "status": "passed",
+        "notes": [
+          "[Colors] All brand colors detected in image.",
+          "[Logo] Logo verified in top-right region (16641/16641 opaque pixels, 81 distinct colors).",
+          "[Text] No prohibited words detected. Checked 4 rendered text(s)."
+        ]
+      },
+      "legal_compliance": {
+        "status": "passed",
+        "notes": [
+          "No legal flags raised. Checked 4 text(s)."
+        ]
+      },
+      "rendered_texts": [
+        "BLUE BEACH HOUSE DESIGNS",
+        "The perfect shell handbag for the season, complete with a lined interior, drawstring closure, and room for all your essentials.",
+        "Handcrafted Coastal Elegance",
+        "Custom orders welcome \u2014 bluebeachhousedesigns.com"
+      ]
+    },
+    {
+      "product_id": "cowrie-shell-box",
+      "aspect_ratio": "9:16",
+      "language": "es",
+      "file_path": "output/coastal_collection_2025/cowrie-shell-box/stories_reels/creative_es.jpg",
+      "status": "generated",
+      "hero_status": "reused",
+      "prompt_used": null,
+      "brand_compliance": {
+        "status": "passed",
+        "notes": [
+          "[Colors] All brand colors detected in image.",
+          "[Logo] Logo verified in top-right region (16641/16641 opaque pixels, 81 distinct colors).",
+          "[Text] No prohibited words detected. Checked 4 rendered text(s)."
+        ]
+      },
+      "legal_compliance": {
+        "status": "passed",
+        "notes": [
+          "No legal flags raised. Checked 4 text(s)."
+        ]
+      },
+      "rendered_texts": [
+        "BLUE BEACH HOUSE DESIGNS",
+        "El bolso de conchas perfecto para la temporada, con interior forrado, cierre de cord\u00f3n y espacio para todo lo esencial.",
+        "Elegancia Costera Artesanal",
+        "Custom orders welcome \u2014 bluebeachhousedesigns.com"
+      ]
+    },
+    {
+      "product_id": "cowrie-shell-box",
+      "aspect_ratio": "16:9",
+      "language": "en",
+      "file_path": "output/coastal_collection_2025/cowrie-shell-box/facebook_landscape/creative_en.jpg",
+      "status": "generated",
+      "hero_status": "reused",
+      "prompt_used": null,
+      "brand_compliance": {
+        "status": "passed",
+        "notes": [
+          "[Colors] All brand colors detected in image.",
+          "[Logo] Logo verified in top-right region (16641/16641 opaque pixels, 80 distinct colors).",
+          "[Text] No prohibited words detected. Checked 4 rendered text(s)."
+        ]
+      },
+      "legal_compliance": {
+        "status": "passed",
+        "notes": [
+          "No legal flags raised. Checked 4 text(s)."
+        ]
+      },
+      "rendered_texts": [
+        "BLUE BEACH HOUSE DESIGNS",
+        "The perfect shell handbag for the season, complete with a lined interior, drawstring closure, and room for all your essentials.",
+        "Handcrafted Coastal Elegance",
+        "Custom orders welcome \u2014 bluebeachhousedesigns.com"
+      ]
+    },
+    {
+      "product_id": "cowrie-shell-box",
+      "aspect_ratio": "16:9",
+      "language": "es",
+      "file_path": "output/coastal_collection_2025/cowrie-shell-box/facebook_landscape/creative_es.jpg",
+      "status": "generated",
+      "hero_status": "reused",
+      "prompt_used": null,
+      "brand_compliance": {
+        "status": "passed",
+        "notes": [
+          "[Colors] All brand colors detected in image.",
+          "[Logo] Logo verified in top-right region (16641/16641 opaque pixels, 80 distinct colors).",
+          "[Text] No prohibited words detected. Checked 4 rendered text(s)."
+        ]
+      },
+      "legal_compliance": {
+        "status": "passed",
+        "notes": [
+          "No legal flags raised. Checked 4 text(s)."
+        ]
+      },
+      "rendered_texts": [
+        "BLUE BEACH HOUSE DESIGNS",
+        "El bolso de conchas perfecto para la temporada, con interior forrado, cierre de cord\u00f3n y espacio para todo lo esencial.",
+        "Elegancia Costera Artesanal",
+        "Custom orders welcome \u2014 bluebeachhousedesigns.com"
+      ]
+    },
+    {
+      "product_id": "painted-shell-art",
+      "aspect_ratio": "1:1",
+      "language": "en",
+      "file_path": "output/coastal_collection_2025/painted-shell-art/instagram_square/creative_en.jpg",
+      "status": "generated",
+      "hero_status": "reused",
+      "prompt_used": null,
+      "brand_compliance": {
+        "status": "passed",
+        "notes": [
+          "[Colors] All brand colors detected in image.",
+          "[Logo] Logo verified in top-right region (16641/16641 opaque pixels, 242 distinct colors).",
+          "[Text] No prohibited words detected. Checked 4 rendered text(s)."
+        ]
+      },
+      "legal_compliance": {
+        "status": "passed",
+        "notes": [
+          "No legal flags raised. Checked 4 text(s)."
+        ]
+      },
+      "rendered_texts": [
+        "BLUE BEACH HOUSE DESIGNS",
+        "The perfect shell handbag for the season, complete with a lined interior, drawstring closure, and room for all your essentials.",
+        "Handcrafted Coastal Elegance",
+        "Custom orders welcome \u2014 bluebeachhousedesigns.com"
+      ]
+    },
+    {
+      "product_id": "painted-shell-art",
+      "aspect_ratio": "1:1",
+      "language": "es",
+      "file_path": "output/coastal_collection_2025/painted-shell-art/instagram_square/creative_es.jpg",
+      "status": "generated",
+      "hero_status": "reused",
+      "prompt_used": null,
+      "brand_compliance": {
+        "status": "passed",
+        "notes": [
+          "[Colors] All brand colors detected in image.",
+          "[Logo] Logo verified in top-right region (16641/16641 opaque pixels, 242 distinct colors).",
+          "[Text] No prohibited words detected. Checked 4 rendered text(s)."
+        ]
+      },
+      "legal_compliance": {
+        "status": "passed",
+        "notes": [
+          "No legal flags raised. Checked 4 text(s)."
+        ]
+      },
+      "rendered_texts": [
+        "BLUE BEACH HOUSE DESIGNS",
+        "El bolso de conchas perfecto para la temporada, con interior forrado, cierre de cord\u00f3n y espacio para todo lo esencial.",
+        "Elegancia Costera Artesanal",
+        "Custom orders welcome \u2014 bluebeachhousedesigns.com"
+      ]
+    },
+    {
+      "product_id": "painted-shell-art",
+      "aspect_ratio": "9:16",
+      "language": "en",
+      "file_path": "output/coastal_collection_2025/painted-shell-art/stories_reels/creative_en.jpg",
+      "status": "generated",
+      "hero_status": "reused",
+      "prompt_used": null,
+      "brand_compliance": {
+        "status": "passed",
+        "notes": [
+          "[Colors] All brand colors detected in image.",
+          "[Logo] Logo verified in top-right region (16641/16641 opaque pixels, 249 distinct colors).",
+          "[Text] No prohibited words detected. Checked 4 rendered text(s)."
+        ]
+      },
+      "legal_compliance": {
+        "status": "passed",
+        "notes": [
+          "No legal flags raised. Checked 4 text(s)."
+        ]
+      },
+      "rendered_texts": [
+        "BLUE BEACH HOUSE DESIGNS",
+        "The perfect shell handbag for the season, complete with a lined interior, drawstring closure, and room for all your essentials.",
+        "Handcrafted Coastal Elegance",
+        "Custom orders welcome \u2014 bluebeachhousedesigns.com"
+      ]
+    },
+    {
+      "product_id": "painted-shell-art",
+      "aspect_ratio": "9:16",
+      "language": "es",
+      "file_path": "output/coastal_collection_2025/painted-shell-art/stories_reels/creative_es.jpg",
+      "status": "generated",
+      "hero_status": "reused",
+      "prompt_used": null,
+      "brand_compliance": {
+        "status": "passed",
+        "notes": [
+          "[Colors] All brand colors detected in image.",
+          "[Logo] Logo verified in top-right region (16641/16641 opaque pixels, 249 distinct colors).",
+          "[Text] No prohibited words detected. Checked 4 rendered text(s)."
+        ]
+      },
+      "legal_compliance": {
+        "status": "passed",
+        "notes": [
+          "No legal flags raised. Checked 4 text(s)."
+        ]
+      },
+      "rendered_texts": [
+        "BLUE BEACH HOUSE DESIGNS",
+        "El bolso de conchas perfecto para la temporada, con interior forrado, cierre de cord\u00f3n y espacio para todo lo esencial.",
+        "Elegancia Costera Artesanal",
+        "Custom orders welcome \u2014 bluebeachhousedesigns.com"
+      ]
+    },
+    {
+      "product_id": "painted-shell-art",
+      "aspect_ratio": "16:9",
+      "language": "en",
+      "file_path": "output/coastal_collection_2025/painted-shell-art/facebook_landscape/creative_en.jpg",
+      "status": "generated",
+      "hero_status": "reused",
+      "prompt_used": null,
+      "brand_compliance": {
+        "status": "passed",
+        "notes": [
+          "[Colors] All brand colors detected in image.",
+          "[Logo] Logo verified in top-right region (16641/16641 opaque pixels, 111 distinct colors).",
+          "[Text] No prohibited words detected. Checked 4 rendered text(s)."
+        ]
+      },
+      "legal_compliance": {
+        "status": "passed",
+        "notes": [
+          "No legal flags raised. Checked 4 text(s)."
+        ]
+      },
+      "rendered_texts": [
+        "BLUE BEACH HOUSE DESIGNS",
+        "The perfect shell handbag for the season, complete with a lined interior, drawstring closure, and room for all your essentials.",
+        "Handcrafted Coastal Elegance",
+        "Custom orders welcome \u2014 bluebeachhousedesigns.com"
+      ]
+    },
+    {
+      "product_id": "painted-shell-art",
+      "aspect_ratio": "16:9",
+      "language": "es",
+      "file_path": "output/coastal_collection_2025/painted-shell-art/facebook_landscape/creative_es.jpg",
+      "status": "generated",
+      "hero_status": "reused",
+      "prompt_used": null,
+      "brand_compliance": {
+        "status": "passed",
+        "notes": [
+          "[Colors] All brand colors detected in image.",
+          "[Logo] Logo verified in top-right region (16641/16641 opaque pixels, 111 distinct colors).",
+          "[Text] No prohibited words detected. Checked 4 rendered text(s)."
+        ]
+      },
+      "legal_compliance": {
+        "status": "passed",
+        "notes": [
+          "No legal flags raised. Checked 4 text(s)."
+        ]
+      },
+      "rendered_texts": [
+        "BLUE BEACH HOUSE DESIGNS",
+        "El bolso de conchas perfecto para la temporada, con interior forrado, cierre de cord\u00f3n y espacio para todo lo esencial.",
+        "Elegancia Costera Artesanal",
+        "Custom orders welcome \u2014 bluebeachhousedesigns.com"
+      ]
+    }
+  ],
+  "warnings": [],
+  "elapsed_seconds": 4.223064184188843,
+  "metrics": {
+    "total_elapsed_ms": 4223,
+    "total_api_calls": 0,
+    "total_estimated_cost_usd": 0.0,
+    "provider": "mock (mock-v1)",
+    "stages": [
+      {
+        "name": "brief_ingestion",
+        "elapsed_ms": 5,
+        "items_processed": 1,
+        "api_calls": 0,
+        "estimated_cost_usd": 0.0,
+        "notes": [
+          "Loaded: Coastal Collection 2025"
+        ]
+      },
+      {
+        "name": "brief_analysis",
+        "elapsed_ms": 0,
+        "items_processed": 1,
+        "api_calls": 0,
+        "estimated_cost_usd": 0.0,
+        "notes": [
+          "Score: 92/100"
+        ]
+      },
+      {
+        "name": "compose_resort-shell-handbag",
+        "elapsed_ms": 1407,
+        "items_processed": 6,
+        "api_calls": 0,
+        "estimated_cost_usd": 0.0,
+        "notes": []
+      },
+      {
+        "name": "validate_resort-shell-handbag",
+        "elapsed_ms": 1407,
+        "items_processed": 6,
+        "api_calls": 0,
+        "estimated_cost_usd": 0.0,
+        "notes": []
+      },
+      {
+        "name": "compose_cowrie-shell-box",
+        "elapsed_ms": 1347,
+        "items_processed": 6,
+        "api_calls": 0,
+        "estimated_cost_usd": 0.0,
+        "notes": []
+      },
+      {
+        "name": "validate_cowrie-shell-box",
+        "elapsed_ms": 1347,
+        "items_processed": 6,
+        "api_calls": 0,
+        "estimated_cost_usd": 0.0,
+        "notes": []
+      },
+      {
+        "name": "compose_painted-shell-art",
+        "elapsed_ms": 1425,
+        "items_processed": 6,
+        "api_calls": 0,
+        "estimated_cost_usd": 0.0,
+        "notes": []
+      },
+      {
+        "name": "validate_painted-shell-art",
+        "elapsed_ms": 1425,
+        "items_processed": 6,
+        "api_calls": 0,
+        "estimated_cost_usd": 0.0,
+        "notes": []
+      }
+    ],
+    "per_asset": [
+      {
+        "product_id": "resort-shell-handbag",
+        "aspect_ratio": "1:1",
+        "language": "en",
+        "provider": "reused",
+        "generation_ms": 0,
+        "composition_ms": 100,
+        "validation_ms": 92,
+        "estimated_cost_usd": 0.0
+      },
+      {
+        "product_id": "resort-shell-handbag",
+        "aspect_ratio": "1:1",
+        "language": "es",
+        "provider": "reused",
+        "generation_ms": 0,
+        "composition_ms": 81,
+        "validation_ms": 88,
+        "estimated_cost_usd": 0.0
+      },
+      {
+        "product_id": "resort-shell-handbag",
+        "aspect_ratio": "9:16",
+        "language": "en",
+        "provider": "reused",
+        "generation_ms": 0,
+        "composition_ms": 91,
+        "validation_ms": 155,
+        "estimated_cost_usd": 0.0
+      },
+      {
+        "product_id": "resort-shell-handbag",
+        "aspect_ratio": "9:16",
+        "language": "es",
+        "provider": "reused",
+        "generation_ms": 0,
+        "composition_ms": 83,
+        "validation_ms": 155,
+        "estimated_cost_usd": 0.0
+      },
+      {
+        "product_id": "resort-shell-handbag",
+        "aspect_ratio": "16:9",
+        "language": "en",
+        "provider": "reused",
+        "generation_ms": 0,
+        "composition_ms": 129,
+        "validation_ms": 151,
+        "estimated_cost_usd": 0.0
+      },
+      {
+        "product_id": "resort-shell-handbag",
+        "aspect_ratio": "16:9",
+        "language": "es",
+        "provider": "reused",
+        "generation_ms": 0,
+        "composition_ms": 125,
+        "validation_ms": 151,
+        "estimated_cost_usd": 0.0
+      },
+      {
+        "product_id": "cowrie-shell-box",
+        "aspect_ratio": "1:1",
+        "language": "en",
+        "provider": "reused",
+        "generation_ms": 0,
+        "composition_ms": 74,
+        "validation_ms": 95,
+        "estimated_cost_usd": 0.0
+      },
+      {
+        "product_id": "cowrie-shell-box",
+        "aspect_ratio": "1:1",
+        "language": "es",
+        "provider": "reused",
+        "generation_ms": 0,
+        "composition_ms": 71,
+        "validation_ms": 98,
+        "estimated_cost_usd": 0.0
+      },
+      {
+        "product_id": "cowrie-shell-box",
+        "aspect_ratio": "9:16",
+        "language": "en",
+        "provider": "reused",
+        "generation_ms": 0,
+        "composition_ms": 81,
+        "validation_ms": 167,
+        "estimated_cost_usd": 0.0
+      },
+      {
+        "product_id": "cowrie-shell-box",
+        "aspect_ratio": "9:16",
+        "language": "es",
+        "provider": "reused",
+        "generation_ms": 0,
+        "composition_ms": 81,
+        "validation_ms": 167,
+        "estimated_cost_usd": 0.0
+      },
+      {
+        "product_id": "cowrie-shell-box",
+        "aspect_ratio": "16:9",
+        "language": "en",
+        "provider": "reused",
+        "generation_ms": 0,
+        "composition_ms": 103,
+        "validation_ms": 153,
+        "estimated_cost_usd": 0.0
+      },
+      {
+        "product_id": "cowrie-shell-box",
+        "aspect_ratio": "16:9",
+        "language": "es",
+        "provider": "reused",
+        "generation_ms": 0,
+        "composition_ms": 101,
+        "validation_ms": 152,
+        "estimated_cost_usd": 0.0
+      },
+      {
+        "product_id": "painted-shell-art",
+        "aspect_ratio": "1:1",
+        "language": "en",
+        "provider": "reused",
+        "generation_ms": 0,
+        "composition_ms": 96,
+        "validation_ms": 87,
+        "estimated_cost_usd": 0.0
+      },
+      {
+        "product_id": "painted-shell-art",
+        "aspect_ratio": "1:1",
+        "language": "es",
+        "provider": "reused",
+        "generation_ms": 0,
+        "composition_ms": 85,
+        "validation_ms": 87,
+        "estimated_cost_usd": 0.0
+      },
+      {
+        "product_id": "painted-shell-art",
+        "aspect_ratio": "9:16",
+        "language": "en",
+        "provider": "reused",
+        "generation_ms": 0,
+        "composition_ms": 91,
+        "validation_ms": 152,
+        "estimated_cost_usd": 0.0
+      },
+      {
+        "product_id": "painted-shell-art",
+        "aspect_ratio": "9:16",
+        "language": "es",
+        "provider": "reused",
+        "generation_ms": 0,
+        "composition_ms": 91,
+        "validation_ms": 152,
+        "estimated_cost_usd": 0.0
+      },
+      {
+        "product_id": "painted-shell-art",
+        "aspect_ratio": "16:9",
+        "language": "en",
+        "provider": "reused",
+        "generation_ms": 0,
+        "composition_ms": 134,
+        "validation_ms": 158,
+        "estimated_cost_usd": 0.0
+      },
+      {
+        "product_id": "painted-shell-art",
+        "aspect_ratio": "16:9",
+        "language": "es",
+        "provider": "reused",
+        "generation_ms": 0,
+        "composition_ms": 132,
+        "validation_ms": 152,
+        "estimated_cost_usd": 0.0
+      }
+    ]
+  },
+  "brief_analysis": {
+    "score": {
+      "overall": 92,
+      "completeness": 25,
+      "clarity": 20,
+      "brand_strength": 25,
+      "targeting": 22
+    },
+    "strengths": [
+      "Tagline provided \u2014 adds messaging depth",
+      "3 products defined",
+      "Multi-language campaign (en, es)",
+      "Pre-existing hero for 'Resort Shell Handbag' \u2014 saves generation cost",
+      "Pre-existing hero for 'Bespoke Rattan Cowrie Shell Box' \u2014 saves generation cost",
+      "Pre-existing hero for 'Painted Shell Art' \u2014 saves generation cost",
+      "Target audience includes demographic specifics",
+      "Hyper-local region targeting: Southern Florida \u2014 Naples & Palm Beach",
+      "Brand palette defined (3 colors)",
+      "Accent color specified for secondary UI elements",
+      "Logo asset provided",
+      "Prohibited words list (4 terms)",
+      "Legal disclaimer configured",
+      "Custom font family: Georgia",
+      "3 aspect ratios for multi-platform delivery",
+      "Full platform coverage: Instagram, Stories/Reels, Facebook/YouTube"
+    ],
+    "weaknesses": [],
+    "suggestions": [
+      "Consider action-oriented messaging (e.g., 'Discover...', 'Feel...')"
+    ],
+    "risk_flags": [],
+    "creative_direction": "Recommended direction: seasonal, coastal/nautical, design-professional visual language",
+    "analyzed_by": "heuristic"
+  },
+  "efficiency": {
+    "automated_seconds": 4.22,
+    "estimated_manual_minutes": 270,
+    "time_saved_minutes": 269.9,
+    "time_saved_hours": 4.5,
+    "speedup_factor": 3836.1
+  }
+}
