@@ -706,18 +706,21 @@ DEFAULT_BUILDER_PRODUCTS = [
         "name": "Resort Shell Handbag",
         "description": "Handcrafted rattan handbag adorned with natural seashells and floral accents, featuring a lined interior, drawstring closure, and room for all your essentials",
         "keywords": "shell handbag, rattan bag, coastal fashion, beach accessory, resort wear, handcrafted, seashell",
+        "hero_image": "input_assets/resort-shell-handbag.png",
     },
     {
         "id": "cowrie-shell-box",
         "name": "Bespoke Rattan Cowrie Shell Box",
         "description": "Hand-woven rattan keepsake box embellished with cowrie shells and turquoise accents, perfect for jewelry storage or coastal home decor",
         "keywords": "cowrie shell, rattan box, keepsake box, coastal decor, jewelry box, handwoven",
+        "hero_image": "input_assets/bespoke-rattan-cowrie-shell-box.png",
     },
     {
         "id": "painted-shell-art",
         "name": "Painted Shell Art",
         "description": "Vibrant hand-painted seashell collection displayed in a gilded bamboo frame, featuring pastel rainbow scallops, starfish, and sand dollars",
         "keywords": "shell art, wall art, coastal wall decor, painted shells, framed art, pastel decor",
+        "hero_image": "input_assets/painted-shell-art.png",
     },
 ]
 
@@ -973,7 +976,8 @@ def _render_brief_builder():
                 with pc2:
                     p_desc = st.text_area("Description", value=st.session_state.get(f"bb_pdesc_{i}", default_product["description"]), key=f"bb_pdesc_{i}", height=68)
                     p_kw   = st.text_input("Keywords (comma-separated)", value=st.session_state.get(f"bb_pkw_{i}", default_product["keywords"]), key=f"bb_pkw_{i}")
-                products_data.append({"id": p_id.strip(), "name": p_name.strip(), "description": p_desc.strip(), "keywords": [k.strip() for k in p_kw.split(",") if k.strip()]})
+                hero_image = default_product.get("hero_image")
+                products_data.append({"id": p_id.strip(), "name": p_name.strip(), "description": p_desc.strip(), "hero_image": hero_image, "keywords": [k.strip() for k in p_kw.split(",") if k.strip()]})
 
         st.session_state.bb_products_data = products_data
 
@@ -1463,8 +1467,8 @@ def _render_pipeline_results(brief, result):
     time_saved_hrs = _estimate_time_saved_hours(result.created_count, result.elapsed_seconds)
     assets_data = _serialize_result_assets(result)
 
-    tab_campaign, tab_gallery, tab_approval, tab_ab, tab_performance, tab_metrics = st.tabs(
-        ["📋 Campaign", "🖼️ Gallery", "✅ Approval Queue", "🔀 A/B Compare", "📈 Performance", "📊 Metrics"]
+    tab_campaign, tab_gallery, tab_approval, tab_ab, tab_analytics = st.tabs(
+        ["📋 Campaign", "🖼️ Gallery", "✅ Approval Queue", "🔀 Variations", "📊 Analytics"]
     )
 
     with tab_campaign:
@@ -1489,7 +1493,7 @@ def _render_pipeline_results(brief, result):
         _render_approval_queue(assets_data, session_key="pipeline_run")
 
     with tab_ab:
-        render_section_title("A/B Template Comparison")
+        render_section_title("Variations")
         st.caption("Compare all 5 layout templates side-by-side using the generated hero images.")
         from src.storage import StorageManager as _SM, slugify as _slugify
         storage = _SM(input_dir=Path("input_assets"), output_dir=Path("output"))
@@ -1503,10 +1507,8 @@ def _render_pipeline_results(brief, result):
                 st.info(f"No hero found for {product.name}")
             st.divider()
 
-    with tab_performance:
+    with tab_analytics:
         _render_performance(assets_data, session_key="pipeline_run")
-
-    with tab_metrics:
         from src.storage import StorageManager
         storage = StorageManager(input_dir=Path("input_assets"), output_dir=Path("output"))
         campaign_dir = storage.get_campaign_dir(brief.name)
@@ -1540,7 +1542,7 @@ def _render_sample_library():
         return
 
     # Sample reports are stored as JSON, so file paths may need to be re-rooted.
-    sample_tabs = st.tabs(["📋 Campaign", "🖼️ Gallery", "✅ Approval Queue", "🔀 A/B Compare", "📈 Performance", "📊 Metrics"])
+    sample_tabs = st.tabs(["📋 Campaign", "🖼️ Gallery", "✅ Approval Queue", "🔀 Variations", "📊 Analytics"])
     patched_assets = _normalize_report_asset_paths(report.get("assets", []), campaign_dir)
 
     with sample_tabs[0]:
@@ -1567,7 +1569,7 @@ def _render_sample_library():
         _render_approval_queue(patched_assets, session_key=f"sample_{selected_idx}")
 
     with sample_tabs[3]:
-        render_section_title("A/B Template Comparison")
+        render_section_title("Variations")
         try:
             brief_for_ab = None
             for _, brief_path in SAMPLE_BRIEFS.items():
@@ -1591,8 +1593,6 @@ def _render_sample_library():
 
     with sample_tabs[4]:
         _render_performance(patched_assets, session_key=f"sample_{selected_idx}")
-
-    with sample_tabs[5]:
         _render_metrics(report)
 
 
