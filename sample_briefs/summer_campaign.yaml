@@ -30,7 +30,7 @@ campaign:
     - id: "resort-shell-handbag"
       name: "Resort Shell Handbag"
       description: "Handcrafted rattan handbag adorned with natural seashells and floral accents, featuring a lined interior, drawstring closure, and room for all your essentials"
-      hero_image: "input_assets/resort-shell-handbag.png"
+      # hero_image: "input_assets/resort-shell-handbag.png"
       keywords:
         - shell handbag
         - rattan bag
@@ -43,7 +43,7 @@ campaign:
     - id: "cowrie-shell-box"
       name: "Bespoke Rattan Cowrie Shell Box"
       description: "Hand-woven rattan keepsake box embellished with cowrie shells and turquoise accents, perfect for jewelry storage or coastal home decor"
-      hero_image: "input_assets/bespoke-rattan-cowrie-shell-box.png"
+      # hero_image: "input_assets/bespoke-rattan-cowrie-shell-box.png"
       keywords:
         - cowrie shell
         - rattan box

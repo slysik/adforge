@@ -715,21 +715,18 @@ DEFAULT_BUILDER_PRODUCTS = [
         "name": "Resort Shell Handbag",
         "description": "Handcrafted rattan handbag adorned with natural seashells and floral accents, featuring a lined interior, drawstring closure, and room for all your essentials",
         "keywords": "shell handbag, rattan bag, coastal fashion, beach accessory, resort wear, handcrafted, seashell",
-        "hero_image": "input_assets/resort-shell-handbag.png",
     },
     {
         "id": "cowrie-shell-box",
         "name": "Bespoke Rattan Cowrie Shell Box",
         "description": "Hand-woven rattan keepsake box embellished with cowrie shells and turquoise accents, perfect for jewelry storage or coastal home decor",
         "keywords": "cowrie shell, rattan box, keepsake box, coastal decor, jewelry box, handwoven",
-        "hero_image": "input_assets/bespoke-rattan-cowrie-shell-box.png",
     },
     {
         "id": "painted-shell-art",
         "name": "Painted Shell Art",
         "description": "Vibrant hand-painted seashell collection displayed in a gilded bamboo frame, featuring pastel rainbow scallops, starfish, and sand dollars",
         "keywords": "shell art, wall art, coastal wall decor, painted shells, framed art, pastel decor",
-        "hero_image": "input_assets/painted-shell-art.png",
     },
 ]
 
@@ -1101,6 +1098,38 @@ def _find_sample_campaigns(base: Path) -> list[Path]:
     return sorted([d for d in base.iterdir() if d.is_dir() and (d / "report.json").exists()])
 
 
+def _score_asset(asset: dict) -> float:
+    """Score a creative for AI-pick ranking. Higher = better."""
+    score = 50.0  # base
+    brand = asset.get("brand_compliance", {}).get("status", "not_checked")
+    legal = asset.get("legal_compliance", {}).get("status", "not_checked")
+    hero  = asset.get("hero_status", "generated")
+    ratio = asset.get("aspect_ratio", "")
+
+    # Compliance boosts
+    if brand == "passed": score += 20
+    elif brand == "warning": score += 5
+    elif brand == "failed": score -= 15
+    if legal == "passed": score += 20
+    elif legal == "warning": score += 5
+    elif legal == "failed": score -= 15
+
+    # Generated heroes are unique; reused are less novel
+    if hero == "generated": score += 10
+
+    # Prefer versatile ratios (1:1 is most universal)
+    if "1:1" in ratio: score += 5
+    elif "9:16" in ratio: score += 3
+
+    # Vary by file size as a proxy for visual richness
+    fp = asset.get("file_path", "")
+    if fp and Path(fp).exists():
+        size_kb = Path(fp).stat().st_size / 1024
+        score += min(10, size_kb / 50)  # up to 10 pts for larger files
+
+    return score
+
+
 def _render_gallery(assets: list[dict], base_dir: Path | None = None):
     products: dict[str, list] = {}
     for asset in assets:
@@ -1108,6 +1137,13 @@ def _render_gallery(assets: list[dict], base_dir: Path | None = None):
         if pid not in products:
             products[pid] = []
         products[pid].append(asset)
+
+    # AI-pick: find best creative per product
+    ai_picks: dict[str, int] = {}
+    for pid, passets in products.items():
+        scored = [(i, _score_asset(a)) for i, a in enumerate(passets)]
+        best_idx, _ = max(scored, key=lambda x: x[1])
+        ai_picks[pid] = id(passets[best_idx])  # use object id to match
 
     for product_id, product_assets in products.items():
         st.markdown(f'<div class="af-gallery-product-title">📦 {product_id}</div>', unsafe_allow_html=True)
@@ -1132,8 +1168,16 @@ def _render_gallery(assets: list[dict], base_dir: Path | None = None):
                 legal_status = asset.get("legal_compliance", {}).get("status", "not_checked")
                 hero_status  = asset.get("hero_status", "generated")
                 hero_icon    = "♻️" if hero_status == "reused" else "✦"
+                is_ai_pick   = id(asset) == ai_picks.get(product_id)
 
                 with col:
+                    if is_ai_pick:
+                        st.markdown(
+                            '<div style="background:linear-gradient(135deg,#1B4F72,#2C3E50);color:#FFD700;'
+                            'text-align:center;padding:0.3rem;border-radius:8px 8px 0 0;font-size:0.82rem;font-weight:700">'
+                            '⭐ AI Pick</div>',
+                            unsafe_allow_html=True,
+                        )
                     if Path(file_path).exists():
                         st.image(str(file_path), use_container_width=True)
                     else:
