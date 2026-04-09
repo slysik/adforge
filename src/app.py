@@ -1288,90 +1288,98 @@ def _render_performance(assets: list[dict], session_key: str = "default"):
 
     perf = build_performance_report(assets)
 
-    OCEAN      = "#1B4F72"
-    CORAL      = "#E07B6A"
-    SLATE      = "#2C3E50"
-    BG_CARD    = "#162236"
-    TEXT_COLOR = "rgba(255,255,255,0.7)"
-    WINNER_GOLD = "#FFD700"
+    # Warm tonal palette
+    WARM_BG     = "#2C1810"
+    WARM_CARD   = "#3D2317"
+    WARM_CELL   = "rgba(212,165,116,0.08)"
+    WARM_BORDER = "rgba(212,165,116,0.2)"
+    SAND        = "#D4A574"
+    CREAM       = "#F5E6CA"
+    TERRA       = "#C4724E"
+    GREEN       = "#7FB069"
+    TEXT_LIGHT  = "#F5E6CA"
+    TEXT_DIM    = "rgba(245,230,202,0.6)"
+    GOLD        = "#E8B849"
 
-    # --- Top-level metric cards ---
-    render_section_title("Campaign Performance")
-    render_metric_cards([
-        {"label": "Total Spend",  "value": f"${perf.total_spend:,.0f}",  "sub": "USD",        "icon": "💰"},
-        {"label": "Impressions",  "value": f"{perf.total_impressions/1000:.1f}K", "sub": "total views", "icon": "👁️"},
-        {"label": "Avg CTR",      "value": f"{perf.avg_ctr:.2f}%",      "sub": "click-through rate", "icon": "🖱️"},
-        {"label": "Avg CPA",      "value": f"${perf.avg_cpa:.2f}",      "sub": "cost per acquisition", "icon": "🎯"},
-    ])
-
-    # --- Winner callout ---
-    if perf.winner:
-        w = perf.winner
-        st.markdown(
-            f'<div style="background:linear-gradient(135deg,{OCEAN},{SLATE});border-left:4px solid {WINNER_GOLD};'
-            f'border-radius:8px;padding:1rem 1.2rem;margin:0.5rem 0 1.2rem">'
-            f'<span style="font-size:1.3rem">🏆</span> '
-            f'<strong style="color:{WINNER_GOLD}">Winner: {w.creative_id}</strong>'
-            f'<span style="color:{TEXT_COLOR};margin-left:1.2rem">'
-            f'CTR <strong style="color:#fff">{w.ctr:.2f}%</strong> · '
-            f'CPA <strong style="color:#fff">${w.cpa:.2f}</strong> · '
-            f'<strong style="color:#fff">{w.conversions}</strong> conversions · '
-            f'ROAS <strong style="color:#fff">{w.conversions * w.cpa / w.spend_usd:.1f}x</strong>'
-            f'</span></div>',
-            unsafe_allow_html=True,
-        )
-
-    # --- Winner detail card ---
-    if perf.winner:
-        w = perf.winner
-        conv_rate = w.conversions / max(w.clicks, 1) * 100
-        ctr_vs_avg = ((w.ctr - perf.avg_ctr) / perf.avg_ctr * 100) if perf.avg_ctr else 0
-        cpa_vs_avg = ((perf.avg_cpa - w.cpa) / perf.avg_cpa * 100) if perf.avg_cpa else 0
-        st.markdown(
-            f'<div style="background:{BG_CARD};border-radius:10px;padding:1.2rem;border:1px solid rgba(255,255,255,0.08);max-width:480px">'
-            f'<div style="font-size:1.1rem;font-weight:700;color:#fff;margin-bottom:1rem">🏆 {w.creative_id}</div>'
-            f'<div style="display:grid;grid-template-columns:1fr 1fr;gap:0.8rem">'
-            f'<div style="background:rgba(255,255,255,0.04);border-radius:8px;padding:0.7rem;text-align:center">'
-            f'<div style="color:{TEXT_COLOR};font-size:0.7rem;text-transform:uppercase;letter-spacing:0.05em">CTR</div>'
-            f'<div style="color:#fff;font-size:1.3rem;font-weight:700">{w.ctr:.2f}%</div>'
-            f'<div style="color:{"#2ecc71" if ctr_vs_avg > 0 else CORAL};font-size:0.75rem">{"+" if ctr_vs_avg > 0 else ""}{ctr_vs_avg:.0f}% vs avg</div></div>'
-            f'<div style="background:rgba(255,255,255,0.04);border-radius:8px;padding:0.7rem;text-align:center">'
-            f'<div style="color:{TEXT_COLOR};font-size:0.7rem;text-transform:uppercase;letter-spacing:0.05em">CPA</div>'
-            f'<div style="color:#fff;font-size:1.3rem;font-weight:700">${w.cpa:.2f}</div>'
-            f'<div style="color:{"#2ecc71" if cpa_vs_avg > 0 else CORAL};font-size:0.75rem">{cpa_vs_avg:.0f}% better</div></div>'
-            f'<div style="background:rgba(255,255,255,0.04);border-radius:8px;padding:0.7rem;text-align:center">'
-            f'<div style="color:{TEXT_COLOR};font-size:0.7rem;text-transform:uppercase;letter-spacing:0.05em">Conversions</div>'
-            f'<div style="color:#fff;font-size:1.3rem;font-weight:700">{w.conversions}</div>'
-            f'<div style="color:{TEXT_COLOR};font-size:0.75rem">{conv_rate:.1f}% conv rate</div></div>'
-            f'<div style="background:rgba(255,255,255,0.04);border-radius:8px;padding:0.7rem;text-align:center">'
-            f'<div style="color:{TEXT_COLOR};font-size:0.7rem;text-transform:uppercase;letter-spacing:0.05em">Spend</div>'
-            f'<div style="color:#fff;font-size:1.3rem;font-weight:700">${w.spend_usd:,.0f}</div>'
-            f'<div style="color:{TEXT_COLOR};font-size:0.75rem">{w.spend_usd/perf.total_spend*100:.0f}% of total</div></div>'
-            f'</div></div>',
-            unsafe_allow_html=True,
-        )
-
-    # --- KPI data table + export ---
     sorted_kpis = sorted(perf.kpis, key=lambda x: x.cpa)
     winner_id = perf.winner.creative_id if perf.winner else None
 
-    render_section_title("Per-Creative KPIs")
-    table_data = []
-    for k in sorted_kpis:
-        is_winner = k.creative_id == winner_id
-        table_data.append({
-            "Creative":    ("🏆 " if is_winner else "") + k.creative_id,
-            "Product":     k.product_id,
-            "Ratio":       k.aspect_ratio,
-            "Lang":        k.language,
-            "Spend":       f"${k.spend_usd:.2f}",
-            "Impressions": f"{k.impressions:,}",
-            "Clicks":      f"{k.clicks:,}",
-            "CTR %":       f"{k.ctr:.2f}",
-            "Conversions": k.conversions,
-            "CPA":         f"${k.cpa:.2f}",
-        })
-    st.dataframe(table_data, use_container_width=True, hide_index=True)
+    # --- Single-page analytics panel ---
+    st.markdown(
+        f'<div style="background:{WARM_BG};border-radius:12px;padding:1.2rem 1.4rem;border:1px solid {WARM_BORDER}">'
+        # Row 1: Summary metrics inline
+        f'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.6rem;margin-bottom:0.8rem">'
+        f'<div style="background:{WARM_CELL};border-radius:8px;padding:0.6rem;text-align:center">'
+        f'<div style="color:{TEXT_DIM};font-size:0.65rem;text-transform:uppercase;letter-spacing:0.05em">Total Spend</div>'
+        f'<div style="color:{CREAM};font-size:1.1rem;font-weight:700">${perf.total_spend:,.0f}</div></div>'
+        f'<div style="background:{WARM_CELL};border-radius:8px;padding:0.6rem;text-align:center">'
+        f'<div style="color:{TEXT_DIM};font-size:0.65rem;text-transform:uppercase;letter-spacing:0.05em">Impressions</div>'
+        f'<div style="color:{CREAM};font-size:1.1rem;font-weight:700">{perf.total_impressions/1000:.1f}K</div></div>'
+        f'<div style="background:{WARM_CELL};border-radius:8px;padding:0.6rem;text-align:center">'
+        f'<div style="color:{TEXT_DIM};font-size:0.65rem;text-transform:uppercase;letter-spacing:0.05em">Avg CTR</div>'
+        f'<div style="color:{CREAM};font-size:1.1rem;font-weight:700">{perf.avg_ctr:.2f}%</div></div>'
+        f'<div style="background:{WARM_CELL};border-radius:8px;padding:0.6rem;text-align:center">'
+        f'<div style="color:{TEXT_DIM};font-size:0.65rem;text-transform:uppercase;letter-spacing:0.05em">Avg CPA</div>'
+        f'<div style="color:{CREAM};font-size:1.1rem;font-weight:700">${perf.avg_cpa:.2f}</div></div>'
+        f'</div>'
+        # Row 2: Winner banner (if exists)
+        + (
+            (
+                lambda w: (
+                    f'<div style="background:linear-gradient(135deg,{WARM_CARD},{WARM_BG});border-left:3px solid {GOLD};'
+                    f'border-radius:6px;padding:0.6rem 1rem;margin-bottom:0.8rem;display:flex;align-items:center;gap:0.8rem;flex-wrap:wrap">'
+                    f'<span style="font-size:1.1rem">🏆</span>'
+                    f'<strong style="color:{GOLD};font-size:0.95rem">{w.creative_id}</strong>'
+                    f'<span style="color:{TEXT_LIGHT};font-size:0.85rem">'
+                    f'CTR <strong>{w.ctr:.2f}%</strong>'
+                    f'<span style="color:{TEXT_DIM}"> · </span>'
+                    f'CPA <strong>${w.cpa:.2f}</strong>'
+                    f'<span style="color:{TEXT_DIM}"> · </span>'
+                    f'<strong>{w.conversions}</strong> conv'
+                    f'<span style="color:{TEXT_DIM}"> · </span>'
+                    + (lambda ctr_d, cpa_d:
+                        f'<span style="color:{GREEN if ctr_d > 0 else TERRA};font-size:0.8rem">CTR {"+" if ctr_d > 0 else ""}{ctr_d:.0f}%</span>'
+                        f'<span style="color:{TEXT_DIM}"> · </span>'
+                        f'<span style="color:{GREEN if cpa_d > 0 else TERRA};font-size:0.8rem">CPA {cpa_d:.0f}% better</span>'
+                    )(
+                        ((w.ctr - perf.avg_ctr) / perf.avg_ctr * 100) if perf.avg_ctr else 0,
+                        ((perf.avg_cpa - w.cpa) / perf.avg_cpa * 100) if perf.avg_cpa else 0,
+                    )
+                    + f'</span></div>'
+                )
+            )(perf.winner)
+            if perf.winner else ''
+        )
+        # Row 3: KPI table header
+        + f'<div style="font-size:0.85rem;font-weight:600;color:{SAND};margin-bottom:0.4rem">Per-Creative KPIs</div>'
+        # Row 3: Compact KPI table
+        + f'<div style="overflow-x:auto">'
+        + f'<table style="width:100%;border-collapse:collapse;font-size:0.78rem;color:{TEXT_LIGHT}">'
+        + f'<tr style="border-bottom:1px solid {WARM_BORDER}">'
+        + ''.join(f'<th style="padding:0.35rem 0.5rem;text-align:left;color:{SAND};font-weight:600;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.03em">{h}</th>'
+                  for h in ["Creative", "Product", "Ratio", "Lang", "Spend", "Impr", "Clicks", "CTR", "Conv", "CPA"])
+        + '</tr>'
+        + ''.join(
+            f'<tr style="background:{WARM_CELL if k.creative_id == winner_id else "transparent"};border-bottom:1px solid rgba(212,165,116,0.06)">'
+            + f'<td style="padding:0.3rem 0.5rem;font-weight:{"700" if k.creative_id == winner_id else "400"}">'
+            + (f'<span style="color:{GOLD}">🏆 </span>' if k.creative_id == winner_id else '')
+            + f'{k.creative_id}</td>'
+            + f'<td style="padding:0.3rem 0.5rem">{k.product_id}</td>'
+            + f'<td style="padding:0.3rem 0.5rem">{k.aspect_ratio}</td>'
+            + f'<td style="padding:0.3rem 0.5rem">{k.language}</td>'
+            + f'<td style="padding:0.3rem 0.5rem">${k.spend_usd:.0f}</td>'
+            + f'<td style="padding:0.3rem 0.5rem">{k.impressions:,}</td>'
+            + f'<td style="padding:0.3rem 0.5rem">{k.clicks:,}</td>'
+            + f'<td style="padding:0.3rem 0.5rem;color:{GREEN if k.ctr > perf.avg_ctr else TEXT_LIGHT}">{k.ctr:.2f}%</td>'
+            + f'<td style="padding:0.3rem 0.5rem">{k.conversions}</td>'
+            + f'<td style="padding:0.3rem 0.5rem;color:{GREEN if k.cpa < perf.avg_cpa else TEXT_LIGHT}">${k.cpa:.2f}</td>'
+            + '</tr>'
+            for k in sorted_kpis
+        )
+        + '</table></div>'
+        + '</div>',
+        unsafe_allow_html=True,
+    )
 
     csv_data   = [f"{k.creative_id},{k.product_id},{k.aspect_ratio},{k.language},{k.spend_usd:.2f},{k.impressions},{k.clicks},{k.conversions},{k.ctr:.2f},{k.cpa:.2f},{k.cpc:.2f}" for k in perf.kpis]
     csv_header = "creative_id,product_id,aspect_ratio,language,spend_usd,impressions,clicks,conversions,ctr_pct,cpa_usd,cpc_usd"
@@ -1382,7 +1390,7 @@ def _render_performance(assets: list[dict], session_key: str = "default"):
         mime="text/csv",
         key=f"download_kpis_{session_key}",
     )
-    st.caption("*Sample data generated for demo purposes. In production, this would ingest real ad platform metrics.*")
+    st.caption("*Sample data for demo purposes.*")
 
 
 def _render_metrics(report: dict):
@@ -1532,8 +1540,8 @@ def _render_pipeline_results(brief, result):
     time_saved_hrs = _estimate_time_saved_hours(result.created_count, result.elapsed_seconds)
     assets_data = _serialize_result_assets(result)
 
-    tab_campaign, tab_gallery, tab_approval, tab_ab, tab_analytics = st.tabs(
-        ["📋 Campaign", "🖼️ Gallery", "✅ Approval Queue", "🔀 Variations", "📊 Analytics"]
+    tab_campaign, tab_approval, tab_gallery, tab_ab, tab_analytics = st.tabs(
+        ["📋 Campaign", "✅ Approval Queue", "🖼️ Gallery", "🔀 Variations", "📊 Analytics"]
     )
 
     with tab_campaign:
@@ -1607,7 +1615,7 @@ def _render_sample_library():
         return
 
     # Sample reports are stored as JSON, so file paths may need to be re-rooted.
-    sample_tabs = st.tabs(["📋 Campaign", "🖼️ Gallery", "✅ Approval Queue", "🔀 Variations", "📊 Analytics"])
+    sample_tabs = st.tabs(["📋 Campaign", "✅ Approval Queue", "🖼️ Gallery", "🔀 Variations", "📊 Analytics"])
     patched_assets = _normalize_report_asset_paths(report.get("assets", []), campaign_dir)
 
     with sample_tabs[0]:
@@ -1628,10 +1636,10 @@ def _render_sample_library():
             _render_analysis(analysis_data)
 
     with sample_tabs[1]:
-        _render_gallery(patched_assets)
+        _render_approval_queue(patched_assets, session_key=f"sample_{selected_idx}")
 
     with sample_tabs[2]:
-        _render_approval_queue(patched_assets, session_key=f"sample_{selected_idx}")
+        _render_gallery(patched_assets)
 
     with sample_tabs[3]:
         render_section_title("Variations")
