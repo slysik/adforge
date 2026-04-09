@@ -132,7 +132,7 @@ html, body, [class*="css"] {
   padding-bottom: 0;
 }
 
-/* ── Sidebar — Narrow icon bar ────────────────────────────────────────── */
+/* ── Sidebar — Narrow icon bar (always visible) ──────────────────────── */
 [data-testid="collapsedControl"] {
   display: none !important;
 }
@@ -142,10 +142,21 @@ html, body, [class*="css"] {
   min-width: 88px !important;
   max-width: 88px !important;
   width: 88px !important;
+  transform: none !important;
+  transition: none !important;
 }
 [data-testid="stSidebar"] > div:first-child {
   width: 88px !important;
   padding: 0.5rem 0 !important;
+}
+/* Prevent sidebar collapse — always pinned open */
+[data-testid="stSidebar"][aria-expanded="false"] {
+  display: block !important;
+  transform: none !important;
+  margin-left: 0 !important;
+  min-width: 88px !important;
+  max-width: 88px !important;
+  width: 88px !important;
 }
 [data-testid="stSidebar"] * {
   color: #E8F4FD !important;
@@ -1565,11 +1576,11 @@ def _render_performance(assets: list[dict], session_key: str = "default"):
         <div style="font-size:1.3rem;font-weight:700;color:{CHARCOAL}">{perf.total_impressions/1000:.1f}K</div>
       </div>
       <div style="background:{CARD_BG};border:1px solid {BORDER};border-radius:var(--radius-sm);padding:0.8rem 1rem;text-align:center">
-        <div style="font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em;color:{CHARCOAL_M};margin-bottom:0.2rem">Avg CTR</div>
+        <div style="font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em;color:{CHARCOAL_M};margin-bottom:0.2rem">Avg Click-Through Rate</div>
         <div style="font-size:1.3rem;font-weight:700;color:{CHARCOAL}">{perf.avg_ctr:.2f}%</div>
       </div>
       <div style="background:{CARD_BG};border:1px solid {BORDER};border-radius:var(--radius-sm);padding:0.8rem 1rem;text-align:center">
-        <div style="font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em;color:{CHARCOAL_M};margin-bottom:0.2rem">Avg CPA</div>
+        <div style="font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em;color:{CHARCOAL_M};margin-bottom:0.2rem">Avg Cost Per Acquisition</div>
         <div style="font-size:1.3rem;font-weight:700;color:{CHARCOAL}">${perf.avg_cpa:.2f}</div>
       </div>
     </div>
@@ -1587,10 +1598,10 @@ def _render_performance(assets: list[dict], session_key: str = "default"):
           <div>
             <div style="font-size:1rem;font-weight:700;color:{GOLD_TEXT}">Top Performer — {w.creative_id.replace("-"," ").title()}</div>
             <div style="font-size:0.88rem;color:{CHARCOAL_M};margin-top:0.15rem">
-              CTR <strong style="color:{CHARCOAL}">{w.ctr:.2f}%</strong>
+              Click-Through Rate <strong style="color:{CHARCOAL}">{w.ctr:.2f}%</strong>
               <span style="color:{GREEN if ctr_delta > 0 else RED};font-size:0.82rem;margin-left:0.2rem">{"+" if ctr_delta > 0 else ""}{ctr_delta:.0f}% vs avg</span>
               &nbsp;·&nbsp;
-              CPA <strong style="color:{CHARCOAL}">${w.cpa:.2f}</strong>
+              Cost Per Acquisition <strong style="color:{CHARCOAL}">${w.cpa:.2f}</strong>
               <span style="color:{GREEN if cpa_delta > 0 else RED};font-size:0.82rem;margin-left:0.2rem">{cpa_delta:.0f}% better</span>
               &nbsp;·&nbsp;
               <strong style="color:{CHARCOAL}">{w.conversions}</strong> conversions
@@ -1624,11 +1635,11 @@ def _render_performance(assets: list[dict], session_key: str = "default"):
 
     st.markdown(f"""
     <div style="background:{CARD_BG};border:1px solid {BORDER};border-radius:var(--radius-sm);padding:1rem;overflow-x:auto">
-      <div style="font-size:0.95rem;font-weight:700;color:{CHARCOAL};margin-bottom:0.6rem">Per-Creative KPIs</div>
+      <div style="font-size:0.95rem;font-weight:700;color:{CHARCOAL};margin-bottom:0.6rem">Per-Creative Performance Indicators</div>
       <table style="width:100%;border-collapse:collapse;font-size:0.88rem;color:{CHARCOAL}">
         <thead>
           <tr style="border-bottom:2px solid {BORDER}">
-            {''.join(f'<th style="padding:0.45rem 0.6rem;text-align:left;color:{SAND};font-weight:700;font-size:0.8rem;text-transform:uppercase;letter-spacing:0.04em">{h}</th>' for h in ["Creative","Product","Ratio","Lang","Spend","Impr","Clicks","CTR","Conv","CPA"])}
+            {''.join(f'<th style="padding:0.45rem 0.6rem;text-align:left;color:{SAND};font-weight:700;font-size:0.8rem;text-transform:uppercase;letter-spacing:0.04em">{h}</th>' for h in ["Creative","Product","Ratio","Lang","Spend","Impressions","Clicks","Click-Through Rate","Conversions","Cost Per Acq."])}
           </tr>
         </thead>
         <tbody>{table_rows}</tbody>
@@ -1639,7 +1650,7 @@ def _render_performance(assets: list[dict], session_key: str = "default"):
     # ── Export ──
     st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
     csv_data   = [f"{k.creative_id},{k.product_id},{k.aspect_ratio},{k.language},{k.spend_usd:.2f},{k.impressions},{k.clicks},{k.conversions},{k.ctr:.2f},{k.cpa:.2f},{k.cpc:.2f}" for k in perf.kpis]
-    csv_header = "creative_id,product_id,aspect_ratio,language,spend_usd,impressions,clicks,conversions,ctr_pct,cpa_usd,cpc_usd"
+    csv_header = "creative_id,product_id,aspect_ratio,language,spend_usd,impressions,clicks,conversions,click_through_rate_pct,cost_per_acquisition_usd,cost_per_click_usd"
     dl_col, _ = st.columns([1.5, 4.5])
     with dl_col:
         st.download_button(
