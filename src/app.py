@@ -1243,33 +1243,57 @@ def _render_approval_queue(assets: list[dict], session_key: str = "default"):
     total    = len(assets)
     pct_done = ((approved + rejected) / total * 100) if total else 0
 
-    # Summary metric cards
-    render_metric_cards([
-        {"label": "Pending",  "value": str(pending),  "sub": "awaiting review", "icon": "⏳", "bar_pct": pending / total * 100 if total else 0},
-        {"label": "Approved", "value": str(approved), "sub": "ready to publish","icon": "✅", "bar_pct": approved / total * 100 if total else 0},
-        {"label": "Rejected", "value": str(rejected), "sub": "needs revision",  "icon": "❌", "bar_pct": rejected / total * 100 if total else 0},
-        {"label": "Progress", "value": f"{pct_done:.0f}%", "sub": f"{approved+rejected} of {total} reviewed", "icon": "📊", "bar_pct": pct_done},
-    ])
+    # --- Status color map ---
+    STATUS_COLORS = {
+        "pending":  {"bg": "#FEF3E2", "border": "#E8B849", "text": "#8B6914", "badge": "#F4D03F", "icon": "⏳"},
+        "approved": {"bg": "#E8F5E9", "border": "#4CAF50", "text": "#2E7D32", "badge": "#66BB6A", "icon": "✅"},
+        "rejected": {"bg": "#FFEBEE", "border": "#EF5350", "text": "#C62828", "badge": "#EF5350", "icon": "❌"},
+    }
 
-    # Bulk actions
-    col_a, col_r, col_reset = st.columns(3)
-    if col_a.button("✅ Approve All", key=f"approve_all_{session_key}"):
+    # --- Progress bar + summary strip ---
+    approved_pct = approved / total * 100 if total else 0
+    rejected_pct = rejected / total * 100 if total else 0
+    pending_pct  = pending / total * 100 if total else 0
+    st.markdown(f"""
+    <div style="background:var(--warm-ivory);border:1px solid var(--sandy-beige);border-radius:var(--radius-md);
+                padding:1rem 1.2rem;margin-bottom:1rem">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.6rem;flex-wrap:wrap;gap:0.5rem">
+        <div style="font-size:1.05rem;font-weight:700;color:var(--charcoal)">
+          Review Progress — <span style="color:var(--ocean-blue)">{pct_done:.0f}%</span> complete
+        </div>
+        <div style="display:flex;gap:1rem;font-size:0.88rem">
+          <span style="color:{STATUS_COLORS['pending']['text']}">⏳ {pending} pending</span>
+          <span style="color:{STATUS_COLORS['approved']['text']}">✅ {approved} approved</span>
+          <span style="color:{STATUS_COLORS['rejected']['text']}">❌ {rejected} rejected</span>
+        </div>
+      </div>
+      <div style="height:8px;border-radius:4px;background:#E0D5C7;overflow:hidden;display:flex">
+        <div style="width:{approved_pct}%;background:#4CAF50;transition:width 0.3s"></div>
+        <div style="width:{rejected_pct}%;background:#EF5350;transition:width 0.3s"></div>
+        <div style="width:{pending_pct}%;background:#F4D03F;transition:width 0.3s"></div>
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # --- Bulk action buttons (compact row) ---
+    b1, b2, b3, spacer = st.columns([1, 1, 1, 3])
+    if b1.button("✅ Approve All", key=f"approve_all_{session_key}", use_container_width=True):
         for i in range(len(assets)):
             approvals[i]["status"] = "approved"
         st.rerun()
-    if col_r.button("❌ Reject All", key=f"reject_all_{session_key}"):
+    if b2.button("❌ Reject All", key=f"reject_all_{session_key}", use_container_width=True):
         for i in range(len(assets)):
             approvals[i]["status"] = "rejected"
         st.rerun()
-    if col_reset.button("🔄 Reset All", key=f"reset_all_{session_key}"):
+    if b3.button("🔄 Reset All", key=f"reset_all_{session_key}", use_container_width=True):
         for i in range(len(assets)):
             approvals[i]["status"] = "pending"
             approvals[i]["comment"] = ""
         st.rerun()
 
-    st.markdown("<hr>", unsafe_allow_html=True)
+    st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
 
-    # Per-asset cards — render in rows of 3 to match Gallery sizing
+    # --- Per-asset review cards (rows of 3) ---
     for row_start in range(0, len(assets), 3):
         row_assets = list(enumerate(assets))[row_start:row_start + 3]
         cols = st.columns(3)
@@ -1278,60 +1302,101 @@ def _render_approval_queue(assets: list[dict], session_key: str = "default"):
             ratio  = asset.get("aspect_ratio", "?")
             lang   = asset.get("language", "?")
             status = approvals[i]["status"]
-            header_label = {"pending": "⏳ Pending", "approved": "✅ Approved", "rejected": "❌ Rejected"}[status]
+            sc     = STATUS_COLORS[status]
+
+            brand  = asset.get("brand_compliance", {}).get("status", "not_checked")
+            legal  = asset.get("legal_compliance", {}).get("status", "not_checked")
+            hero   = asset.get("hero_status", "generated")
+
+            # Friendly product name
+            product_name = pid.replace("-", " ").title()
 
             with col:
+                # Card open — colored left border + subtle background
+                st.markdown(f"""
+                <div style="background:{sc['bg']};border-left:4px solid {sc['border']};
+                            border-radius:var(--radius-sm);padding:0.7rem 0.8rem;margin-bottom:0.4rem;
+                            box-shadow:var(--shadow-sm)">
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.3rem">
+                    <span style="font-size:0.92rem;font-weight:700;color:var(--charcoal)">{product_name}</span>
+                    <span style="background:{sc['badge']};color:#fff;padding:2px 8px;border-radius:10px;
+                                 font-size:0.75rem;font-weight:600;text-transform:uppercase">
+                      {sc['icon']} {status}
+                    </span>
+                  </div>
+                  <div style="font-size:0.82rem;color:var(--charcoal-mid);margin-bottom:0.2rem">
+                    {ratio} · {lang.upper()}
+                    <span style="margin-left:0.5rem">
+                      {COMPLIANCE_EMOJI.get(brand,'—')} Brand
+                      {COMPLIANCE_EMOJI.get(legal,'—')} Legal
+                    </span>
+                  </div>
+                  <div style="font-size:0.78rem;color:var(--charcoal-light)">
+                    {'♻️ Reused hero' if hero == 'reused' else '✦ AI-generated hero'}
+                  </div>
+                </div>
+                """, unsafe_allow_html=True)
+
+                # Image
                 fp = asset.get("file_path", "")
                 if fp and Path(fp).exists():
                     st.image(fp, use_container_width=True)
                 else:
                     st.warning("Image not available")
 
-                brand  = asset.get("brand_compliance", {}).get("status", "not_checked")
-                legal  = asset.get("legal_compliance", {}).get("status", "not_checked")
-                hero   = asset.get("hero_status", "generated")
-                st.caption(
-                    f"{pid} · {ratio} · {lang}  \n"
-                    f"{COMPLIANCE_EMOJI.get(brand,'—')} Brand · "
-                    f"{COMPLIANCE_EMOJI.get(legal,'—')} Legal · "
-                    f"{'♻️ reused' if hero == 'reused' else '✦ generated'}"
-                )
+                # Decision radio
                 new_status = st.radio(
-                    header_label,
+                    "Decision",
                     ["pending", "approved", "rejected"],
                     index=["pending", "approved", "rejected"].index(status),
                     key=f"status_{session_key}_{i}",
                     horizontal=True,
+                    label_visibility="collapsed",
                 )
                 if new_status != status:
                     approvals[i]["status"] = new_status
 
+                # Comment field
                 approvals[i]["comment"] = st.text_input(
-                    "Comment",
+                    "Note",
                     value=approvals[i]["comment"],
                     key=f"comment_{session_key}_{i}",
+                    placeholder="Add reviewer note…",
+                    label_visibility="collapsed",
                 )
 
-    st.markdown("<hr>", unsafe_allow_html=True)
-    if st.button("Export Approval Manifest (JSON)", key=f"export_{session_key}"):
-        manifest = []
-        for i, asset in enumerate(assets):
-            manifest.append({
-                "product_id":      asset.get("product_id"),
-                "aspect_ratio":    asset.get("aspect_ratio"),
-                "language":        asset.get("language"),
-                "file_path":       asset.get("file_path"),
-                "approval_status": approvals[i]["status"],
-                "reviewer_comment": approvals[i]["comment"],
-            })
-        st.json(manifest)
-        st.download_button(
-            "Download manifest.json",
-            data=json.dumps(manifest, indent=2),
-            file_name="approval_manifest.json",
-            mime="application/json",
-            key=f"download_{session_key}",
-        )
+                # Visual spacer between card rows
+                st.markdown("<div style='height:0.3rem'></div>", unsafe_allow_html=True)
+
+    # --- Export section ---
+    st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
+    exp_col1, exp_col2, _ = st.columns([1.5, 1.5, 3])
+    with exp_col1:
+        if st.button("📋 Export Manifest", key=f"export_{session_key}", use_container_width=True):
+            manifest = []
+            for i, asset in enumerate(assets):
+                manifest.append({
+                    "product_id":      asset.get("product_id"),
+                    "aspect_ratio":    asset.get("aspect_ratio"),
+                    "language":        asset.get("language"),
+                    "file_path":       asset.get("file_path"),
+                    "approval_status": approvals[i]["status"],
+                    "reviewer_comment": approvals[i]["comment"],
+                })
+            st.session_state[f"_manifest_{session_key}"] = manifest
+    with exp_col2:
+        manifest = st.session_state.get(f"_manifest_{session_key}")
+        if manifest:
+            st.download_button(
+                "⬇ Download JSON",
+                data=json.dumps(manifest, indent=2),
+                file_name="approval_manifest.json",
+                mime="application/json",
+                key=f"download_{session_key}",
+                use_container_width=True,
+            )
+    if st.session_state.get(f"_manifest_{session_key}"):
+        st.json(st.session_state[f"_manifest_{session_key}"])
 
 
 def _render_performance(assets: list[dict], session_key: str = "default"):
