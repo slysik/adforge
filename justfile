@@ -5,6 +5,10 @@
 default:
     @just --list
 
+# Clone the adforge repository
+clone dest="adforge":
+    git clone https://github.com/slysik/adforge.git {{dest}}
+
 # Install dependencies (uses uv if available, falls back to pip)
 install:
     #!/usr/bin/env bash
