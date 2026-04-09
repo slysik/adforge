@@ -1230,7 +1230,7 @@ def _render_approval_queue(assets: list[dict], session_key: str = "default"):
             with col:
                 fp = asset.get("file_path", "")
                 if fp and Path(fp).exists():
-                    st.image(fp, width=220)
+                    st.image(fp, use_container_width=True)
                 else:
                     st.warning("Image not available")
 
