@@ -89,7 +89,7 @@ output/coastal_collection_2025/
 
 ## 🚀 Quick Start
 
-[▶️ Watch Installation Video](docs/assets/how-to-install-video.mov)
+[![Watch Installation Video](docs/assets/install-preview.jpg)](docs/assets/how-to-install-video.mov)
 
 **Prerequisites:** [just](https://github.com/casey/just#installation) + Python 3.9+ · No API keys needed for demo
 
