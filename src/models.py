@@ -85,6 +85,7 @@ class CampaignBrief(BaseModel):
     tagline: Optional[str] = None
     target_region: str = Field(..., min_length=1)
     target_audience: str = Field(..., min_length=1)
+    theme: Optional[str] = Field(default=None, description="Visual/local theme e.g. 'warm coastal'")
     languages: list[str] = Field(default_factory=lambda: ["en"])
     brand_guidelines: BrandGuidelines = Field(default_factory=BrandGuidelines)
     products: list[Product] = Field(..., min_length=2,

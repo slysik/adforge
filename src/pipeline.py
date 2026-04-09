@@ -77,15 +77,18 @@ def _build_prompt(
     target_audience: str,
     target_region: str,
     brand_name: str,
+    theme: str = "",
     enrichment: str = "",
 ) -> str:
     """Build a rich generation prompt with optional enrichment from brief analysis."""
     kw = ", ".join(keywords) if keywords else ""
+    theme_clause = f"Visual theme: {theme}. " if theme else ""
     base = (
         f"A high-quality, professional advertising photograph for a social media campaign. "
         f"Product: {product_name} – {product_description}. "
         f"Brand: {brand_name}. "
         f"Campaign theme: {campaign_message}. "
+        f"{theme_clause}"
         f"Target audience: {target_audience} in {target_region}. "
         f"Visual keywords: {kw}. "
         f"The image should be vibrant, eye-catching, product-centric, clean background, "
@@ -277,6 +280,7 @@ def _build_product_prompt(
         target_audience=brief.target_audience,
         target_region=brief.target_region,
         brand_name=brief.brand,
+        theme=brief.theme or "",
         enrichment=enrichments.get(product.id, ""),
     )
 

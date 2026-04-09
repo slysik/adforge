@@ -945,6 +945,7 @@ def _render_brief_builder():
         with col2:
             st.session_state.bb_region   = st.text_input("Target Region",    value=st.session_state.get("bb_region", "Southern Florida — Naples & Palm Beach"))
             st.session_state.bb_audience = st.text_input("Target Audience",  value=st.session_state.get("bb_audience", "Home decor designers, interior stylists, ages 30-60"))
+            st.session_state.bb_theme    = st.text_input("Theme",            value=st.session_state.get("bb_theme", "warm coastal"))
             st.session_state.bb_langs    = st.multiselect("Languages", ["en", "es", "fr", "de", "pt", "ja", "zh", "ko"], default=st.session_state.get("bb_langs", ["en"]))
 
     with tab2:
@@ -1005,6 +1006,7 @@ def _render_brief_builder():
             "tagline":  st.session_state.get("bb_tagline") or None,
             "target_region":   st.session_state.get("bb_region", ""),
             "target_audience": st.session_state.get("bb_audience", ""),
+            "theme": st.session_state.get("bb_theme") or None,
             "languages": st.session_state.get("bb_langs", ["en"]),
             "brand_guidelines": {
                 "primary_colors": [
@@ -1034,7 +1036,7 @@ def _render_brief_builder():
 
         # Brief card preview
         meta_left  = [("Brand", brief.brand), ("Campaign", brief.name), ("Message", brief.message)]
-        meta_right = [("Region", brief.target_region), ("Audience", brief.target_audience), ("Products", str(len(brief.products)))]
+        meta_right = [("Region", brief.target_region), ("Audience", brief.target_audience), ("Theme", brief.theme or "—"), ("Products", str(len(brief.products)))]
         rows = "".join(
             f'<div><div class="af-brief-label">{l}</div><div class="af-brief-value">{v}</div></div>'
             for (l, v) in meta_left + meta_right
@@ -1660,6 +1662,7 @@ def _render_brief_review(brief):
             ("Message", brief.message),
             ("Region", brief.target_region),
             ("Audience", brief.target_audience),
+            ("Theme", brief.theme or "—"),
             ("Languages", ", ".join(brief.languages)),
             ("Products", str(len(brief.products))),
         ]
