@@ -874,6 +874,20 @@ def _compliance_badge(status: str) -> str:
     return f'<span class="af-badge af-badge-{cls}">{label_map.get(status, status)}</span>'
 
 
+def _place_logo_on_canvas(canvas, logo_path: str | None) -> "PILImage":
+    """Place logo in top-right corner of a canvas (mirrors Compositor._place_logo)."""
+    from PIL import Image as PILImage
+    if not logo_path or not Path(logo_path).exists():
+        return canvas
+    logo = PILImage.open(logo_path).convert("RGBA")
+    w, h = canvas.size
+    logo_max = int(min(w, h) * 0.12)
+    logo.thumbnail((logo_max, logo_max), PILImage.LANCZOS)
+    padding = int(w * 0.04)
+    canvas.paste(logo, (w - logo.width - padding, padding), logo)
+    return canvas
+
+
 def _render_ab_comparison(brief, sample_hero_path: Path | None = None):
     from PIL import Image as PILImage
 
@@ -883,6 +897,7 @@ def _render_ab_comparison(brief, sample_hero_path: Path | None = None):
 
     hero = PILImage.open(str(sample_hero_path)).convert("RGBA")
     bg = brief.brand_guidelines
+    logo_path = getattr(bg, "logo_path", None)
 
     ratio = brief.aspect_ratios[0]
     st.caption(f"Preview at **{ratio.ratio}** ({ratio.width}×{ratio.height})")
@@ -903,6 +918,7 @@ def _render_ab_comparison(brief, sample_hero_path: Path | None = None):
                     brand_colors=bg.primary_colors,
                     accent_color=bg.accent_color,
                 )
+                canvas = _place_logo_on_canvas(canvas, logo_path)
                 st.image(canvas.convert("RGB"), caption=f"{info['icon']} {info['label']}", use_container_width=True)
             except Exception as e:
                 st.error(f"{info['label']}: {e}")
@@ -1031,7 +1047,10 @@ def _render_brief_builder():
         # --- Run Pipeline controls (only visible on Review tab) ---
         st.markdown("<hr>", unsafe_allow_html=True)
         render_section_title("Run Pipeline")
-        options_col, template_col, action_col = st.columns([1.1, 1.1, 0.9])
+        action_col, options_col, template_col = st.columns([0.9, 1.1, 1.1])
+        with action_col:
+            st.markdown("<div style='height:1.8rem'></div>", unsafe_allow_html=True)
+            run_pipeline_now = st.button("🚀 Run Pipeline", type="primary", use_container_width=True, key="main_run_pipeline")
         with options_col:
             provider_choice = st.selectbox(
                 "Image Provider",
@@ -1050,12 +1069,10 @@ def _render_brief_builder():
             if template_choice != "auto":
                 info = TEMPLATE_INFO.get(LayoutTemplate(template_choice), {})
                 st.caption(f"{info.get('icon', '')} {info.get('desc', '')}")
-        with action_col:
-            st.markdown("<div style='height:1.8rem'></div>", unsafe_allow_html=True)
-            run_pipeline_now = st.button("🚀 Run Pipeline", type="primary", use_container_width=True, key="main_run_pipeline")
 
         if run_pipeline_now:
             st.session_state._run_triggered = True
+            st.session_state._pipeline_reran = False
 
     return brief
 
@@ -1197,42 +1214,35 @@ def _render_approval_queue(assets: list[dict], session_key: str = "default"):
 
     st.markdown("<hr>", unsafe_allow_html=True)
 
-    # Per-asset cards
-    for i, asset in enumerate(assets):
-        pid    = asset.get("product_id", "unknown")
-        ratio  = asset.get("aspect_ratio", "?")
-        lang   = asset.get("language", "?")
-        status = approvals[i]["status"]
+    # Per-asset cards — render in rows of 3 to match Gallery sizing
+    for row_start in range(0, len(assets), 3):
+        row_assets = list(enumerate(assets))[row_start:row_start + 3]
+        cols = st.columns(3)
+        for col, (i, asset) in zip(cols, row_assets):
+            pid    = asset.get("product_id", "unknown")
+            ratio  = asset.get("aspect_ratio", "?")
+            lang   = asset.get("language", "?")
+            status = approvals[i]["status"]
+            header_label = {"pending": "⏳ Pending", "approved": "✅ Approved", "rejected": "❌ Rejected"}[status]
 
-        header_label = {"pending": "⏳ Pending", "approved": "✅ Approved", "rejected": "❌ Rejected"}[status]
-        header_cls   = status
-
-        with st.expander(f"{header_label} — {pid} / {ratio} / {lang}", expanded=(status == "pending")):
-            img_col, ctrl_col = st.columns([2, 1])
-            with img_col:
+            with col:
                 fp = asset.get("file_path", "")
                 if fp and Path(fp).exists():
                     st.image(fp, use_container_width=True)
                 else:
                     st.warning("Image not available")
 
-            with ctrl_col:
                 brand  = asset.get("brand_compliance", {}).get("status", "not_checked")
                 legal  = asset.get("legal_compliance", {}).get("status", "not_checked")
                 hero   = asset.get("hero_status", "generated")
-                st.markdown(
-                    f'<div class="af-card" style="padding:.75rem 1rem">'
-                    f'<div class="af-brief-label">Brand Compliance</div>'
-                    f'<div class="af-brief-value">{COMPLIANCE_EMOJI.get(brand,"—")} {brand}</div>'
-                    f'<div class="af-brief-label" style="margin-top:.5rem">Legal Compliance</div>'
-                    f'<div class="af-brief-value">{COMPLIANCE_EMOJI.get(legal,"—")} {legal}</div>'
-                    f'<div class="af-brief-label" style="margin-top:.5rem">Hero Source</div>'
-                    f'<div class="af-brief-value">{"♻️ reused" if hero == "reused" else "✦ generated"}</div>'
-                    f'</div>',
-                    unsafe_allow_html=True,
+                st.caption(
+                    f"{pid} · {ratio} · {lang}  \n"
+                    f"{COMPLIANCE_EMOJI.get(brand,'—')} Brand · "
+                    f"{COMPLIANCE_EMOJI.get(legal,'—')} Legal · "
+                    f"{'♻️ reused' if hero == 'reused' else '✦ generated'}"
                 )
                 new_status = st.radio(
-                    "Decision",
+                    header_label,
                     ["pending", "approved", "rejected"],
                     index=["pending", "approved", "rejected"].index(status),
                     key=f"status_{session_key}_{i}",
@@ -1270,13 +1280,38 @@ def _render_approval_queue(assets: list[dict], session_key: str = "default"):
 
 
 def _render_performance(assets: list[dict], session_key: str = "default"):
+    import plotly.graph_objects as go
+
     if not assets:
         st.info("No assets to analyze.")
         return
 
     perf = build_performance_report(assets)
 
-    render_section_title("Campaign Performance (Sample Data)")
+    # --- Color palette (matches app theme) ---
+    OCEAN      = "#1B4F72"
+    SAND       = "#D4A574"
+    CREAM      = "#F5E6CA"
+    TEAL       = "#17A2B8"
+    CORAL      = "#E07B6A"
+    SLATE      = "#2C3E50"
+    BG_DARK    = "#0F1B2D"
+    BG_CARD    = "#162236"
+    GRID_COLOR = "rgba(255,255,255,0.06)"
+    TEXT_COLOR = "rgba(255,255,255,0.7)"
+    WINNER_GOLD = "#FFD700"
+
+    _plotly_layout = dict(
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor=BG_DARK,
+        font=dict(family="Inter, system-ui, sans-serif", color=TEXT_COLOR, size=12),
+        margin=dict(l=50, r=20, t=40, b=50),
+        xaxis=dict(gridcolor=GRID_COLOR, zerolinecolor=GRID_COLOR),
+        yaxis=dict(gridcolor=GRID_COLOR, zerolinecolor=GRID_COLOR),
+    )
+
+    # --- Top-level metric cards ---
+    render_section_title("Campaign Performance")
     render_metric_cards([
         {"label": "Total Spend",  "value": f"${perf.total_spend:,.0f}",  "sub": "USD",        "icon": "💰"},
         {"label": "Impressions",  "value": f"{perf.total_impressions/1000:.1f}K", "sub": "total views", "icon": "👁️"},
@@ -1284,17 +1319,243 @@ def _render_performance(assets: list[dict], session_key: str = "default"):
         {"label": "Avg CPA",      "value": f"${perf.avg_cpa:.2f}",      "sub": "cost per acquisition", "icon": "🎯"},
     ])
 
+    # --- Winner callout ---
     if perf.winner:
-        st.success(
-            f"**Winner:** `{perf.winner.creative_id}` — "
-            f"CTR {perf.winner.ctr:.2f}% · CPA ${perf.winner.cpa:.2f} · "
-            f"{perf.winner.conversions} conversions"
+        w = perf.winner
+        st.markdown(
+            f'<div style="background:linear-gradient(135deg,{OCEAN},{SLATE});border-left:4px solid {WINNER_GOLD};'
+            f'border-radius:8px;padding:1rem 1.2rem;margin:0.5rem 0 1.2rem">'
+            f'<span style="font-size:1.3rem">🏆</span> '
+            f'<strong style="color:{WINNER_GOLD}">Winner: {w.creative_id}</strong>'
+            f'<span style="color:{TEXT_COLOR};margin-left:1.2rem">'
+            f'CTR <strong style="color:#fff">{w.ctr:.2f}%</strong> · '
+            f'CPA <strong style="color:#fff">${w.cpa:.2f}</strong> · '
+            f'<strong style="color:#fff">{w.conversions}</strong> conversions · '
+            f'ROAS <strong style="color:#fff">{w.conversions * w.cpa / w.spend_usd:.1f}x</strong>'
+            f'</span></div>',
+            unsafe_allow_html=True,
         )
 
+    sorted_kpis = sorted(perf.kpis, key=lambda x: x.cpa)
+    labels = [k.creative_id.replace("_", " ") for k in sorted_kpis]
+    short_labels = [k.creative_id.split("_")[-2] + " " + k.creative_id.split("_")[-1] for k in sorted_kpis]
+    winner_id = perf.winner.creative_id if perf.winner else None
+    bar_colors = [WINNER_GOLD if k.creative_id == winner_id else OCEAN for k in sorted_kpis]
+    bar_colors_alt = [WINNER_GOLD if k.creative_id == winner_id else TEAL for k in sorted_kpis]
+
+    # --- Row 1: CTR vs CPA scatter + Spend vs Conversions bubble ---
     render_section_title("Per-Creative KPIs")
+    chart_col1, chart_col2 = st.columns(2)
+
+    with chart_col1:
+        fig = go.Figure()
+        for k in sorted_kpis:
+            is_w = k.creative_id == winner_id
+            fig.add_trace(go.Scatter(
+                x=[k.cpa], y=[k.ctr],
+                mode="markers+text",
+                marker=dict(
+                    size=max(12, k.conversions * 1.5),
+                    color=WINNER_GOLD if is_w else OCEAN,
+                    line=dict(width=2, color=WINNER_GOLD if is_w else SAND),
+                    opacity=1.0 if is_w else 0.8,
+                ),
+                text=["🏆" if is_w else ""],
+                textposition="top center",
+                name=k.creative_id.replace("_", " "),
+                hovertemplate=(
+                    f"<b>{k.creative_id}</b><br>"
+                    f"CPA: ${k.cpa:.2f}<br>CTR: {k.ctr:.2f}%<br>"
+                    f"Conversions: {k.conversions}<br>Spend: ${k.spend_usd:.0f}"
+                    "<extra></extra>"
+                ),
+            ))
+        fig.update_layout(
+            **_plotly_layout,
+            title=dict(text="CTR vs CPA", font=dict(size=14, color="#fff")),
+            xaxis_title="Cost per Acquisition ($)",
+            yaxis_title="Click-Through Rate (%)",
+            showlegend=False,
+            height=340,
+        )
+        # Quadrant guide lines at averages
+        fig.add_hline(y=perf.avg_ctr, line_dash="dot", line_color=SAND, opacity=0.4,
+                       annotation_text=f"Avg CTR {perf.avg_ctr:.1f}%", annotation_font_color=SAND)
+        fig.add_vline(x=perf.avg_cpa, line_dash="dot", line_color=SAND, opacity=0.4,
+                       annotation_text=f"Avg CPA ${perf.avg_cpa:.0f}", annotation_font_color=SAND)
+        st.plotly_chart(fig, use_container_width=True, key=f"scatter_ctr_cpa_{session_key}")
+
+    with chart_col2:
+        fig = go.Figure()
+        fig.add_trace(go.Bar(
+            x=short_labels,
+            y=[k.conversions for k in sorted_kpis],
+            marker=dict(color=bar_colors, line=dict(width=0), cornerradius=4),
+            hovertemplate=[
+                f"<b>{k.creative_id}</b><br>Conversions: {k.conversions}<br>Spend: ${k.spend_usd:.0f}<extra></extra>"
+                for k in sorted_kpis
+            ],
+        ))
+        fig.update_layout(
+            **_plotly_layout,
+            title=dict(text="Conversions by Creative", font=dict(size=14, color="#fff")),
+            xaxis_title="", yaxis_title="Conversions",
+            showlegend=False,
+            height=340,
+        )
+        st.plotly_chart(fig, use_container_width=True, key=f"bar_conversions_{session_key}")
+
+    # --- Row 2: Spend distribution donut + CTR horizontal bars ---
+    chart_col3, chart_col4 = st.columns(2)
+
+    with chart_col3:
+        palette = [WINNER_GOLD if k.creative_id == winner_id else c
+                   for k, c in zip(sorted_kpis, [OCEAN, TEAL, SAND, CORAL, SLATE, "#6C5B7B", "#45B7D1", "#96CEB4", "#FFEAA7"] * 3)]
+        fig = go.Figure()
+        fig.add_trace(go.Pie(
+            labels=short_labels,
+            values=[k.spend_usd for k in sorted_kpis],
+            hole=0.55,
+            marker=dict(colors=palette[:len(sorted_kpis)], line=dict(color=BG_DARK, width=2)),
+            textinfo="percent",
+            textfont=dict(color="#fff", size=11),
+            hovertemplate=[
+                f"<b>{k.creative_id}</b><br>${k.spend_usd:,.0f} ({k.spend_usd/perf.total_spend*100:.1f}%)<extra></extra>"
+                for k in sorted_kpis
+            ],
+        ))
+        fig.update_layout(
+            **_plotly_layout,
+            title=dict(text="Spend Distribution", font=dict(size=14, color="#fff")),
+            showlegend=True,
+            legend=dict(font=dict(size=10, color=TEXT_COLOR), orientation="h", y=-0.15),
+            height=340,
+            annotations=[dict(text=f"${perf.total_spend:,.0f}", x=0.5, y=0.5,
+                              font=dict(size=18, color="#fff", family="Inter"), showarrow=False)],
+        )
+        st.plotly_chart(fig, use_container_width=True, key=f"donut_spend_{session_key}")
+
+    with chart_col4:
+        fig = go.Figure()
+        fig.add_trace(go.Bar(
+            y=short_labels[::-1],
+            x=[k.ctr for k in sorted_kpis][::-1],
+            orientation="h",
+            marker=dict(color=bar_colors_alt[::-1], line=dict(width=0), cornerradius=4),
+            text=[f"{k.ctr:.1f}%" for k in sorted_kpis][::-1],
+            textposition="outside",
+            textfont=dict(color="#fff", size=11),
+            hovertemplate=[
+                f"<b>{k.creative_id}</b><br>CTR: {k.ctr:.2f}%<br>Clicks: {k.clicks:,}<extra></extra>"
+                for k in sorted_kpis
+            ][::-1],
+        ))
+        fig.update_layout(
+            **_plotly_layout,
+            title=dict(text="Click-Through Rate by Creative", font=dict(size=14, color="#fff")),
+            xaxis_title="CTR (%)", yaxis_title="",
+            showlegend=False,
+            height=340,
+        )
+        st.plotly_chart(fig, use_container_width=True, key=f"hbar_ctr_{session_key}")
+
+    # --- Row 3: Efficiency radar for winner vs avg ---
+    if perf.winner:
+        render_section_title("Winner Deep Dive")
+        radar_col, detail_col = st.columns([1.2, 0.8])
+
+        with radar_col:
+            w = perf.winner
+            categories = ["CTR", "Conv Rate", "CPC Efficiency", "Spend Efficiency", "Volume"]
+            avg_vals = [
+                perf.avg_ctr,
+                perf.total_conversions / max(perf.total_clicks, 1) * 100,
+                1 / (perf.total_spend / max(perf.total_clicks, 1)),
+                1 / perf.avg_cpa,
+                perf.total_impressions / max(len(perf.kpis), 1) / 1000,
+            ]
+            winner_vals = [
+                w.ctr,
+                w.conversions / max(w.clicks, 1) * 100,
+                1 / w.cpc if w.cpc > 0 else 0,
+                1 / w.cpa if w.cpa > 0 else 0,
+                w.impressions / 1000,
+            ]
+            # Normalize to 0–100 scale relative to max
+            max_vals = [max(a, b, 0.001) for a, b in zip(avg_vals, winner_vals)]
+            avg_norm = [a / m * 100 for a, m in zip(avg_vals, max_vals)]
+            win_norm = [w / m * 100 for w, m in zip(winner_vals, max_vals)]
+
+            fig = go.Figure()
+            fig.add_trace(go.Scatterpolar(
+                r=avg_norm + [avg_norm[0]],
+                theta=categories + [categories[0]],
+                fill="toself",
+                fillcolor=f"rgba(27,79,114,0.25)",
+                line=dict(color=OCEAN, width=2),
+                name="Campaign Avg",
+            ))
+            fig.add_trace(go.Scatterpolar(
+                r=win_norm + [win_norm[0]],
+                theta=categories + [categories[0]],
+                fill="toself",
+                fillcolor=f"rgba(255,215,0,0.15)",
+                line=dict(color=WINNER_GOLD, width=2),
+                name="Winner",
+            ))
+            fig.update_layout(
+                **_plotly_layout,
+                polar=dict(
+                    bgcolor=BG_DARK,
+                    radialaxis=dict(visible=True, range=[0, 110], gridcolor=GRID_COLOR, tickfont=dict(size=9, color=TEXT_COLOR)),
+                    angularaxis=dict(gridcolor=GRID_COLOR, tickfont=dict(size=11, color="#fff")),
+                ),
+                title=dict(text="Winner vs Campaign Average", font=dict(size=14, color="#fff")),
+                showlegend=True,
+                legend=dict(font=dict(size=11, color=TEXT_COLOR)),
+                height=380,
+            )
+            st.plotly_chart(fig, use_container_width=True, key=f"radar_winner_{session_key}")
+
+        with detail_col:
+            w = perf.winner
+            conv_rate = w.conversions / max(w.clicks, 1) * 100
+            ctr_vs_avg = ((w.ctr - perf.avg_ctr) / perf.avg_ctr * 100) if perf.avg_ctr else 0
+            cpa_vs_avg = ((perf.avg_cpa - w.cpa) / perf.avg_cpa * 100) if perf.avg_cpa else 0
+            st.markdown(
+                f'<div style="background:{BG_CARD};border-radius:10px;padding:1.2rem;border:1px solid rgba(255,255,255,0.08)">'
+                f'<div style="font-size:1.1rem;font-weight:700;color:#fff;margin-bottom:1rem">🏆 {w.creative_id}</div>'
+                f'<div style="display:grid;grid-template-columns:1fr 1fr;gap:0.8rem">'
+                # CTR
+                f'<div style="background:rgba(255,255,255,0.04);border-radius:8px;padding:0.7rem;text-align:center">'
+                f'<div style="color:{TEXT_COLOR};font-size:0.7rem;text-transform:uppercase;letter-spacing:0.05em">CTR</div>'
+                f'<div style="color:#fff;font-size:1.3rem;font-weight:700">{w.ctr:.2f}%</div>'
+                f'<div style="color:{"#2ecc71" if ctr_vs_avg > 0 else CORAL};font-size:0.75rem">{"+" if ctr_vs_avg > 0 else ""}{ctr_vs_avg:.0f}% vs avg</div></div>'
+                # CPA
+                f'<div style="background:rgba(255,255,255,0.04);border-radius:8px;padding:0.7rem;text-align:center">'
+                f'<div style="color:{TEXT_COLOR};font-size:0.7rem;text-transform:uppercase;letter-spacing:0.05em">CPA</div>'
+                f'<div style="color:#fff;font-size:1.3rem;font-weight:700">${w.cpa:.2f}</div>'
+                f'<div style="color:{"#2ecc71" if cpa_vs_avg > 0 else CORAL};font-size:0.75rem">{"" if cpa_vs_avg < 0 else ""}{cpa_vs_avg:.0f}% better</div></div>'
+                # Conversions
+                f'<div style="background:rgba(255,255,255,0.04);border-radius:8px;padding:0.7rem;text-align:center">'
+                f'<div style="color:{TEXT_COLOR};font-size:0.7rem;text-transform:uppercase;letter-spacing:0.05em">Conversions</div>'
+                f'<div style="color:#fff;font-size:1.3rem;font-weight:700">{w.conversions}</div>'
+                f'<div style="color:{TEXT_COLOR};font-size:0.75rem">{conv_rate:.1f}% conv rate</div></div>'
+                # Spend
+                f'<div style="background:rgba(255,255,255,0.04);border-radius:8px;padding:0.7rem;text-align:center">'
+                f'<div style="color:{TEXT_COLOR};font-size:0.7rem;text-transform:uppercase;letter-spacing:0.05em">Spend</div>'
+                f'<div style="color:#fff;font-size:1.3rem;font-weight:700">${w.spend_usd:,.0f}</div>'
+                f'<div style="color:{TEXT_COLOR};font-size:0.75rem">{w.spend_usd/perf.total_spend*100:.0f}% of total</div></div>'
+                f'</div></div>',
+                unsafe_allow_html=True,
+            )
+
+    # --- KPI data table + export ---
+    st.markdown("")
+    render_section_title("Full KPI Table")
     table_data = []
-    for k in sorted(perf.kpis, key=lambda x: x.cpa):
-        is_winner = perf.winner and k.creative_id == perf.winner.creative_id
+    for k in sorted_kpis:
+        is_winner = k.creative_id == winner_id
         table_data.append({
             "Creative":    ("🏆 " if is_winner else "") + k.creative_id,
             "Product":     k.product_id,
@@ -1715,6 +1976,11 @@ if current_brief is not None and st.session_state.get("_run_triggered"):
             except RuntimeError as exc:
                 status.update(label="Pipeline Failed", state="error", expanded=False)
                 st.error(f"Pipeline failed: {exc}")
+
+    # Rerun once so the Brief Builder expander re-renders collapsed
+    if st.session_state.active_run_result is not None and not st.session_state.get("_pipeline_reran"):
+        st.session_state._pipeline_reran = True
+        st.rerun()
 
     if (
         st.session_state.active_run_result is not None
