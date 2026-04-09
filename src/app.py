@@ -72,12 +72,34 @@ html, body, [class*="css"] {
   color: var(--charcoal);
   font-size: 1rem;
 }
-/* Bump overall Streamlit text for readability */
+/* Readable base text across all Streamlit elements */
 .main .block-container, .main .block-container p,
 .main .block-container li, .main .block-container span,
 .main .block-container label, .main .block-container div {
-  font-size: 0.95rem;
-  line-height: 1.55;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+/* Ensure form labels are clearly readable */
+.main .block-container label[data-testid="stWidgetLabel"],
+.main .block-container .stRadio label,
+.main .block-container .stSelectbox label,
+.main .block-container .stTextInput label,
+.main .block-container .stTextArea label,
+.main .block-container .stNumberInput label {
+  font-size: 0.92rem !important;
+  font-weight: 600 !important;
+  color: var(--charcoal) !important;
+}
+/* Radio option text */
+.main .stRadio [role="radiogroup"] label {
+  font-size: 0.92rem !important;
+  font-weight: 500 !important;
+}
+/* Captions should be legible */
+.main .block-container [data-testid="stCaptionContainer"] {
+  font-size: 0.88rem !important;
+  color: var(--charcoal-mid) !important;
+  line-height: 1.5 !important;
 }
 
 /* Hide Streamlit header toolbar (Deploy button) and kill top gap */
@@ -156,9 +178,9 @@ html, body, [class*="css"] {
   background: transparent;
   border: none !important;
   border-radius: var(--radius-sm) var(--radius-sm) 0 0 !important;
-  padding: .6rem 1.2rem !important;
-  font-size: .95rem;
-  font-weight: 500;
+  padding: .65rem 1.3rem !important;
+  font-size: 0.95rem;
+  font-weight: 600;
   color: var(--charcoal-mid) !important;
   transition: background var(--transition), color var(--transition) !important;
 }
@@ -172,14 +194,15 @@ html, body, [class*="css"] {
   font-weight: 600 !important;
 }
 
-/* ── Primary buttons ──────────────────────────────────────────────────── */
-.stButton > button[kind="primary"], .stButton > button[data-baseweb="button"] {
+/* ── Primary buttons (Run Pipeline, main CTAs) ───────────────────────── */
+.stButton > button[kind="primary"] {
   background: var(--ocean-blue) !important;
   color: #fff !important;
   border: none !important;
   border-radius: var(--radius-md) !important;
   font-weight: 600 !important;
-  padding: .6rem 1.5rem !important;
+  font-size: 0.95rem !important;
+  padding: .65rem 1.5rem !important;
   transition: background var(--transition), box-shadow var(--transition), transform var(--transition) !important;
   box-shadow: var(--shadow-sm) !important;
 }
@@ -187,6 +210,34 @@ html, body, [class*="css"] {
   background: var(--ocean-dark) !important;
   box-shadow: var(--shadow-md) !important;
   transform: translateY(-1px) !important;
+}
+/* ── Default buttons (bulk actions, export, secondary) ────────────────── */
+.stButton > button[data-baseweb="button"]:not([kind="primary"]) {
+  background: var(--warm-ivory) !important;
+  color: var(--charcoal) !important;
+  border: 1.5px solid var(--sandy-beige) !important;
+  border-radius: var(--radius-md) !important;
+  font-weight: 600 !important;
+  font-size: 0.9rem !important;
+  padding: .55rem 1.2rem !important;
+  transition: background var(--transition), border-color var(--transition) !important;
+  box-shadow: none !important;
+}
+.stButton > button[data-baseweb="button"]:not([kind="primary"]):hover {
+  background: var(--sandy-beige) !important;
+  border-color: var(--shell-tan) !important;
+}
+/* ── Download buttons ─────────────────────────────────────────────────── */
+.stDownloadButton > button {
+  background: var(--warm-ivory) !important;
+  color: var(--charcoal) !important;
+  border: 1.5px solid var(--sandy-beige) !important;
+  border-radius: var(--radius-md) !important;
+  font-weight: 600 !important;
+  font-size: 0.9rem !important;
+}
+.stDownloadButton > button:hover {
+  background: var(--sandy-beige) !important;
 }
 .stButton > button[kind="secondary"] {
   background: transparent !important;
@@ -642,8 +693,38 @@ html, body, [class*="css"] {
   margin-bottom: .5rem;
 }
 
+/* ── Text inputs & text areas ─────────────────────────────────────────── */
+.stTextInput > div > div > input,
+.stTextArea > div > div > textarea {
+  border: 1.5px solid var(--sandy-beige) !important;
+  border-radius: var(--radius-sm) !important;
+  font-size: 0.95rem !important;
+  padding: 0.5rem 0.75rem !important;
+  transition: border-color var(--transition) !important;
+}
+.stTextInput > div > div > input:focus,
+.stTextArea > div > div > textarea:focus {
+  border-color: var(--ocean-light) !important;
+  box-shadow: 0 0 0 2px rgba(46,134,193,.12) !important;
+}
+/* ── Selectbox ────────────────────────────────────────────────────────── */
+.stSelectbox > div > div {
+  border: 1.5px solid var(--sandy-beige) !important;
+  border-radius: var(--radius-sm) !important;
+  font-size: 0.95rem !important;
+}
 /* ── Divider ─────────────────────────────────────────────────────────── */
 hr { border-color: var(--sandy-beige) !important; margin: 1.25rem 0 !important; }
+
+/* ── Empty state helper text ─────────────────────────────────────────── */
+.af-empty-state {
+  text-align: center;
+  padding: 2.5rem 1.5rem;
+  color: var(--charcoal-mid);
+}
+.af-empty-state-icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
+.af-empty-state-title { font-size: 1.1rem; font-weight: 700; color: var(--charcoal); margin-bottom: 0.3rem; }
+.af-empty-state-desc { font-size: 0.95rem; max-width: 420px; margin: 0 auto; line-height: 1.6; }
 </style>
 """
 
@@ -938,7 +1019,7 @@ def _render_ab_comparison(brief, sample_hero_path: Path | None = None):
 def _render_brief_builder():
     from src.models import CampaignBrief, Product, AspectRatio, BrandGuidelines
 
-    tab1, tab2, tab3, tab4 = st.tabs(["1. Enter Campaign Info", "2. Brand Guidelines", "3. Products", "4. Review"])
+    tab1, tab2, tab3, tab4 = st.tabs(["Campaign", "Brand", "Products", "Review & Run"])
     brief = None
 
     with tab1:
@@ -1050,11 +1131,10 @@ def _render_brief_builder():
         st.markdown(f'<div class="af-card"><div class="af-brief-grid">{rows}</div></div>', unsafe_allow_html=True)
 
         total = len(brief.products) * 3 * len(brief.languages)
-        st.info(f"Ready to generate **{total} creatives** (3 aspect ratios × {len(brief.products)} products × {len(brief.languages)} language(s)).")
+        st.success(f"Ready to generate **{total} creatives** — {len(brief.aspect_ratios)} ratios × {len(brief.products)} products × {len(brief.languages)} language(s)")
 
-        # --- Run Pipeline controls (only visible on Review tab) ---
-        st.markdown("<hr>", unsafe_allow_html=True)
-        render_section_title("Run Pipeline")
+        # --- Run Pipeline controls ---
+        st.markdown("<div style='height:0.75rem'></div>", unsafe_allow_html=True)
         action_col, options_col, template_col = st.columns([0.9, 1.1, 1.1])
         with action_col:
             st.markdown("<div style='height:1.8rem'></div>", unsafe_allow_html=True)
@@ -1146,7 +1226,8 @@ def _render_gallery(assets: list[dict], base_dir: Path | None = None):
         ai_picks[pid] = id(passets[best_idx])  # use object id to match
 
     for product_id, product_assets in products.items():
-        st.markdown(f'<div class="af-gallery-product-title">📦 {product_id}</div>', unsafe_allow_html=True)
+        friendly_name = product_id.replace("-", " ").title()
+        st.markdown(f'<div class="af-gallery-product-title">📦 {friendly_name}</div>', unsafe_allow_html=True)
 
         languages = sorted(set(a["language"] for a in product_assets))
 
@@ -1173,8 +1254,9 @@ def _render_gallery(assets: list[dict], base_dir: Path | None = None):
                 with col:
                     if is_ai_pick:
                         st.markdown(
-                            '<div style="background:linear-gradient(135deg,#1B4F72,#2C3E50);color:#FFD700;'
-                            'text-align:center;padding:0.3rem;border-radius:8px 8px 0 0;font-size:0.82rem;font-weight:700">'
+                            '<div style="background:linear-gradient(135deg,#FFF3D0,#FFEAA7);color:#8B6914;'
+                            'text-align:center;padding:0.35rem;border-radius:8px 8px 0 0;font-size:0.85rem;font-weight:700;'
+                            'border:1px solid #E8B849;border-bottom:none">'
                             '⭐ AI Pick</div>',
                             unsafe_allow_html=True,
                         )
@@ -1192,7 +1274,7 @@ def _render_gallery(assets: list[dict], base_dir: Path | None = None):
                         unsafe_allow_html=True,
                     )
 
-        st.markdown("<hr>", unsafe_allow_html=True)
+        st.markdown("<div style='height:1rem'></div>", unsafe_allow_html=True)
 
 
 def _render_analysis(analysis_data: dict):
@@ -1406,108 +1488,122 @@ def _render_performance(assets: list[dict], session_key: str = "default"):
 
     perf = build_performance_report(assets)
 
-    # Warm tonal palette
-    WARM_BG     = "#2C1810"
-    WARM_CARD   = "#3D2317"
-    WARM_CELL   = "rgba(212,165,116,0.08)"
-    WARM_BORDER = "rgba(212,165,116,0.2)"
-    SAND        = "#D4A574"
-    CREAM       = "#F5E6CA"
-    TERRA       = "#C4724E"
-    GREEN       = "#7FB069"
-    TEXT_LIGHT  = "#F5E6CA"
-    TEXT_DIM    = "rgba(245,230,202,0.6)"
-    GOLD        = "#E8B849"
+    # Light warm palette — consistent with rest of app
+    BG_CREAM    = "var(--warm-ivory)"
+    CARD_BG     = "#FFF9F2"
+    BORDER      = "var(--sandy-beige)"
+    OCEAN       = "var(--ocean-blue)"
+    SAND        = "var(--shell-tan)"
+    CHARCOAL    = "var(--charcoal)"
+    CHARCOAL_M  = "var(--charcoal-mid)"
+    GREEN       = "#2E7D32"
+    RED         = "#C62828"
+    GOLD_BG     = "#FFF3D0"
+    GOLD_BORDER = "#E8B849"
+    GOLD_TEXT   = "#8B6914"
+    ROW_ALT     = "rgba(212,165,116,0.06)"
+    ROW_WINNER  = "rgba(232,184,73,0.12)"
 
     sorted_kpis = sorted(perf.kpis, key=lambda x: x.cpa)
     winner_id = perf.winner.creative_id if perf.winner else None
 
-    # --- Single-page analytics panel ---
-    st.markdown(
-        f'<div style="background:{WARM_BG};border-radius:12px;padding:1.2rem 1.4rem;border:1px solid {WARM_BORDER}">'
-        # Row 1: Summary metrics inline
-        f'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.6rem;margin-bottom:0.8rem">'
-        f'<div style="background:{WARM_CELL};border-radius:8px;padding:0.6rem;text-align:center">'
-        f'<div style="color:{TEXT_DIM};font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em">Total Spend</div>'
-        f'<div style="color:{CREAM};font-size:1.1rem;font-weight:700">${perf.total_spend:,.0f}</div></div>'
-        f'<div style="background:{WARM_CELL};border-radius:8px;padding:0.6rem;text-align:center">'
-        f'<div style="color:{TEXT_DIM};font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em">Impressions</div>'
-        f'<div style="color:{CREAM};font-size:1.1rem;font-weight:700">{perf.total_impressions/1000:.1f}K</div></div>'
-        f'<div style="background:{WARM_CELL};border-radius:8px;padding:0.6rem;text-align:center">'
-        f'<div style="color:{TEXT_DIM};font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em">Avg CTR</div>'
-        f'<div style="color:{CREAM};font-size:1.1rem;font-weight:700">{perf.avg_ctr:.2f}%</div></div>'
-        f'<div style="background:{WARM_CELL};border-radius:8px;padding:0.6rem;text-align:center">'
-        f'<div style="color:{TEXT_DIM};font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em">Avg CPA</div>'
-        f'<div style="color:{CREAM};font-size:1.1rem;font-weight:700">${perf.avg_cpa:.2f}</div></div>'
-        f'</div>'
-        # Row 2: Winner banner (if exists)
-        + (
-            (
-                lambda w: (
-                    f'<div style="background:linear-gradient(135deg,{WARM_CARD},{WARM_BG});border-left:3px solid {GOLD};'
-                    f'border-radius:6px;padding:0.6rem 1rem;margin-bottom:0.8rem;display:flex;align-items:center;gap:0.8rem;flex-wrap:wrap">'
-                    f'<span style="font-size:1.1rem">🏆</span>'
-                    f'<strong style="color:{GOLD};font-size:0.95rem">{w.creative_id}</strong>'
-                    f'<span style="color:{TEXT_LIGHT};font-size:0.85rem">'
-                    f'CTR <strong>{w.ctr:.2f}%</strong>'
-                    f'<span style="color:{TEXT_DIM}"> · </span>'
-                    f'CPA <strong>${w.cpa:.2f}</strong>'
-                    f'<span style="color:{TEXT_DIM}"> · </span>'
-                    f'<strong>{w.conversions}</strong> conv'
-                    f'<span style="color:{TEXT_DIM}"> · </span>'
-                    + (lambda ctr_d, cpa_d:
-                        f'<span style="color:{GREEN if ctr_d > 0 else TERRA};font-size:0.8rem">CTR {"+" if ctr_d > 0 else ""}{ctr_d:.0f}%</span>'
-                        f'<span style="color:{TEXT_DIM}"> · </span>'
-                        f'<span style="color:{GREEN if cpa_d > 0 else TERRA};font-size:0.8rem">CPA {cpa_d:.0f}% better</span>'
-                    )(
-                        ((w.ctr - perf.avg_ctr) / perf.avg_ctr * 100) if perf.avg_ctr else 0,
-                        ((perf.avg_cpa - w.cpa) / perf.avg_cpa * 100) if perf.avg_cpa else 0,
-                    )
-                    + f'</span></div>'
-                )
-            )(perf.winner)
-            if perf.winner else ''
-        )
-        # Row 3: KPI table header
-        + f'<div style="font-size:0.85rem;font-weight:600;color:{SAND};margin-bottom:0.4rem">Per-Creative KPIs</div>'
-        # Row 3: Compact KPI table
-        + f'<div style="overflow-x:auto">'
-        + f'<table style="width:100%;border-collapse:collapse;font-size:0.88rem;color:{TEXT_LIGHT}">'
-        + f'<tr style="border-bottom:1px solid {WARM_BORDER}">'
-        + ''.join(f'<th style="padding:0.35rem 0.5rem;text-align:left;color:{SAND};font-weight:600;font-size:0.8rem;text-transform:uppercase;letter-spacing:0.03em">{h}</th>'
-                  for h in ["Creative", "Product", "Ratio", "Lang", "Spend", "Impr", "Clicks", "CTR", "Conv", "CPA"])
-        + '</tr>'
-        + ''.join(
-            f'<tr style="background:{WARM_CELL if k.creative_id == winner_id else "transparent"};border-bottom:1px solid rgba(212,165,116,0.06)">'
-            + f'<td style="padding:0.3rem 0.5rem;font-weight:{"700" if k.creative_id == winner_id else "400"}">'
-            + (f'<span style="color:{GOLD}">🏆 </span>' if k.creative_id == winner_id else '')
-            + f'{k.creative_id}</td>'
-            + f'<td style="padding:0.3rem 0.5rem">{k.product_id}</td>'
-            + f'<td style="padding:0.3rem 0.5rem">{k.aspect_ratio}</td>'
-            + f'<td style="padding:0.3rem 0.5rem">{k.language}</td>'
-            + f'<td style="padding:0.3rem 0.5rem">${k.spend_usd:.0f}</td>'
-            + f'<td style="padding:0.3rem 0.5rem">{k.impressions:,}</td>'
-            + f'<td style="padding:0.3rem 0.5rem">{k.clicks:,}</td>'
-            + f'<td style="padding:0.3rem 0.5rem;color:{GREEN if k.ctr > perf.avg_ctr else TEXT_LIGHT}">{k.ctr:.2f}%</td>'
-            + f'<td style="padding:0.3rem 0.5rem">{k.conversions}</td>'
-            + f'<td style="padding:0.3rem 0.5rem;color:{GREEN if k.cpa < perf.avg_cpa else TEXT_LIGHT}">${k.cpa:.2f}</td>'
-            + '</tr>'
-            for k in sorted_kpis
-        )
-        + '</table></div>'
-        + '</div>',
-        unsafe_allow_html=True,
-    )
+    # ── Summary metric cards ──
+    st.markdown(f"""
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.8rem;margin-bottom:1rem">
+      <div style="background:{CARD_BG};border:1px solid {BORDER};border-radius:var(--radius-sm);padding:0.8rem 1rem;text-align:center">
+        <div style="font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em;color:{CHARCOAL_M};margin-bottom:0.2rem">Total Spend</div>
+        <div style="font-size:1.3rem;font-weight:700;color:{CHARCOAL}">${perf.total_spend:,.0f}</div>
+      </div>
+      <div style="background:{CARD_BG};border:1px solid {BORDER};border-radius:var(--radius-sm);padding:0.8rem 1rem;text-align:center">
+        <div style="font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em;color:{CHARCOAL_M};margin-bottom:0.2rem">Impressions</div>
+        <div style="font-size:1.3rem;font-weight:700;color:{CHARCOAL}">{perf.total_impressions/1000:.1f}K</div>
+      </div>
+      <div style="background:{CARD_BG};border:1px solid {BORDER};border-radius:var(--radius-sm);padding:0.8rem 1rem;text-align:center">
+        <div style="font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em;color:{CHARCOAL_M};margin-bottom:0.2rem">Avg CTR</div>
+        <div style="font-size:1.3rem;font-weight:700;color:{CHARCOAL}">{perf.avg_ctr:.2f}%</div>
+      </div>
+      <div style="background:{CARD_BG};border:1px solid {BORDER};border-radius:var(--radius-sm);padding:0.8rem 1rem;text-align:center">
+        <div style="font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em;color:{CHARCOAL_M};margin-bottom:0.2rem">Avg CPA</div>
+        <div style="font-size:1.3rem;font-weight:700;color:{CHARCOAL}">${perf.avg_cpa:.2f}</div>
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
 
+    # ── Winner banner ──
+    if perf.winner:
+        w = perf.winner
+        ctr_delta = ((w.ctr - perf.avg_ctr) / perf.avg_ctr * 100) if perf.avg_ctr else 0
+        cpa_delta = ((perf.avg_cpa - w.cpa) / perf.avg_cpa * 100) if perf.avg_cpa else 0
+        st.markdown(f"""
+        <div style="background:{GOLD_BG};border-left:4px solid {GOLD_BORDER};border-radius:var(--radius-sm);
+                    padding:0.8rem 1.2rem;margin-bottom:1rem;display:flex;align-items:center;gap:0.8rem;flex-wrap:wrap">
+          <span style="font-size:1.4rem">🏆</span>
+          <div>
+            <div style="font-size:1rem;font-weight:700;color:{GOLD_TEXT}">Top Performer — {w.creative_id.replace("-"," ").title()}</div>
+            <div style="font-size:0.88rem;color:{CHARCOAL_M};margin-top:0.15rem">
+              CTR <strong style="color:{CHARCOAL}">{w.ctr:.2f}%</strong>
+              <span style="color:{GREEN if ctr_delta > 0 else RED};font-size:0.82rem;margin-left:0.2rem">{"+" if ctr_delta > 0 else ""}{ctr_delta:.0f}% vs avg</span>
+              &nbsp;·&nbsp;
+              CPA <strong style="color:{CHARCOAL}">${w.cpa:.2f}</strong>
+              <span style="color:{GREEN if cpa_delta > 0 else RED};font-size:0.82rem;margin-left:0.2rem">{cpa_delta:.0f}% better</span>
+              &nbsp;·&nbsp;
+              <strong style="color:{CHARCOAL}">{w.conversions}</strong> conversions
+            </div>
+          </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # ── KPI Table ──
+    table_rows = ""
+    for idx, k in enumerate(sorted_kpis):
+        is_winner = k.creative_id == winner_id
+        bg = ROW_WINNER if is_winner else (ROW_ALT if idx % 2 == 0 else "transparent")
+        badge = '<span style="background:#E8B849;color:#fff;padding:1px 6px;border-radius:8px;font-size:0.72rem;margin-left:0.3rem">BEST</span>' if is_winner else ""
+        ctr_color = GREEN if k.ctr > perf.avg_ctr else CHARCOAL
+        cpa_color = GREEN if k.cpa < perf.avg_cpa else CHARCOAL
+        table_rows += (
+            f'<tr style="background:{bg}">'
+            f'<td style="padding:0.45rem 0.6rem;font-weight:{"700" if is_winner else "400"}">{k.creative_id}{badge}</td>'
+            f'<td style="padding:0.45rem 0.6rem">{k.product_id.replace("-"," ").title()}</td>'
+            f'<td style="padding:0.45rem 0.6rem">{k.aspect_ratio}</td>'
+            f'<td style="padding:0.45rem 0.6rem">{k.language.upper()}</td>'
+            f'<td style="padding:0.45rem 0.6rem">${k.spend_usd:.0f}</td>'
+            f'<td style="padding:0.45rem 0.6rem">{k.impressions:,}</td>'
+            f'<td style="padding:0.45rem 0.6rem">{k.clicks:,}</td>'
+            f'<td style="padding:0.45rem 0.6rem;color:{ctr_color};font-weight:600">{k.ctr:.2f}%</td>'
+            f'<td style="padding:0.45rem 0.6rem">{k.conversions}</td>'
+            f'<td style="padding:0.45rem 0.6rem;color:{cpa_color};font-weight:600">${k.cpa:.2f}</td>'
+            f'</tr>'
+        )
+
+    st.markdown(f"""
+    <div style="background:{CARD_BG};border:1px solid {BORDER};border-radius:var(--radius-sm);padding:1rem;overflow-x:auto">
+      <div style="font-size:0.95rem;font-weight:700;color:{CHARCOAL};margin-bottom:0.6rem">Per-Creative KPIs</div>
+      <table style="width:100%;border-collapse:collapse;font-size:0.88rem;color:{CHARCOAL}">
+        <thead>
+          <tr style="border-bottom:2px solid {BORDER}">
+            {''.join(f'<th style="padding:0.45rem 0.6rem;text-align:left;color:{SAND};font-weight:700;font-size:0.8rem;text-transform:uppercase;letter-spacing:0.04em">{h}</th>' for h in ["Creative","Product","Ratio","Lang","Spend","Impr","Clicks","CTR","Conv","CPA"])}
+          </tr>
+        </thead>
+        <tbody>{table_rows}</tbody>
+      </table>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # ── Export ──
+    st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
     csv_data   = [f"{k.creative_id},{k.product_id},{k.aspect_ratio},{k.language},{k.spend_usd:.2f},{k.impressions},{k.clicks},{k.conversions},{k.ctr:.2f},{k.cpa:.2f},{k.cpc:.2f}" for k in perf.kpis]
     csv_header = "creative_id,product_id,aspect_ratio,language,spend_usd,impressions,clicks,conversions,ctr_pct,cpa_usd,cpc_usd"
-    st.download_button(
-        "Download KPIs (CSV)",
-        data=csv_header + "\n" + "\n".join(csv_data),
-        file_name="creative_kpis.csv",
-        mime="text/csv",
-        key=f"download_kpis_{session_key}",
-    )
+    dl_col, _ = st.columns([1.5, 4.5])
+    with dl_col:
+        st.download_button(
+            "⬇ Download KPIs (CSV)",
+            data=csv_header + "\n" + "\n".join(csv_data),
+            file_name="creative_kpis.csv",
+            mime="text/csv",
+            key=f"download_kpis_{session_key}",
+            use_container_width=True,
+        )
     st.caption("*Sample data for demo purposes.*")
 
 
@@ -1570,12 +1666,12 @@ def _build_campaign_summary_cards(
 ) -> list[dict]:
     """Build the standard summary cards used for pipeline and sample runs."""
     return [
-        {"label": "Total", "value": str(total_assets), "sub": "planned", "icon": "📁", "bar_pct": 100},
+        {"label": "Total Assets", "value": str(total_assets), "sub": "creatives planned", "icon": "📁", "bar_pct": 100},
         {"label": "Created", "value": str(created_count), "sub": created_sub, "icon": "✅", "bar_pct": created_count / max(total_assets, 1) * 100},
-        {"label": "Hero Reused", "value": str(hero_reused_count), "sub": "from cache", "icon": "♻️"},
-        {"label": "Failed", "value": str(failed_count), "sub": "errors", "icon": "⚠️"},
-        {"label": "Time", "value": f"{elapsed_seconds:.1f}s", "sub": "pipeline duration", "icon": "⏱️"},
-        {"label": "Saved", "value": f"{time_saved_hours:.1f}h", "sub": "vs manual", "icon": "🚀"},
+        {"label": "Heroes Reused", "value": str(hero_reused_count), "sub": "cached images", "icon": "♻️"},
+        {"label": "Failed", "value": str(failed_count), "sub": "need attention", "icon": "⚠️"},
+        {"label": "Duration", "value": f"{elapsed_seconds:.1f}s", "sub": "total pipeline time", "icon": "⏱️"},
+        {"label": "Time Saved", "value": f"{time_saved_hours:.1f}h", "sub": "vs. manual workflow", "icon": "🚀"},
     ]
 
 
@@ -1659,7 +1755,7 @@ def _render_pipeline_results(brief, result):
     assets_data = _serialize_result_assets(result)
 
     tab_campaign, tab_approval, tab_gallery, tab_ab, tab_analytics = st.tabs(
-        ["📋 Campaign", "✅ Approval Queue", "🖼️ Gallery", "🔀 Variations", "📊 Analytics"]
+        ["Campaign", "Approval", "Gallery", "Variations", "Analytics"]
     )
 
     with tab_campaign:
@@ -1684,8 +1780,11 @@ def _render_pipeline_results(brief, result):
         _render_approval_queue(assets_data, session_key="pipeline_run")
 
     with tab_ab:
-        render_section_title("Variations")
-        st.caption("Compare all 5 layout templates side-by-side using the generated hero images.")
+        st.markdown(
+            '<div style="color:var(--charcoal-mid);font-size:0.92rem;margin-bottom:0.5rem">'
+            'Compare all 5 layout templates side-by-side using the generated hero images.</div>',
+            unsafe_allow_html=True,
+        )
         from src.storage import StorageManager as _SM, slugify as _slugify
         storage = _SM(input_dir=Path("input_assets"), output_dir=Path("output"))
         for product in brief.products:
@@ -1733,7 +1832,7 @@ def _render_sample_library():
         return
 
     # Sample reports are stored as JSON, so file paths may need to be re-rooted.
-    sample_tabs = st.tabs(["📋 Campaign", "✅ Approval Queue", "🖼️ Gallery", "🔀 Variations", "📊 Analytics"])
+    sample_tabs = st.tabs(["Campaign", "Approval", "Gallery", "Variations", "Analytics"])
     patched_assets = _normalize_report_asset_paths(report.get("assets", []), campaign_dir)
 
     with sample_tabs[0]:
@@ -1760,7 +1859,6 @@ def _render_sample_library():
         _render_gallery(patched_assets)
 
     with sample_tabs[3]:
-        render_section_title("Variations")
         try:
             brief_for_ab = None
             for _, brief_path in SAMPLE_BRIEFS.items():
@@ -1840,20 +1938,20 @@ if "active_run_provider" not in st.session_state:
 
 render_hero_header(
     "AdForge",
-    "Creative automation for social campaigns. Build a brief, run the workflow, and review campaign outputs in one place.",
+    "Build briefs. Generate creatives. Review and approve — all in one place.",
     badge="Pipeline Studio",
 )
 
-if st.session_state.run_log:
-    render_section_title("Recent Runs")
-    _render_run_log()
+if len(st.session_state.run_log) > 1:
+    with st.expander(f"Recent Runs ({len(st.session_state.run_log)})", expanded=False):
+        _render_run_log()
 
 # Collapse Brief Builder when results already exist so the user sees pipeline output first.
 # Use a dynamic key so Streamlit re-creates the widget (and respects expanded=False)
 # after a pipeline run instead of remembering the old toggle state.
 _has_results = st.session_state.active_run_result is not None
 _expander_key = "brief_builder_done" if _has_results else "brief_builder_open"
-with st.expander("Brief Builder", expanded=not _has_results, key=_expander_key):
+with st.expander("📝 Brief Builder — Configure your campaign", expanded=not _has_results, key=_expander_key):
     current_brief = _render_brief_builder()
 current_brief_path = None
 
@@ -1916,9 +2014,8 @@ if (
     st.session_state.active_run_result is not None
     and st.session_state.active_run_campaign
 ):
-    st.markdown("<hr>", unsafe_allow_html=True)
-    st.markdown('<div id="af-results-top"></div>', unsafe_allow_html=True)
-    render_section_title("4. Results")
+    st.markdown('<div id="af-results-top" style="height:0.5rem"></div>', unsafe_allow_html=True)
+    render_section_title("Results")
     components.html(
         """
         <script>
@@ -1936,4 +2033,12 @@ if (
     )
 
 if st.session_state.active_run_result is None:
-    st.info("Complete all brief steps and go to the Review tab to run the pipeline.")
+    st.markdown(
+        '<div class="af-empty-state">'
+        '<div class="af-empty-state-icon">🎨</div>'
+        '<div class="af-empty-state-title">Ready to create?</div>'
+        '<div class="af-empty-state-desc">Open the Brief Builder above, fill in your campaign details, '
+        'then hit <strong>Run Pipeline</strong> on the Review tab to generate your creatives.</div>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
