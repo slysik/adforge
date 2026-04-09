@@ -735,7 +735,7 @@ class MockProvider(ImageProvider):
 
         # Extract product name from prompt for deterministic palette
         product_name = prompt.split("Product: ")[-1].split(" – ")[0] if "Product:" in prompt else prompt[:30]
-        img = self._procedural_image(product_name, width, height)
+        img = self._procedural_image(product_name, width, height, prompt)
 
         elapsed_ms = int((time.time() - start) * 1000)
 
@@ -754,25 +754,43 @@ class MockProvider(ImageProvider):
         return img, meta
 
     @staticmethod
-    def _procedural_image(product_name: str, w: int, h: int) -> Image.Image:
-        """Generate a clean procedural product image."""
-        from colorsys import hsv_to_rgb
+    def _parse_brand_colors(prompt: str) -> list[tuple[int, int, int]]:
+        """Extract hex colors from the 'Brand color palette:' clause in the prompt."""
+        import re
+        match = re.search(r"Brand color palette:\s*([^.]+)\.", prompt)
+        if not match:
+            return []
+        hex_codes = re.findall(r"#([0-9A-Fa-f]{6})", match.group(1))
+        return [(int(h[:2], 16), int(h[2:4], 16), int(h[4:6], 16)) for h in hex_codes]
+
+    @staticmethod
+    def _procedural_image(product_name: str, w: int, h: int, prompt: str = "") -> Image.Image:
+        """Generate a clean procedural product image using brand colors when available."""
+        from colorsys import hsv_to_rgb, rgb_to_hsv
+
+        # Try to use brand colors from the prompt
+        brand_rgbs = MockProvider._parse_brand_colors(prompt)
 
         digest = hashlib.md5(product_name.encode()).hexdigest()
-        hue = int(digest[:2], 16) / 255.0
-        sat_seed = int(digest[2:4], 16) / 255.0
+        shape_variant = int(digest[4:6], 16)
 
-        # Background
-        r, g, b = hsv_to_rgb(hue, 0.15 + sat_seed * 0.15, 0.95)
-        bg = (int(r * 255), int(g * 255), int(b * 255))
-
-        # Product color
-        r2, g2, b2 = hsv_to_rgb(hue, 0.4 + sat_seed * 0.3, 0.85)
-        prod_color = (int(r2 * 255), int(g2 * 255), int(b2 * 255))
-
-        # Accent
-        r3, g3, b3 = hsv_to_rgb((hue + 0.5) % 1.0, 0.3, 0.9)
-        accent = (int(r3 * 255), int(g3 * 255), int(b3 * 255))
+        if len(brand_rgbs) >= 2:
+            # Use actual brand colors: first for background (lightened), second for product, last for accent
+            def lighten(rgb, factor=0.85):
+                return tuple(int(c + (255 - c) * factor) for c in rgb)
+            bg = lighten(brand_rgbs[0], 0.75)
+            prod_color = brand_rgbs[1] if len(brand_rgbs) > 1 else brand_rgbs[0]
+            accent = brand_rgbs[-1] if len(brand_rgbs) > 2 else brand_rgbs[0]
+        else:
+            # Fallback: deterministic from product name
+            hue = int(digest[:2], 16) / 255.0
+            sat_seed = int(digest[2:4], 16) / 255.0
+            r, g, b = hsv_to_rgb(hue, 0.15 + sat_seed * 0.15, 0.95)
+            bg = (int(r * 255), int(g * 255), int(b * 255))
+            r2, g2, b2 = hsv_to_rgb(hue, 0.4 + sat_seed * 0.3, 0.85)
+            prod_color = (int(r2 * 255), int(g2 * 255), int(b2 * 255))
+            r3, g3, b3 = hsv_to_rgb((hue + 0.5) % 1.0, 0.3, 0.9)
+            accent = (int(r3 * 255), int(g3 * 255), int(b3 * 255))
 
         img = Image.new("RGBA", (w, h), bg + (255,))
         draw = ImageDraw.Draw(img)
@@ -788,7 +806,7 @@ class MockProvider(ImageProvider):
             )
 
         # Central product shape
-        shape_seed = int(digest[4:6], 16) % 3
+        shape_seed = shape_variant % 3
         margin_x = int(w * 0.28)
         margin_top = int(h * 0.18)
         margin_bot = int(h * 0.22)

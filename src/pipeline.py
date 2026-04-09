@@ -79,16 +79,28 @@ def _build_prompt(
     brand_name: str,
     theme: str = "",
     enrichment: str = "",
+    brand_colors: list[str] | None = None,
+    accent_color: str | None = None,
+    tagline: str = "",
 ) -> str:
     """Build a rich generation prompt with optional enrichment from brief analysis."""
     kw = ", ".join(keywords) if keywords else ""
     theme_clause = f"Visual theme: {theme}. " if theme else ""
+    tagline_clause = f"Brand tagline: {tagline}. " if tagline else ""
+    color_clause = ""
+    if brand_colors or accent_color:
+        all_colors = list(brand_colors or [])
+        if accent_color:
+            all_colors.append(accent_color)
+        color_clause = f"Brand color palette: {', '.join(all_colors)}. Use these colors for backgrounds, props, and styling. "
     base = (
         f"A high-quality, professional advertising photograph for a social media campaign. "
         f"Product: {product_name} – {product_description}. "
         f"Brand: {brand_name}. "
         f"Campaign theme: {campaign_message}. "
+        f"{tagline_clause}"
         f"{theme_clause}"
+        f"{color_clause}"
         f"Target audience: {target_audience} in {target_region}. "
         f"Visual keywords: {kw}. "
         f"The image should be vibrant, eye-catching, product-centric, clean background, "
@@ -282,6 +294,9 @@ def _build_product_prompt(
         brand_name=brief.brand,
         theme=brief.theme or "",
         enrichment=enrichments.get(product.id, ""),
+        brand_colors=brief.brand_guidelines.primary_colors,
+        accent_color=brief.brand_guidelines.accent_color,
+        tagline=brief.tagline or "",
     )
 
 

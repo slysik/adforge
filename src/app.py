@@ -1080,8 +1080,11 @@ def _render_brief_builder():
                 with pc2:
                     p_desc = st.text_area("Description", value=st.session_state.get(f"bb_pdesc_{i}", default_product["description"]), key=f"bb_pdesc_{i}", height=68)
                     p_kw   = st.text_input("Keywords (comma-separated)", value=st.session_state.get(f"bb_pkw_{i}", default_product["keywords"]), key=f"bb_pkw_{i}")
+                product_entry = {"id": p_id.strip(), "name": p_name.strip(), "description": p_desc.strip(), "keywords": [k.strip() for k in p_kw.split(",") if k.strip()]}
                 hero_image = default_product.get("hero_image")
-                products_data.append({"id": p_id.strip(), "name": p_name.strip(), "description": p_desc.strip(), "hero_image": hero_image, "keywords": [k.strip() for k in p_kw.split(",") if k.strip()]})
+                if hero_image:
+                    product_entry["hero_image"] = hero_image
+                products_data.append(product_entry)
 
         st.session_state.bb_products_data = products_data
 
