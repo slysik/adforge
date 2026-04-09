@@ -1811,8 +1811,8 @@ def _render_pipeline_results(brief, result):
     time_saved_hrs = _estimate_time_saved_hours(result.created_count, result.elapsed_seconds)
     assets_data = _serialize_result_assets(result)
 
-    tab_campaign, tab_approval, tab_gallery, tab_ab, tab_analytics = st.tabs(
-        ["Campaign", "Approval", "Gallery", "Variations", "Analytics"]
+    tab_campaign, tab_approval, tab_ab, tab_analytics = st.tabs(
+        ["Campaign", "Approval", "Variations", "Analytics"]
     )
 
     with tab_campaign:
@@ -1829,9 +1829,6 @@ def _render_pipeline_results(brief, result):
             with st.expander(f"⚠️ Warnings ({len(result.warnings)})"):
                 for warning in result.warnings:
                     st.warning(warning)
-
-    with tab_gallery:
-        _render_gallery(assets_data)
 
     with tab_approval:
         _render_approval_queue(assets_data, session_key="pipeline_run")
@@ -1889,7 +1886,7 @@ def _render_sample_library():
         return
 
     # Sample reports are stored as JSON, so file paths may need to be re-rooted.
-    sample_tabs = st.tabs(["Campaign", "Approval", "Gallery", "Variations", "Analytics"])
+    sample_tabs = st.tabs(["Campaign", "Approval", "Variations", "Analytics"])
     patched_assets = _normalize_report_asset_paths(report.get("assets", []), campaign_dir)
 
     with sample_tabs[0]:
@@ -1913,9 +1910,6 @@ def _render_sample_library():
         _render_approval_queue(patched_assets, session_key=f"sample_{selected_idx}")
 
     with sample_tabs[2]:
-        _render_gallery(patched_assets)
-
-    with sample_tabs[3]:
         try:
             brief_for_ab = None
             for _, brief_path in SAMPLE_BRIEFS.items():
@@ -1937,7 +1931,7 @@ def _render_sample_library():
         except Exception as exc:
             st.warning(f"A/B comparison unavailable: {exc}")
 
-    with sample_tabs[4]:
+    with sample_tabs[3]:
         _render_performance(patched_assets, session_key=f"sample_{selected_idx}")
         _render_metrics(report)
 
