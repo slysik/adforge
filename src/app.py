@@ -994,6 +994,7 @@ def _render_brief_builder():
                 ],
                 "accent_color":    st.session_state.get("bb_accent", "#D4A574").upper(),
                 "font_family":     st.session_state.get("bb_font", "Georgia"),
+                "logo_path":       "input_assets/logo.png" if Path("input_assets/logo.png").exists() else None,
                 "prohibited_words": [w.strip() for w in st.session_state.get("bb_prohibited", "").split(",") if w.strip()],
                 "required_disclaimer": st.session_state.get("bb_disclaimer") or None,
             },
