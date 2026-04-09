@@ -111,12 +111,23 @@ class StorageManager:
         if not auto_discover:
             return None
 
+        slug = slugify(product_id)
         # Auto-discover in input_assets/
+        # 1. Exact match: <product_id>.png
         for ext in ("*.png", "*.jpg", "*.jpeg", "*.webp"):
-            matches = list(self.input_dir.glob(f"{slugify(product_id)}{ext.lstrip('*')}"))
+            matches = list(self.input_dir.glob(f"{slug}{ext.lstrip('*')}"))
             if matches:
                 console.print(f"  [green]✓ Found existing hero: {matches[0]}[/green]")
                 return matches[0]
+
+        # 2. Partial match: any file whose name contains the product ID
+        for ext in ("*.png", "*.jpg", "*.jpeg", "*.webp"):
+            for candidate in self.input_dir.glob(ext):
+                if candidate.name == "logo.png":
+                    continue
+                if slug in candidate.stem:
+                    console.print(f"  [green]✓ Found existing hero (partial match): {candidate}[/green]")
+                    return candidate
 
         return None
 
