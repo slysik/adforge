@@ -1977,35 +1977,33 @@ if current_brief is not None and st.session_state.get("_run_triggered"):
                 status.update(label="Pipeline Failed", state="error", expanded=False)
                 st.error(f"Pipeline failed: {exc}")
 
-    # Rerun once so the Brief Builder expander re-renders collapsed
-    if st.session_state.active_run_result is not None and not st.session_state.get("_pipeline_reran"):
-        st.session_state._pipeline_reran = True
-        st.rerun()
+# Rerun once so the Brief Builder expander re-renders collapsed
+if st.session_state.active_run_result is not None and not st.session_state.get("_pipeline_reran"):
+    st.session_state._pipeline_reran = True
+    st.rerun()
 
-    if (
-        st.session_state.active_run_result is not None
-        and st.session_state.active_run_campaign == current_brief.name
-    ):
-        st.markdown("<hr>", unsafe_allow_html=True)
-        st.markdown('<div id="af-results-top"></div>', unsafe_allow_html=True)
-        render_section_title("4. Results")
-        # Auto-scroll to Results section via components.html (runs JS in
-        # an iframe that can reach the parent Streamlit document).
-        components.html(
-            """
-            <script>
-                var el = window.parent.document.getElementById('af-results-top');
-                if (el) {
-                    el.scrollIntoView({behavior: 'smooth', block: 'start'});
-                }
-            </script>
-            """,
-            height=0,
-        )
-        _render_pipeline_results(
-            st.session_state.active_run_brief,
-            st.session_state.active_run_result,
-        )
+if (
+    st.session_state.active_run_result is not None
+    and st.session_state.active_run_campaign
+):
+    st.markdown("<hr>", unsafe_allow_html=True)
+    st.markdown('<div id="af-results-top"></div>', unsafe_allow_html=True)
+    render_section_title("4. Results")
+    components.html(
+        """
+        <script>
+            var el = window.parent.document.getElementById('af-results-top');
+            if (el) {
+                el.scrollIntoView({behavior: 'smooth', block: 'start'});
+            }
+        </script>
+        """,
+        height=0,
+    )
+    _render_pipeline_results(
+        st.session_state.active_run_brief,
+        st.session_state.active_run_result,
+    )
 
-else:
+if st.session_state.active_run_result is None:
     st.info("Complete all brief steps and go to the Review tab to run the pipeline.")
