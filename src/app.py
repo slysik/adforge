@@ -34,7 +34,7 @@ st.set_page_config(
     page_title="AdForge — Creative Automation",
     page_icon="🎨",
     layout="wide",
-    initial_sidebar_state="collapsed",
+    initial_sidebar_state="expanded",
 )
 
 # ---------------------------------------------------------------------------
@@ -47,8 +47,8 @@ CUSTOM_CSS = """
   --ocean-blue:   #1B4F72;
   --ocean-dark:   #154060;
   --ocean-light:  #2E86C1;
-  --warm-ivory:   #FDF8F3;
-  --sandy-beige:  #F5E6CA;
+  --warm-ivory:   #F7F2EC;
+  --sandy-beige:  #E8DDD0;
   --shell-tan:    #D4A574;
   --shell-dark:   #B8895A;
   --charcoal:     #2C3E50;
@@ -68,10 +68,12 @@ CUSTOM_CSS = """
 
 /* ── Global resets ────────────────────────────────────────────────────── */
 html, body, [class*="css"] {
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family: 'DM Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   color: var(--charcoal);
   font-size: 1rem;
 }
+/* Import DM Sans from Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap');
 /* Readable base text across all Streamlit elements */
 .main .block-container, .main .block-container p,
 .main .block-container li, .main .block-container span,
@@ -109,7 +111,9 @@ html, body, [class*="css"] {
 .main .block-container {
   padding-top: 0 !important;
   padding-bottom: 2rem;
-  max-width: 1400px;
+  max-width: 1500px;
+  padding-left: 1.5rem !important;
+  padding-right: 1.5rem !important;
 }
 /* Kill the top margin Streamlit adds above the first element */
 .main .block-container > div:first-child {
@@ -128,44 +132,88 @@ html, body, [class*="css"] {
   padding-bottom: 0;
 }
 
-/* ── Sidebar ──────────────────────────────────────────────────────────── */
+/* ── Sidebar — Narrow icon bar ────────────────────────────────────────── */
 [data-testid="collapsedControl"] {
   display: none !important;
 }
 [data-testid="stSidebar"] {
   background: var(--ocean-blue) !important;
   border-right: none;
+  min-width: 88px !important;
+  max-width: 88px !important;
+  width: 88px !important;
+}
+[data-testid="stSidebar"] > div:first-child {
+  width: 88px !important;
+  padding: 0.5rem 0 !important;
 }
 [data-testid="stSidebar"] * {
   color: #E8F4FD !important;
 }
-[data-testid="stSidebar"] .stRadio label {
-  color: #E8F4FD !important;
+/* Nav item styling */
+.af-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.7rem 0.3rem;
+  margin: 0.2rem 0.4rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background var(--transition);
+  text-decoration: none !important;
 }
-[data-testid="stSidebar"] hr {
-  border-color: rgba(255,255,255,.18) !important;
+.af-nav-item:hover {
+  background: rgba(255,255,255,.12);
 }
-[data-testid="stSidebar"] .stSelectbox > div > div {
-  background: rgba(255,255,255,.1) !important;
-  border-color: rgba(255,255,255,.25) !important;
+.af-nav-item.active {
+  background: rgba(255,255,255,.18);
+}
+.af-nav-icon {
+  font-size: 1.5rem;
+  line-height: 1;
+  margin-bottom: 0.2rem;
+}
+.af-nav-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  text-align: center;
+  line-height: 1.2;
+  color: rgba(255,255,255,.85) !important;
+}
+.af-nav-item.active .af-nav-label {
   color: #fff !important;
 }
-[data-testid="stSidebar"] [data-testid="stFileUploader"] {
-  background: rgba(255,255,255,.08) !important;
-  border-color: rgba(255,255,255,.2) !important;
-  border-radius: var(--radius-md) !important;
+.af-nav-divider {
+  height: 1px;
+  background: rgba(255,255,255,.15);
+  margin: 0.4rem 0.6rem;
 }
+/* Sidebar button overrides — functional but visually minimal */
 [data-testid="stSidebar"] .stButton > button {
-  background: var(--shell-tan) !important;
-  color: var(--charcoal) !important;
+  background: transparent !important;
+  color: rgba(255,255,255,.85) !important;
   border: none !important;
   font-weight: 600 !important;
-  border-radius: var(--radius-md) !important;
-  transition: background var(--transition), transform var(--transition) !important;
+  padding: 0.4rem 0.2rem !important;
+  width: 100% !important;
+  font-size: 0.68rem !important;
+  border-radius: var(--radius-sm) !important;
+  transition: background var(--transition) !important;
+  margin-top: -2.8rem !important;
+  position: relative;
+  z-index: 10;
+  height: 3.2rem !important;
+  opacity: 0;
 }
 [data-testid="stSidebar"] .stButton > button:hover {
-  background: var(--shell-dark) !important;
-  transform: translateY(-1px) !important;
+  opacity: 1;
+  background: rgba(255,255,255,.08) !important;
+}
+/* Hide sidebar close button */
+[data-testid="stSidebar"] [data-testid="stSidebarCloseButton"] {
+  display: none !important;
 }
 
 /* ── Tabs ─────────────────────────────────────────────────────────────── */
@@ -430,7 +478,7 @@ html, body, [class*="css"] {
   margin-bottom: 2.5rem;
 }
 .af-gallery-product-title {
-  font-size: 1.15rem;
+  font-size: 1.05rem;
   font-weight: 700;
   color: var(--ocean-blue);
   margin-bottom: .25rem;
@@ -529,7 +577,7 @@ html, body, [class*="css"] {
   opacity: .1;
 }
 .af-metric-label {
-  font-size: .82rem;
+  font-size: .8rem;
   text-transform: uppercase;
   letter-spacing: .07em;
   color: var(--charcoal-mid);
@@ -537,14 +585,14 @@ html, body, [class*="css"] {
   font-weight: 600;
 }
 .af-metric-value {
-  font-size: 2rem;
+  font-size: 1.6rem;
   font-weight: 700;
   color: var(--ocean-blue);
   line-height: 1;
   margin-bottom: .25rem;
 }
 .af-metric-sub {
-  font-size: .82rem;
+  font-size: .8rem;
   color: var(--charcoal-light);
 }
 .af-metric-bar {
@@ -646,7 +694,7 @@ html, body, [class*="css"] {
 
 /* ── Section headings ─────────────────────────────────────────────────── */
 .af-section-title {
-  font-size: 1.15rem;
+  font-size: 1.05rem;
   font-weight: 700;
   color: var(--ocean-blue);
   margin: .75rem 0 .5rem;
@@ -861,29 +909,24 @@ PIPELINE_STAGES = [
 # UI Component helpers
 # ---------------------------------------------------------------------------
 
-def render_hero_header(title: str, subtitle: str, meta: list[tuple[str, str]] | None = None, badge: str = ""):
-    meta_html = ""
-    if meta:
-        items = "".join(
-            f'<div class="af-hero-meta-item">'
-            f'<span class="af-hero-meta-label">{label}</span>'
-            f'<span class="af-hero-meta-value">{value}</span>'
-            f'</div>'
-            for label, value in meta
+def render_hero_header(title: str, subtitle: str, compact: bool = False, meta: list[tuple[str, str]] | None = None, badge: str = ""):
+    if compact:
+        st.markdown(
+            f'<div class="af-hero" style="padding:.5rem 1.2rem;margin-bottom:.3rem">'
+            f'<h1 style="font-size:1.1rem !important">🎨 {title}</h1>'
+            f'</div>',
+            unsafe_allow_html=True,
         )
-        meta_html = f'<div class="af-hero-meta">{items}</div>'
-
-    badge_html = f'<div class="af-hero-badge">{badge}</div>' if badge else ""
-
-    st.markdown(
-        f"""
-        <div class="af-hero">
-          <h1>🎨 {title}</h1>
-          <p>{subtitle}</p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    else:
+        st.markdown(
+            f"""
+            <div class="af-hero">
+              <h1>🎨 {title}</h1>
+              <p>{subtitle}</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
 
 def render_pipeline_stepper(
@@ -1938,110 +1981,148 @@ if "active_run_campaign" not in st.session_state:
     st.session_state.active_run_campaign = None
 if "active_run_provider" not in st.session_state:
     st.session_state.active_run_provider = "mock"
+if "nav_page" not in st.session_state:
+    st.session_state.nav_page = "brief"
 
-render_hero_header(
-    "AdForge",
-    "Build briefs. Generate creatives. Review and approve — all in one place.",
-    badge="Pipeline Studio",
-)
-
-if len(st.session_state.run_log) > 1:
-    with st.expander(f"Recent Runs ({len(st.session_state.run_log)})", expanded=False):
-        _render_run_log()
-
-# Collapse Brief Builder when results already exist so the user sees pipeline output first.
-# Use a dynamic key so Streamlit re-creates the widget (and respects expanded=False)
-# after a pipeline run instead of remembering the old toggle state.
-_has_results = st.session_state.active_run_result is not None
-_expander_key = "brief_builder_done" if _has_results else "brief_builder_open"
-with st.expander("📝 Brief Builder — Configure your campaign", expanded=not _has_results, key=_expander_key):
-    current_brief = _render_brief_builder()
-current_brief_path = None
-
-if current_brief is not None and st.session_state.get("_run_triggered"):
-    st.session_state._run_triggered = False
-    provider_choice = st.session_state.get("main_provider_choice", "mock")
-    template_choice = st.session_state.get("main_template_choice", "auto")
-
-    run_brief_path = current_brief_path
-    if run_brief_path is None:
-        run_brief_path = _save_generated_brief_yaml(current_brief)
-
-        forced_template = None if template_choice == "auto" else template_choice
-        # Use a single row: status badge on the left, stepper on the right.
-        status_col, stepper_col = st.columns([0.2, 0.8])
-        stepper_slot = stepper_col.empty()
-        status_slot = status_col.empty()
-        render_pipeline_stepper(active_stage=1, target=stepper_slot)
-
-        with status_slot.status("Running pipeline...", expanded=True) as status:
-            try:
-                result = run_pipeline(
-                    brief_path=run_brief_path,
-                    input_dir="input_assets",
-                    output_dir="output",
-                    mock=(provider_choice == "mock"),
-                    provider_type=None if provider_choice == "auto" else provider_choice,
-                    template=forced_template,
-                    status_callback=lambda msg: status.update(label=msg),
-                )
-                status.update(label="Pipeline Complete!", state="complete", expanded=False)
-                render_pipeline_stepper(done_stages=7, target=stepper_slot)
-                st.session_state.active_run_result = result
-                st.session_state.active_run_brief = current_brief
-                st.session_state.active_run_campaign = current_brief.name
-                st.session_state.active_run_provider = provider_choice
-                time_saved_hrs = _estimate_time_saved_hours(
-                    result.created_count,
-                    result.elapsed_seconds,
-                )
-                _log_run(
-                    campaign=current_brief.name,
-                    provider=provider_choice,
-                    total=result.total_assets,
-                    created=result.created_count,
-                    failed=result.failed_count,
-                    elapsed=result.elapsed_seconds,
-                    time_saved_hrs=time_saved_hrs,
-                )
-            except RuntimeError as exc:
-                status.update(label="Pipeline Failed", state="error", expanded=False)
-                st.error(f"Pipeline failed: {exc}")
-
-# Rerun once so the Brief Builder expander re-renders collapsed
-if st.session_state.active_run_result is not None and not st.session_state.get("_pipeline_reran"):
-    st.session_state._pipeline_reran = True
-    st.rerun()
-
-if (
-    st.session_state.active_run_result is not None
-    and st.session_state.active_run_campaign
-):
-    st.markdown('<div id="af-results-top" style="height:0.5rem"></div>', unsafe_allow_html=True)
-    render_section_title("Results")
-    components.html(
-        """
-        <script>
-            var el = window.parent.document.getElementById('af-results-top');
-            if (el) {
-                el.scrollIntoView({behavior: 'smooth', block: 'start'});
-            }
-        </script>
-        """,
-        height=0,
-    )
-    _render_pipeline_results(
-        st.session_state.active_run_brief,
-        st.session_state.active_run_result,
-    )
-
-if st.session_state.active_run_result is None:
+# ---------------------------------------------------------------------------
+# Sidebar — Narrow icon navigation
+# ---------------------------------------------------------------------------
+with st.sidebar:
+    # Logo / brand mark at top
     st.markdown(
-        '<div class="af-empty-state">'
-        '<div class="af-empty-state-icon">🎨</div>'
-        '<div class="af-empty-state-title">Ready to create?</div>'
-        '<div class="af-empty-state-desc">Open the Brief Builder above, fill in your campaign details, '
-        'then hit <strong>Run Pipeline</strong> on the Review tab to generate your creatives.</div>'
+        '<div style="text-align:center;padding:0.6rem 0 0.3rem">'
+        '<span style="font-size:1.6rem">🎨</span>'
         '</div>',
         unsafe_allow_html=True,
     )
+    st.markdown('<div class="af-nav-divider"></div>', unsafe_allow_html=True)
+
+    # Nav: Build Brief
+    is_brief = st.session_state.nav_page == "brief"
+    st.markdown(
+        f'<div class="af-nav-item {"active" if is_brief else ""}">'
+        f'<div class="af-nav-icon">📝</div>'
+        f'<div class="af-nav-label">Build<br>Brief</div>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+    if st.button("📝 Brief", key="nav_brief", use_container_width=True):
+        st.session_state.nav_page = "brief"
+        st.rerun()
+
+    # Nav: Results
+    has_results = st.session_state.active_run_result is not None
+    is_results = st.session_state.nav_page == "results"
+    st.markdown(
+        f'<div class="af-nav-item {"active" if is_results else ""}">'
+        f'<div class="af-nav-icon">{"✅" if has_results else "🚀"}</div>'
+        f'<div class="af-nav-label">{"Results" if has_results else "Run"}<br>Pipeline</div>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+    if st.button("🚀 Run" if not has_results else "✅ Results", key="nav_results", use_container_width=True):
+        st.session_state.nav_page = "results"
+        st.rerun()
+
+    # Bottom spacer + version
+    st.markdown(
+        '<div style="position:fixed;bottom:0.8rem;left:0;width:88px;text-align:center">'
+        '<div class="af-nav-divider"></div>'
+        '<div style="font-size:0.55rem;color:rgba(255,255,255,.4);padding-top:0.3rem">AdForge v1.0</div>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+
+# ---------------------------------------------------------------------------
+# Hero header (compact)
+# ---------------------------------------------------------------------------
+_has_results = st.session_state.active_run_result is not None
+render_hero_header(
+    "AdForge",
+    "Build briefs. Generate creatives. Review and approve — all in one place.",
+    compact=_has_results,
+    badge="Pipeline Studio",
+)
+
+# ---------------------------------------------------------------------------
+# Page: Build Brief
+# ---------------------------------------------------------------------------
+if st.session_state.nav_page == "brief":
+    current_brief = _render_brief_builder()
+    current_brief_path = None
+
+    if current_brief is not None and st.session_state.get("_run_triggered"):
+        st.session_state._run_triggered = False
+        provider_choice = st.session_state.get("main_provider_choice", "mock")
+        template_choice = st.session_state.get("main_template_choice", "auto")
+
+        run_brief_path = current_brief_path
+        if run_brief_path is None:
+            run_brief_path = _save_generated_brief_yaml(current_brief)
+
+            forced_template = None if template_choice == "auto" else template_choice
+            status_col, stepper_col = st.columns([0.2, 0.8])
+            stepper_slot = stepper_col.empty()
+            status_slot = status_col.empty()
+            render_pipeline_stepper(active_stage=1, target=stepper_slot)
+
+            with status_slot.status("Running pipeline...", expanded=True) as status:
+                try:
+                    result = run_pipeline(
+                        brief_path=run_brief_path,
+                        input_dir="input_assets",
+                        output_dir="output",
+                        mock=(provider_choice == "mock"),
+                        provider_type=None if provider_choice == "auto" else provider_choice,
+                        template=forced_template,
+                        status_callback=lambda msg: status.update(label=msg),
+                    )
+                    status.update(label="Pipeline Complete!", state="complete", expanded=False)
+                    render_pipeline_stepper(done_stages=7, target=stepper_slot)
+                    st.session_state.active_run_result = result
+                    st.session_state.active_run_brief = current_brief
+                    st.session_state.active_run_campaign = current_brief.name
+                    st.session_state.active_run_provider = provider_choice
+                    time_saved_hrs = _estimate_time_saved_hours(
+                        result.created_count,
+                        result.elapsed_seconds,
+                    )
+                    _log_run(
+                        campaign=current_brief.name,
+                        provider=provider_choice,
+                        total=result.total_assets,
+                        created=result.created_count,
+                        failed=result.failed_count,
+                        elapsed=result.elapsed_seconds,
+                        time_saved_hrs=time_saved_hrs,
+                    )
+                    # Auto-switch to results page
+                    st.session_state.nav_page = "results"
+                    st.session_state._pipeline_reran = True
+                    st.rerun()
+                except RuntimeError as exc:
+                    status.update(label="Pipeline Failed", state="error", expanded=False)
+                    st.error(f"Pipeline failed: {exc}")
+
+# ---------------------------------------------------------------------------
+# Page: Results
+# ---------------------------------------------------------------------------
+if st.session_state.nav_page == "results":
+    if (
+        st.session_state.active_run_result is not None
+        and st.session_state.active_run_campaign
+    ):
+        _render_pipeline_results(
+            st.session_state.active_run_brief,
+            st.session_state.active_run_result,
+        )
+    else:
+        st.markdown(
+            '<div class="af-empty-state">'
+            '<div class="af-empty-state-icon">🚀</div>'
+            '<div class="af-empty-state-title">No results yet</div>'
+            '<div class="af-empty-state-desc">Head to <strong>Build Brief</strong> to configure your campaign, '
+            'then hit <strong>Run Pipeline</strong> on the Review & Run tab.</div>'
+            '</div>',
+            unsafe_allow_html=True,
+        )
