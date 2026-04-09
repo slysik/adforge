@@ -70,6 +70,14 @@ CUSTOM_CSS = """
 html, body, [class*="css"] {
   font-family: Georgia, 'Times New Roman', serif;
   color: var(--charcoal);
+  font-size: 1rem;
+}
+/* Bump overall Streamlit text for readability */
+.main .block-container, .main .block-container p,
+.main .block-container li, .main .block-container span,
+.main .block-container label, .main .block-container div {
+  font-size: 0.95rem;
+  line-height: 1.55;
 }
 
 /* Hide Streamlit header toolbar (Deploy button) and kill top gap */
@@ -149,7 +157,7 @@ html, body, [class*="css"] {
   border: none !important;
   border-radius: var(--radius-sm) var(--radius-sm) 0 0 !important;
   padding: .6rem 1.2rem !important;
-  font-size: .85rem;
+  font-size: .95rem;
   font-weight: 500;
   color: var(--charcoal-mid) !important;
   transition: background var(--transition), color var(--transition) !important;
@@ -200,8 +208,8 @@ html, body, [class*="css"] {
   padding: 1rem 1.2rem;
   box-shadow: var(--shadow-sm);
 }
-[data-testid="stMetricLabel"] { color: var(--charcoal-mid) !important; font-size: .78rem !important; }
-[data-testid="stMetricValue"] { color: var(--ocean-blue) !important; font-size: 1.6rem !important; }
+[data-testid="stMetricLabel"] { color: var(--charcoal-mid) !important; font-size: .88rem !important; }
+[data-testid="stMetricValue"] { color: var(--ocean-blue) !important; font-size: 1.7rem !important; }
 
 /* ── Expanders ────────────────────────────────────────────────────────── */
 [data-testid="stExpander"] {
@@ -214,6 +222,7 @@ html, body, [class*="css"] {
   background: var(--warm-ivory) !important;
   padding: .75rem 1rem !important;
   font-weight: 500 !important;
+  font-size: .95rem !important;
 }
 
 /* ── Info / success / warning / error boxes ───────────────────────────── */
@@ -283,7 +292,7 @@ html, body, [class*="css"] {
   display: inline-block;
   background: rgba(255,255,255,.15);
   color: #fff;
-  font-size: .65rem;
+  font-size: .75rem;
   font-weight: 600;
   letter-spacing: .05em;
   text-transform: uppercase;
@@ -334,7 +343,7 @@ html, body, [class*="css"] {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: .78rem;
+  font-size: .85rem;
   font-weight: 700;
   z-index: 1;
   position: relative;
@@ -355,7 +364,7 @@ html, body, [class*="css"] {
   box-shadow: 0 0 0 4px rgba(212,165,116,.25);
 }
 .af-step-label {
-  font-size: .65rem;
+  font-size: .75rem;
   color: var(--charcoal-light);
   margin-top: .4rem;
   line-height: 1.3;
@@ -370,7 +379,7 @@ html, body, [class*="css"] {
   margin-bottom: 2.5rem;
 }
 .af-gallery-product-title {
-  font-size: 1.05rem;
+  font-size: 1.15rem;
   font-weight: 700;
   color: var(--ocean-blue);
   margin-bottom: .25rem;
@@ -382,7 +391,7 @@ html, body, [class*="css"] {
   display: inline-block;
   background: var(--sandy-beige);
   color: var(--charcoal);
-  font-size: .7rem;
+  font-size: .8rem;
   font-weight: 700;
   padding: .15rem .55rem;
   border-radius: 100px;
@@ -420,18 +429,18 @@ html, body, [class*="css"] {
   background: var(--warm-ivory);
 }
 .af-gallery-ratio {
-  font-size: .72rem;
+  font-size: .82rem;
   font-weight: 700;
   color: var(--ocean-blue);
 }
 .af-gallery-compliance {
-  font-size: .68rem;
+  font-size: .78rem;
   color: var(--charcoal-mid);
   margin-top: .15rem;
 }
 .af-badge {
   display: inline-block;
-  font-size: .65rem;
+  font-size: .75rem;
   font-weight: 700;
   padding: .15rem .45rem;
   border-radius: 100px;
@@ -469,7 +478,7 @@ html, body, [class*="css"] {
   opacity: .1;
 }
 .af-metric-label {
-  font-size: .72rem;
+  font-size: .82rem;
   text-transform: uppercase;
   letter-spacing: .07em;
   color: var(--charcoal-mid);
@@ -484,7 +493,7 @@ html, body, [class*="css"] {
   margin-bottom: .25rem;
 }
 .af-metric-sub {
-  font-size: .72rem;
+  font-size: .82rem;
   color: var(--charcoal-light);
 }
 .af-metric-bar {
@@ -519,7 +528,7 @@ html, body, [class*="css"] {
   align-items: center;
   justify-content: space-between;
   padding: .65rem 1rem;
-  font-size: .82rem;
+  font-size: .9rem;
   font-weight: 600;
 }
 .af-approval-header.approved { background: #EAFAF1; color: var(--success); }
@@ -537,7 +546,7 @@ html, body, [class*="css"] {
   flex: 1;
   text-align: center;
   padding: .75rem .5rem;
-  font-size: .78rem;
+  font-size: .88rem;
   font-weight: 600;
   color: var(--charcoal-light);
   cursor: pointer;
@@ -586,7 +595,7 @@ html, body, [class*="css"] {
 
 /* ── Section headings ─────────────────────────────────────────────────── */
 .af-section-title {
-  font-size: 1.05rem;
+  font-size: 1.15rem;
   font-weight: 700;
   color: var(--ocean-blue);
   margin: .75rem 0 .5rem;
@@ -608,7 +617,7 @@ html, body, [class*="css"] {
   border-radius: var(--radius-sm);
   padding: .45rem .7rem;
   margin-bottom: .35rem;
-  font-size: .76rem;
+  font-size: .85rem;
   color: rgba(255,255,255,.82) !important;
   border-left: 3px solid var(--shell-tan);
 }
@@ -618,11 +627,11 @@ html, body, [class*="css"] {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: .5rem 2rem;
-  font-size: .88rem;
+  font-size: .95rem;
 }
 .af-brief-label {
   color: var(--charcoal-mid);
-  font-size: .72rem;
+  font-size: .82rem;
   text-transform: uppercase;
   letter-spacing: .06em;
   font-weight: 600;
@@ -1310,16 +1319,16 @@ def _render_performance(assets: list[dict], session_key: str = "default"):
         # Row 1: Summary metrics inline
         f'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.6rem;margin-bottom:0.8rem">'
         f'<div style="background:{WARM_CELL};border-radius:8px;padding:0.6rem;text-align:center">'
-        f'<div style="color:{TEXT_DIM};font-size:0.65rem;text-transform:uppercase;letter-spacing:0.05em">Total Spend</div>'
+        f'<div style="color:{TEXT_DIM};font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em">Total Spend</div>'
         f'<div style="color:{CREAM};font-size:1.1rem;font-weight:700">${perf.total_spend:,.0f}</div></div>'
         f'<div style="background:{WARM_CELL};border-radius:8px;padding:0.6rem;text-align:center">'
-        f'<div style="color:{TEXT_DIM};font-size:0.65rem;text-transform:uppercase;letter-spacing:0.05em">Impressions</div>'
+        f'<div style="color:{TEXT_DIM};font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em">Impressions</div>'
         f'<div style="color:{CREAM};font-size:1.1rem;font-weight:700">{perf.total_impressions/1000:.1f}K</div></div>'
         f'<div style="background:{WARM_CELL};border-radius:8px;padding:0.6rem;text-align:center">'
-        f'<div style="color:{TEXT_DIM};font-size:0.65rem;text-transform:uppercase;letter-spacing:0.05em">Avg CTR</div>'
+        f'<div style="color:{TEXT_DIM};font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em">Avg CTR</div>'
         f'<div style="color:{CREAM};font-size:1.1rem;font-weight:700">{perf.avg_ctr:.2f}%</div></div>'
         f'<div style="background:{WARM_CELL};border-radius:8px;padding:0.6rem;text-align:center">'
-        f'<div style="color:{TEXT_DIM};font-size:0.65rem;text-transform:uppercase;letter-spacing:0.05em">Avg CPA</div>'
+        f'<div style="color:{TEXT_DIM};font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em">Avg CPA</div>'
         f'<div style="color:{CREAM};font-size:1.1rem;font-weight:700">${perf.avg_cpa:.2f}</div></div>'
         f'</div>'
         # Row 2: Winner banner (if exists)
@@ -1354,9 +1363,9 @@ def _render_performance(assets: list[dict], session_key: str = "default"):
         + f'<div style="font-size:0.85rem;font-weight:600;color:{SAND};margin-bottom:0.4rem">Per-Creative KPIs</div>'
         # Row 3: Compact KPI table
         + f'<div style="overflow-x:auto">'
-        + f'<table style="width:100%;border-collapse:collapse;font-size:0.78rem;color:{TEXT_LIGHT}">'
+        + f'<table style="width:100%;border-collapse:collapse;font-size:0.88rem;color:{TEXT_LIGHT}">'
         + f'<tr style="border-bottom:1px solid {WARM_BORDER}">'
-        + ''.join(f'<th style="padding:0.35rem 0.5rem;text-align:left;color:{SAND};font-weight:600;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.03em">{h}</th>'
+        + ''.join(f'<th style="padding:0.35rem 0.5rem;text-align:left;color:{SAND};font-weight:600;font-size:0.8rem;text-transform:uppercase;letter-spacing:0.03em">{h}</th>'
                   for h in ["Creative", "Product", "Ratio", "Lang", "Spend", "Impr", "Clicks", "CTR", "Conv", "CPA"])
         + '</tr>'
         + ''.join(
