@@ -222,6 +222,16 @@ html, body, [class*="css"] {
   opacity: 1;
   background: rgba(255,255,255,.08) !important;
 }
+/* Nav section headers */
+.af-nav-section {
+  font-size: 0.55rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(255,255,255,.4);
+  padding: 0.6rem 0.6rem 0.2rem;
+  margin-top: 0.3rem;
+}
 /* Hide sidebar close button */
 [data-testid="stSidebar"] [data-testid="stSidebarCloseButton"] {
   display: none !important;
@@ -1992,7 +2002,35 @@ if "nav_page" not in st.session_state:
 # ---------------------------------------------------------------------------
 # Sidebar — Narrow icon navigation
 # ---------------------------------------------------------------------------
-with st.sidebar:
+
+# Navigation structure: list of sections, each with a label and list of items.
+# Each item: (icon, label_html, page_key, button_label, button_key)
+# For dynamic items (results), icon/label are resolved at render time.
+NAV_ITEMS: list[dict] = [
+    {
+        "section": "Create",
+        "items": [
+            {"icon": "📝", "label": "Build<br>Brief", "page": "brief", "btn_label": "📝 Brief", "btn_key": "nav_brief"},
+        ],
+    },
+    {
+        "section": "Pipeline",
+        "items": [
+            {"icon": None, "label": None, "page": "results", "btn_label": None, "btn_key": "nav_results", "dynamic": True},
+        ],
+    },
+    {
+        "section": "Tools",
+        "items": [
+            {"icon": "📊", "label": "Analytics", "page": "analytics", "btn_label": "📊 Analytics", "btn_key": "nav_analytics"},
+            {"icon": "📁", "label": "Assets", "page": "assets", "btn_label": "📁 Assets", "btn_key": "nav_assets"},
+        ],
+    },
+]
+
+
+def _render_sidebar_nav() -> None:
+    """Render the sidebar navigation with section grouping."""
     # Logo / brand mark at top
     st.markdown(
         '<div style="text-align:center;padding:0.6rem 0 0.3rem">'
@@ -2002,32 +2040,39 @@ with st.sidebar:
     )
     st.markdown('<div class="af-nav-divider"></div>', unsafe_allow_html=True)
 
-    # Nav: Build Brief
-    is_brief = st.session_state.nav_page == "brief"
-    st.markdown(
-        f'<div class="af-nav-item {"active" if is_brief else ""}">'
-        f'<div class="af-nav-icon">📝</div>'
-        f'<div class="af-nav-label">Build<br>Brief</div>'
-        f'</div>',
-        unsafe_allow_html=True,
-    )
-    if st.button("📝 Brief", key="nav_brief", use_container_width=True):
-        st.session_state.nav_page = "brief"
-        st.rerun()
-
-    # Nav: Results
     has_results = st.session_state.active_run_result is not None
-    is_results = st.session_state.nav_page == "results"
-    st.markdown(
-        f'<div class="af-nav-item {"active" if is_results else ""}">'
-        f'<div class="af-nav-icon">{"✅" if has_results else "🚀"}</div>'
-        f'<div class="af-nav-label">{"Results" if has_results else "Run"}<br>Pipeline</div>'
-        f'</div>',
-        unsafe_allow_html=True,
-    )
-    if st.button("🚀 Run" if not has_results else "✅ Results", key="nav_results", use_container_width=True):
-        st.session_state.nav_page = "results"
-        st.rerun()
+
+    for section in NAV_ITEMS:
+        # Section header
+        st.markdown(
+            f'<div class="af-nav-section">{section["section"]}</div>',
+            unsafe_allow_html=True,
+        )
+
+        for item in section["items"]:
+            page = item["page"]
+            is_active = st.session_state.nav_page == page
+
+            # Resolve dynamic icon/label for results page
+            if item.get("dynamic"):
+                icon = "✅" if has_results else "🚀"
+                label_html = ("Results" if has_results else "Run") + "<br>Pipeline"
+                btn_label = "✅ Results" if has_results else "🚀 Run"
+            else:
+                icon = item["icon"]
+                label_html = item["label"]
+                btn_label = item["btn_label"]
+
+            st.markdown(
+                f'<div class="af-nav-item {"active" if is_active else ""}">'
+                f'<div class="af-nav-icon">{icon}</div>'
+                f'<div class="af-nav-label">{label_html}</div>'
+                f'</div>',
+                unsafe_allow_html=True,
+            )
+            if st.button(btn_label, key=item["btn_key"], use_container_width=True):
+                st.session_state.nav_page = page
+                st.rerun()
 
     # Bottom spacer + version
     st.markdown(
@@ -2037,6 +2082,10 @@ with st.sidebar:
         '</div>',
         unsafe_allow_html=True,
     )
+
+
+with st.sidebar:
+    _render_sidebar_nav()
 
 # ---------------------------------------------------------------------------
 # Hero header (compact)
@@ -2131,3 +2180,17 @@ if st.session_state.nav_page == "results":
             '</div>',
             unsafe_allow_html=True,
         )
+
+# ---------------------------------------------------------------------------
+# Page: Analytics (placeholder)
+# ---------------------------------------------------------------------------
+if st.session_state.nav_page == "analytics":
+    st.markdown("### Analytics")
+    st.info("Analytics dashboard coming soon.")
+
+# ---------------------------------------------------------------------------
+# Page: Assets (placeholder)
+# ---------------------------------------------------------------------------
+if st.session_state.nav_page == "assets":
+    st.markdown("### Asset Library")
+    st.info("Asset browser coming soon.")
