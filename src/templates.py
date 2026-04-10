@@ -136,6 +136,16 @@ def render_product_hero(
         y_cursor += (line_bbox[3] - line_bbox[1]) + 8
 
     rendered.append(message)
+
+    # Brand-colored accent bar at the very bottom
+    accent_bar_color: tuple[int, ...] | None = None
+    if accent_color:
+        accent_bar_color = _hex_to_rgb(accent_color)
+    elif brand_colors:
+        accent_bar_color = _hex_to_rgb(brand_colors[0])
+    if accent_bar_color is not None:
+        draw.rectangle([(0, height - 4), (width, height)], fill=accent_bar_color + (230,))
+
     return canvas, rendered
 
 
@@ -416,9 +426,10 @@ def render_bold_type(
     overlay_draw.rectangle([(0, 0), (width, height)], fill=(0, 0, 0, 160))
     canvas = Image.alpha_composite(canvas, overlay)
 
-    # Add brand color tint
-    if accent_color:
-        tint_rgb = _hex_to_rgb(accent_color)
+    # Add brand color tint — use accent_color if available, else brand_colors[0]
+    effective_accent = accent_color if accent_color else (brand_colors[0] if brand_colors else None)
+    if effective_accent:
+        tint_rgb = _hex_to_rgb(effective_accent)
         tint = Image.new("RGBA", (width, height), tint_rgb + (25,))
         canvas = Image.alpha_composite(canvas, tint)
 
@@ -445,10 +456,10 @@ def render_bold_type(
 
     rendered.append(message)
 
-    # Accent underline below message
-    if accent_color:
+    # Accent underline below message — use accent_color if available, else brand_colors[0]
+    if effective_accent:
         line_y = y_start + 10
-        accent_rgb = _hex_to_rgb(accent_color)
+        accent_rgb = _hex_to_rgb(effective_accent)
         draw.rectangle([(padding, line_y), (padding + int(width * 0.3), line_y + 4)],
                        fill=accent_rgb + (255,))
 
