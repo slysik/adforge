@@ -1,0 +1,16 @@
+{
+  "utils": {
+    "status": "ok",
+    "score": 24,
+    "eval": {
+      "legibility": 4,
+      "correctness": 4,
+      "solution_arch": 4,
+      "simplicity": 4,
+      "visual_design": 4,
+      "layout": 4,
+      "total": 24,
+      "failures": []
+    }
+  }
+}

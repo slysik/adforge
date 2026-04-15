@@ -1,9 +1,19 @@
 """
 Shared utility functions for creative automation.
 
-Enforces DRY (Don't Repeat Yourself) by centralizing common functions
-used across multiple modules. This includes color conversion, image
-resizing, and color analysis utilities.
+Business Value:
+  Consistency across modules — every color conversion, luminance check,
+  and image resize uses the same tested implementation, preventing subtle
+  bugs from duplicated logic.
+
+Purpose:
+  Centralize primitives used by compositor, templates, validator, and
+  providers to enforce DRY.
+
+Description:
+  - hex_to_rgb(): Convert #RRGGBB to (R, G, B) tuple
+  - relative_luminance(): WCAG 2.0 formula (0.2126R + 0.7152G + 0.0722B)
+  - smart_resize(): Aspect-ratio-preserving resize with Lanczos filter
 """
 
 from __future__ import annotations
@@ -27,7 +37,7 @@ def hex_to_rgb(hex_color: str) -> tuple[int, int, int]:
         (255, 87, 51)
     """
     hex_color = hex_color.lstrip("#")
-    return tuple(int(hex_color[i:i + 2], 16) for i in (0, 2, 4))
+    return tuple(int(hex_color[i : i + 2], 16) for i in (0, 2, 4))
 
 
 def smart_resize(img: Image.Image, tw: int, th: int) -> Image.Image:

@@ -1,6 +1,22 @@
 """
 Data models for the creative automation pipeline.
-Uses Pydantic for validation and serialization.
+
+Business Value:
+  Prevents garbage-in/garbage-out by rejecting invalid briefs before any
+  API calls or image processing. Catches malformed colors, unsupported
+  languages, and insufficient product/ratio diversity at the boundary.
+
+Purpose:
+  Define strict Pydantic schemas that serve as the single source of truth
+  for data flowing through the pipeline — from brief ingestion to final
+  reporting.
+
+Description:
+  Core models: CampaignBrief, Product, BrandGuidelines, AspectRatio,
+  GeneratedAsset, PipelineResult. Field validators enforce hex color format
+  (#RRGGBB regex), ISO 639-1 language codes, slug-format product IDs,
+  minimum 2 products, and minimum 3 aspect ratios. Model validators
+  ensure uniqueness of product IDs and languages within a brief.
 """
 
 from __future__ import annotations
@@ -16,8 +32,26 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 # Supported ISO 639-1 language codes
 # ---------------------------------------------------------------------------
 SUPPORTED_LANGUAGES = {
-    "en", "es", "fr", "de", "pt", "ja", "zh", "ko", "it", "nl",
-    "ar", "hi", "ru", "sv", "da", "no", "fi", "pl", "tr", "th",
+    "en",
+    "es",
+    "fr",
+    "de",
+    "pt",
+    "ja",
+    "zh",
+    "ko",
+    "it",
+    "nl",
+    "ar",
+    "hi",
+    "ru",
+    "sv",
+    "da",
+    "no",
+    "fi",
+    "pl",
+    "tr",
+    "th",
 }
 
 HEX_COLOR_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
@@ -25,16 +59,26 @@ HEX_COLOR_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
 
 class AspectRatio(BaseModel):
     """Defines an output aspect ratio with pixel dimensions."""
-    name: str = Field(..., min_length=1, description="Human-readable name, e.g. 'instagram_square'")
-    ratio: str = Field(..., pattern=r"^\d+:\d+$", description="Ratio string, e.g. '1:1'")
+
+    name: str = Field(
+        ..., min_length=1, description="Human-readable name, e.g. 'instagram_square'"
+    )
+    ratio: str = Field(
+        ..., pattern=r"^\d+:\d+$", description="Ratio string, e.g. '1:1'"
+    )
     width: int = Field(..., gt=0, le=4096)
     height: int = Field(..., gt=0, le=4096)
 
 
 class Product(BaseModel):
     """A product within the campaign."""
-    id: str = Field(..., min_length=1, pattern=r"^[a-z0-9][a-z0-9\-]*$",
-                    description="Unique slug (lowercase, hyphens allowed)")
+
+    id: str = Field(
+        ...,
+        min_length=1,
+        pattern=r"^[a-z0-9][a-z0-9\-]*$",
+        description="Unique slug (lowercase, hyphens allowed)",
+    )
     name: str = Field(..., min_length=1)
     description: str = Field(..., min_length=1)
     hero_image: Optional[str] = Field(
@@ -45,6 +89,7 @@ class Product(BaseModel):
 
 class BrandGuidelines(BaseModel):
     """Brand-level constraints and assets."""
+
     primary_colors: list[str] = Field(
         default_factory=lambda: ["#000000", "#FFFFFF"],
         description="Hex color codes (#RRGGBB) for brand palette",
@@ -73,28 +118,36 @@ class BrandGuidelines(BaseModel):
     @classmethod
     def validate_accent_color(cls, v: str | None) -> str | None:
         if v is not None and not HEX_COLOR_RE.match(v):
-            raise ValueError(f"Invalid accent hex color: '{v}'. Expected #RRGGBB format.")
+            raise ValueError(
+                f"Invalid accent hex color: '{v}'. Expected #RRGGBB format."
+            )
         return v
 
 
 class CampaignBrief(BaseModel):
     """Top-level campaign brief – the primary input to the pipeline."""
+
     name: str = Field(..., min_length=1)
     brand: str = Field(..., min_length=1)
     message: str = Field(..., min_length=1)
     tagline: Optional[str] = None
     target_region: str = Field(..., min_length=1)
     target_audience: str = Field(..., min_length=1)
-    theme: Optional[str] = Field(default=None, description="Visual/local theme e.g. 'warm coastal'")
+    theme: Optional[str] = Field(
+        default=None, description="Visual/local theme e.g. 'warm coastal'"
+    )
     languages: list[str] = Field(default_factory=lambda: ["en"])
     brand_guidelines: BrandGuidelines = Field(default_factory=BrandGuidelines)
-    products: list[Product] = Field(..., min_length=2,
-                                    description="At least two products required per campaign")
+    products: list[Product] = Field(
+        ..., min_length=2, description="At least two products required per campaign"
+    )
     aspect_ratios: list[AspectRatio] = Field(
         default_factory=lambda: [
             AspectRatio(name="instagram_square", ratio="1:1", width=1080, height=1080),
             AspectRatio(name="stories", ratio="9:16", width=1080, height=1920),
-            AspectRatio(name="facebook_landscape", ratio="16:9", width=1920, height=1080),
+            AspectRatio(
+                name="facebook_landscape", ratio="16:9", width=1920, height=1080
+            ),
         ],
         min_length=3,
         description="At least three aspect ratios required",
@@ -128,8 +181,10 @@ class CampaignBrief(BaseModel):
 # Pipeline result models
 # ---------------------------------------------------------------------------
 
+
 class ComplianceStatus(str, Enum):
     """Three-valued compliance result with explicit semantics."""
+
     PASSED = "passed"
     WARNING = "warning"
     NOT_CHECKED = "not_checked"
@@ -144,12 +199,14 @@ class AssetStatus(str, Enum):
 
 class ComplianceResult(BaseModel):
     """Evidence-backed compliance check result."""
+
     status: ComplianceStatus
     notes: list[str] = Field(default_factory=list)
 
 
 class GeneratedAsset(BaseModel):
     """Metadata for a single generated creative asset."""
+
     product_id: str
     aspect_ratio: str
     language: str
@@ -171,6 +228,7 @@ class GeneratedAsset(BaseModel):
 
 class PipelineResult(BaseModel):
     """Aggregate result from running the full pipeline."""
+
     campaign_name: str
     total_assets: int = 0
     created_count: int = 0

@@ -41,29 +41,24 @@ demo brief="sample_briefs/beach_house_campaign.yaml":
 start-app:
     #!/usr/bin/env bash
     set -euo pipefail
-    if command -v uv &> /dev/null; then
-        uv run streamlit run src/app.py
-    elif [ -f venv/bin/activate ]; then
-        source venv/bin/activate
-        streamlit run src/app.py
-    else
-        echo "Run 'just install' first" && exit 1
-    fi
+    ./scripts/appctl.sh start
 
 # Restart the Streamlit web UI (kill existing + relaunch)
 restart-app:
     #!/usr/bin/env bash
     set -euo pipefail
-    just stop-app
-    sleep 1
-    just start-app
+    ./scripts/appctl.sh restart
 
 # Stop the Streamlit web UI
 stop-app:
     #!/usr/bin/env bash
-    pkill -f "streamlit run src/app.py" 2>/dev/null || true
-    lsof -ti :8501 | xargs kill -9 2>/dev/null || true
-    echo "✓ Stopped"
+    ./scripts/appctl.sh stop
+
+# Show Streamlit web UI status
+status-app:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    ./scripts/appctl.sh status
 
 # Run the test suite
 test:

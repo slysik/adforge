@@ -1,14 +1,26 @@
 """
 Pipeline performance and cost tracker.
 
-Tracks per-stage timing and estimated costs for the full pipeline run.
-This is essential for client-facing work — creative automation at scale
-needs cost visibility per campaign, per asset, and per API call.
+Business Value:
+  Per-stage timing and cost visibility lets campaign managers optimize
+  spend and identify bottlenecks. Essential for client billing in
+  production creative automation.
 
-In production, this would integrate with:
-  - Adobe Admin Console for Firefly credit tracking
-  - Cloud cost management (AWS Cost Explorer, Azure Cost Analysis)
-  - Client billing systems for usage-based pricing
+Purpose:
+  Instrument every pipeline stage with timing, API call counts, and
+  estimated costs. Provide structured metrics for reporting and
+  dashboards.
+
+Description:
+  Uses a context manager pattern (PipelineTracker._StageContext) for
+  automatic timing via with-blocks. Tracks:
+    - Per-stage wall-clock time
+    - API calls per provider
+    - Estimated cost per asset ($0.04 Firefly, $0.04 Gemini, $0 mock)
+    - Cache hit rate (heroes reused vs generated)
+
+  In production, integrates with Adobe Admin Console for Firefly credit
+  tracking, cloud cost management, and client billing systems.
 """
 
 from __future__ import annotations
@@ -26,6 +38,7 @@ console = Console()
 @dataclass
 class StageMetrics:
     """Timing and cost for a single pipeline stage."""
+
     name: str
     started: float = 0.0
     elapsed_ms: int = 0
@@ -38,6 +51,7 @@ class StageMetrics:
 @dataclass
 class AssetMetrics:
     """Per-asset generation metrics."""
+
     product_id: str
     aspect_ratio: str
     language: str
@@ -51,6 +65,7 @@ class AssetMetrics:
 @dataclass
 class PipelineMetrics:
     """Aggregate pipeline performance and cost metrics."""
+
     stages: list[StageMetrics] = field(default_factory=list)
     assets: list[AssetMetrics] = field(default_factory=list)
     total_elapsed_ms: int = 0
@@ -113,6 +128,7 @@ class PipelineTracker:
 
     class _StageContext:
         """Context manager for tracking a pipeline stage."""
+
         def __init__(self, stage: StageMetrics):
             self.stage = stage
 
@@ -151,7 +167,9 @@ class PipelineTracker:
 
 def print_metrics(metrics: PipelineMetrics) -> None:
     """Print a performance summary table."""
-    table = Table(title="Pipeline Performance", show_header=True, header_style="bold magenta")
+    table = Table(
+        title="Pipeline Performance", show_header=True, header_style="bold magenta"
+    )
     table.add_column("Stage", style="white")
     table.add_column("Time", justify="right", style="cyan")
     table.add_column("Items", justify="right")
@@ -159,19 +177,37 @@ def print_metrics(metrics: PipelineMetrics) -> None:
     table.add_column("Est. Cost", justify="right", style="yellow")
 
     for s in metrics.stages:
-        time_str = f"{s.elapsed_ms}ms" if s.elapsed_ms < 1000 else f"{s.elapsed_ms / 1000:.1f}s"
+        time_str = (
+            f"{s.elapsed_ms}ms"
+            if s.elapsed_ms < 1000
+            else f"{s.elapsed_ms / 1000:.1f}s"
+        )
         cost_str = f"${s.estimated_cost_usd:.3f}" if s.estimated_cost_usd > 0 else "–"
         table.add_row(
-            s.name, time_str, str(s.items_processed),
-            str(s.api_calls), cost_str,
+            s.name,
+            time_str,
+            str(s.items_processed),
+            str(s.api_calls),
+            cost_str,
         )
 
     # Totals row
-    total_time = f"{metrics.total_elapsed_ms}ms" if metrics.total_elapsed_ms < 1000 else f"{metrics.total_elapsed_ms / 1000:.1f}s"
-    total_cost = f"${metrics.total_estimated_cost_usd:.3f}" if metrics.total_estimated_cost_usd > 0 else "$0.000"
+    total_time = (
+        f"{metrics.total_elapsed_ms}ms"
+        if metrics.total_elapsed_ms < 1000
+        else f"{metrics.total_elapsed_ms / 1000:.1f}s"
+    )
+    total_cost = (
+        f"${metrics.total_estimated_cost_usd:.3f}"
+        if metrics.total_estimated_cost_usd > 0
+        else "$0.000"
+    )
     table.add_row(
-        "[bold]TOTAL[/bold]", f"[bold]{total_time}[/bold]", "",
-        f"[bold]{metrics.total_api_calls}[/bold]", f"[bold]{total_cost}[/bold]",
+        "[bold]TOTAL[/bold]",
+        f"[bold]{total_time}[/bold]",
+        "",
+        f"[bold]{metrics.total_api_calls}[/bold]",
+        f"[bold]{total_cost}[/bold]",
         style="bold",
     )
 

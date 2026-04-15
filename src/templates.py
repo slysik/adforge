@@ -1,20 +1,32 @@
 """
 Multi-template layout system for campaign creatives.
 
-Real creative teams use different layouts for different placements and
-campaign goals. This module provides multiple layout templates that the
-pipeline can select automatically or via brief configuration.
+Business Value:
+  Encodes creative judgment as auditable, deterministic rules — not AI
+  guesswork. Template auto-selection is instant ($0, 0ms) vs asking an
+  LLM ($0.01, 500ms), and the logic is fully explainable to stakeholders.
 
-Templates:
-  - PRODUCT_HERO: Product-centric with bold messaging (default)
-  - EDITORIAL: Text-forward with editorial feel
-  - SPLIT_PANEL: 50/50 image/text split
-  - MINIMAL: Clean, whitespace-heavy, premium feel
-  - BOLD_TYPE: Oversized typography with subtle background
+Purpose:
+  Provide multiple layout strategies (Strategy pattern) that auto-select
+  based on content signals, so the pipeline produces visually diverse
+  creatives without manual template assignment.
 
-Each template is a composition strategy — it takes the same inputs
-(hero image, text, brand config) and produces a different visual layout.
-This is how production creative automation works at scale.
+Description:
+  Five templates, each a composition strategy with the same interface:
+
+    - PRODUCT_HERO: Full-bleed hero + gradient overlay (default)
+    - EDITORIAL: 60/40 hero/text split for long messages (>40 chars)
+    - SPLIT_PANEL: 50/50 image/dark-panel split for 9:16 formats
+    - MINIMAL: Centered hero + whitespace for luxury/premium keywords
+    - BOLD_TYPE: Oversized typography for short messages (<=20 chars)
+
+  Auto-selection logic (templates.py:auto_select_template):
+    luxury keywords → MINIMAL → short message → BOLD_TYPE →
+    vertical ratio → SPLIT_PANEL → long message → EDITORIAL →
+    default → PRODUCT_HERO
+
+  Split panel uses WCAG 2.0 luminance to pick the darkest brand color
+  for the text panel, guaranteeing white text readability.
 """
 
 from __future__ import annotations
@@ -28,8 +40,12 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont
 from rich.console import Console
 
 from .compositor import (
-    _get_font, _get_cjk_font, _needs_cjk,
-    _hex_to_rgb, _draw_text_with_shadow, _draw_gradient_overlay,
+    _get_font,
+    _get_cjk_font,
+    _needs_cjk,
+    _hex_to_rgb,
+    _draw_text_with_shadow,
+    _draw_gradient_overlay,
 )
 from .utils import smart_resize as _smart_resize, luminance
 
@@ -38,11 +54,12 @@ console = Console()
 
 class LayoutTemplate(str, Enum):
     """Available layout templates for creative composition."""
-    PRODUCT_HERO = "product_hero"    # Default: full-bleed hero with overlay text
-    EDITORIAL = "editorial"          # Text-forward, editorial magazine feel
-    SPLIT_PANEL = "split_panel"      # 50/50 image and text panel
-    MINIMAL = "minimal"              # Clean, premium, whitespace-heavy
-    BOLD_TYPE = "bold_type"          # Oversized typography focus
+
+    PRODUCT_HERO = "product_hero"  # Default: full-bleed hero with overlay text
+    EDITORIAL = "editorial"  # Text-forward, editorial magazine feel
+    SPLIT_PANEL = "split_panel"  # 50/50 image and text panel
+    MINIMAL = "minimal"  # Clean, premium, whitespace-heavy
+    BOLD_TYPE = "bold_type"  # Oversized typography focus
 
 
 def auto_select_template(
@@ -53,13 +70,21 @@ def auto_select_template(
     """Automatically select the best template based on content signals.
 
     This encodes creative judgment as a heuristic:
-      - Stories/vertical formats → BOLD_TYPE (typography dominates vertical space)
       - Luxury/premium keywords → MINIMAL (premium feel)
       - Short punchy messages → BOLD_TYPE
+      - Stories/vertical formats → SPLIT_PANEL (text gets a dedicated panel)
       - Long messages → EDITORIAL (more text room)
       - Default → PRODUCT_HERO (universally safe)
     """
-    luxury_keywords = {"luxury", "premium", "gold", "velvet", "serum", "radiance", "elegant"}
+    luxury_keywords = {
+        "luxury",
+        "premium",
+        "gold",
+        "velvet",
+        "serum",
+        "radiance",
+        "elegant",
+    }
     has_luxury = bool(set(k.lower() for k in product_keywords) & luxury_keywords)
 
     if has_luxury:
@@ -80,6 +105,7 @@ def auto_select_template(
 # ---------------------------------------------------------------------------
 # Template renderers
 # ---------------------------------------------------------------------------
+
 
 def render_product_hero(
     hero: Image.Image,
@@ -107,20 +133,36 @@ def render_product_hero(
     if brand_name:
         brand_font = _get_font(font_family, max(16, int(base * 0.028)))
         brand_text = brand_name.upper()
-        _draw_text_with_shadow(draw, (padding, padding), brand_text,
-                               brand_font, (255, 255, 255, 220), shadow_offset=2)
+        _draw_text_with_shadow(
+            draw,
+            (padding, padding),
+            brand_text,
+            brand_font,
+            (255, 255, 255, 220),
+            shadow_offset=2,
+        )
         rendered.append(brand_text)
 
     # Message + tagline (bottom)
-    msg_font = _get_cjk_font(max(28, int(base * 0.065))) if _needs_cjk(message) else _get_font(font_family, max(28, int(base * 0.065)))
+    msg_font = (
+        _get_cjk_font(max(28, int(base * 0.065)))
+        if _needs_cjk(message)
+        else _get_font(font_family, max(28, int(base * 0.065)))
+    )
     tag_font = _get_font(font_family, max(18, int(base * 0.035)))
 
     y_cursor = height - padding
     if tagline:
         tag_bbox = draw.textbbox((0, 0), tagline, font=tag_font)
         y_cursor -= (tag_bbox[3] - tag_bbox[1]) + 10
-        _draw_text_with_shadow(draw, (padding, y_cursor), tagline,
-                               tag_font, (255, 255, 255, 200), shadow_offset=2)
+        _draw_text_with_shadow(
+            draw,
+            (padding, y_cursor),
+            tagline,
+            tag_font,
+            (255, 255, 255, 200),
+            shadow_offset=2,
+        )
         rendered.append(tagline)
 
     max_chars = max(15, int(width / (max(28, int(base * 0.065)) * 0.55)))
@@ -130,8 +172,14 @@ def render_product_hero(
     y_cursor -= (msg_bbox[3] - msg_bbox[1]) + 15
 
     for line in lines:
-        _draw_text_with_shadow(draw, (padding, y_cursor), line,
-                               msg_font, (255, 255, 255, 255), shadow_offset=3)
+        _draw_text_with_shadow(
+            draw,
+            (padding, y_cursor),
+            line,
+            msg_font,
+            (255, 255, 255, 255),
+            shadow_offset=3,
+        )
         line_bbox = draw.textbbox((0, 0), line, font=msg_font)
         y_cursor += (line_bbox[3] - line_bbox[1]) + 8
 
@@ -180,13 +228,19 @@ def render_editorial(
     if brand_name:
         brand_font = _get_font(font_family, max(14, int(base * 0.022)))
         brand_text = brand_name.upper()
-        draw.text((padding, text_y), brand_text, font=brand_font, fill=(255, 255, 255, 180))
+        draw.text(
+            (padding, text_y), brand_text, font=brand_font, fill=(255, 255, 255, 180)
+        )
         rendered.append(brand_text)
         text_y += int(base * 0.04)
 
     # Message
     msg_size = max(24, int(base * 0.055))
-    msg_font = _get_cjk_font(msg_size) if _needs_cjk(message) else _get_font(font_family, msg_size)
+    msg_font = (
+        _get_cjk_font(msg_size)
+        if _needs_cjk(message)
+        else _get_font(font_family, msg_size)
+    )
     max_chars = max(15, int(width / (msg_size * 0.55)))
     lines = textwrap.wrap(message, width=max_chars)
 
@@ -205,8 +259,6 @@ def render_editorial(
         rendered.append(tagline)
 
     return canvas, rendered
-
-
 
 
 def _pick_panel_color(brand_colors: list[str]) -> tuple[int, int, int]:
@@ -284,7 +336,9 @@ def render_split_panel(
     if brand_name:
         brand_font = _get_font(font_family, max(14, int(base * 0.024)))
         brand_text = brand_name.upper()
-        draw.text((padding, text_y), brand_text, font=brand_font, fill=(255, 255, 255, 180))
+        draw.text(
+            (padding, text_y), brand_text, font=brand_font, fill=(255, 255, 255, 180)
+        )
         rendered.append(brand_text)
         text_y += int(base * 0.05)
 
@@ -292,13 +346,23 @@ def render_split_panel(
     if accent_color:
         accent_rgb = _hex_to_rgb(accent_color)
         bar_w = int(base * 0.15)
-        draw.rectangle([(padding, text_y), (padding + bar_w, text_y + 3)], fill=accent_rgb + (255,))
+        draw.rectangle(
+            [(padding, text_y), (padding + bar_w, text_y + 3)], fill=accent_rgb + (255,)
+        )
         text_y += 15
 
     # Message
     msg_size = max(22, int(base * 0.05))
-    msg_font = _get_cjk_font(msg_size) if _needs_cjk(message) else _get_font(font_family, msg_size)
-    avail_w = (width - padding - int(width * 0.04)) if not is_vertical else (width - 2 * int(width * 0.08))
+    msg_font = (
+        _get_cjk_font(msg_size)
+        if _needs_cjk(message)
+        else _get_font(font_family, msg_size)
+    )
+    avail_w = (
+        (width - padding - int(width * 0.04))
+        if not is_vertical
+        else (width - 2 * int(width * 0.08))
+    )
     max_chars = max(12, int(avail_w / (msg_size * 0.55)))
     lines = textwrap.wrap(message, width=max_chars)
 
@@ -360,14 +424,20 @@ def render_minimal(
     # Message below hero, centered
     msg_y = hero_y + hero_h + int(height * 0.04)
     msg_size = max(22, int(base * 0.045))
-    msg_font = _get_cjk_font(msg_size) if _needs_cjk(message) else _get_font(font_family, msg_size)
+    msg_font = (
+        _get_cjk_font(msg_size)
+        if _needs_cjk(message)
+        else _get_font(font_family, msg_size)
+    )
     max_chars = max(20, int(width / (msg_size * 0.55)))
     lines = textwrap.wrap(message, width=max_chars)
 
     for line in lines:
         line_bbox = draw.textbbox((0, 0), line, font=msg_font)
         lw = line_bbox[2] - line_bbox[0]
-        draw.text(((width - lw) // 2, msg_y), line, font=msg_font, fill=text_color + (230,))
+        draw.text(
+            ((width - lw) // 2, msg_y), line, font=msg_font, fill=text_color + (230,)
+        )
         msg_y += (line_bbox[3] - line_bbox[1]) + 6
 
     rendered.append(message)
@@ -378,7 +448,9 @@ def render_minimal(
         tag_font = _get_font(font_family, max(14, int(base * 0.025)))
         tag_bbox = draw.textbbox((0, 0), tagline, font=tag_font)
         tw = tag_bbox[2] - tag_bbox[0]
-        draw.text(((width - tw) // 2, msg_y), tagline, font=tag_font, fill=text_color + (150,))
+        draw.text(
+            ((width - tw) // 2, msg_y), tagline, font=tag_font, fill=text_color + (150,)
+        )
         rendered.append(tagline)
 
     # Brand name at bottom, centered
@@ -387,8 +459,12 @@ def render_minimal(
         brand_text = brand_name.upper()
         bb = draw.textbbox((0, 0), brand_text, font=brand_font)
         bw = bb[2] - bb[0]
-        draw.text(((width - bw) // 2, height - int(height * 0.06)), brand_text,
-                  font=brand_font, fill=text_color + (120,))
+        draw.text(
+            ((width - bw) // 2, height - int(height * 0.06)),
+            brand_text,
+            font=brand_font,
+            fill=text_color + (120,),
+        )
         rendered.append(brand_text)
 
     return canvas, rendered
@@ -428,7 +504,11 @@ def render_bold_type(
 
     # Oversized message
     msg_size = max(36, int(base * 0.09))
-    msg_font = _get_cjk_font(msg_size) if _needs_cjk(message) else _get_font(font_family, msg_size)
+    msg_font = (
+        _get_cjk_font(msg_size)
+        if _needs_cjk(message)
+        else _get_font(font_family, msg_size)
+    )
     max_chars = max(10, int(width / (msg_size * 0.6)))
     lines = textwrap.wrap(message, width=max_chars)
 
@@ -449,8 +529,10 @@ def render_bold_type(
     if accent_color:
         line_y = y_start + 10
         accent_rgb = _hex_to_rgb(accent_color)
-        draw.rectangle([(padding, line_y), (padding + int(width * 0.3), line_y + 4)],
-                       fill=accent_rgb + (255,))
+        draw.rectangle(
+            [(padding, line_y), (padding + int(width * 0.3), line_y + 4)],
+            fill=accent_rgb + (255,),
+        )
 
     # Tagline below
     if tagline:
@@ -463,7 +545,9 @@ def render_bold_type(
     if brand_name:
         brand_font = _get_font(font_family, max(14, int(base * 0.022)))
         brand_text = brand_name.upper()
-        draw.text((padding, padding), brand_text, font=brand_font, fill=(255, 255, 255, 160))
+        draw.text(
+            (padding, padding), brand_text, font=brand_font, fill=(255, 255, 255, 160)
+        )
         rendered.append(brand_text)
 
     return canvas, rendered

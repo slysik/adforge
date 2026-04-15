@@ -5,7 +5,7 @@
 **Generate dozens of on-brand, localized ad creatives from a single campaign brief — in seconds.**
 
 ![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)
-![Tests](https://img.shields.io/badge/tests-158%20passing-brightgreen.svg)
+![Tests](https://img.shields.io/badge/tests-152%20passing-brightgreen.svg)
 ![License: MIT](https://img.shields.io/badge/license-MIT-yellow.svg)
 
 ---
@@ -118,7 +118,7 @@ just demo           # run pipeline with mock images — no API keys needed
 just start-app      # launch the Streamlit web UI
 just restart-app    # restart the web UI
 just stop-app       # stop the web UI
-just test           # run the test suite (158 tests)
+just test           # run the test suite (152 tests)
 just analyze        # score a campaign brief
 just generate       # generate with a real provider (gemini, dalle, firefly)
 ```
@@ -289,7 +289,7 @@ graph TD
 |:-------|:--------|
 | `models.py` | Pydantic schemas — enforces ≥2 products, hex colors, ISO language codes |
 | `pipeline.py` | 7-stage orchestrator — parallel generation, progress bars, metrics |
-| `providers.py` | Provider abstraction — Firefly → Gemini → DALL-E → Mock auto-resolution |
+| `providers.py` | Provider abstraction — Firefly → Gemini → Mock auto-resolution, with DALL-E available by explicit selection |
 | `analyzer.py` | Brief quality scoring — heuristic + optional LLM augmentation |
 | `templates.py` | 5 layout templates — auto-selected by content, ratio, keywords |
 | `compositor.py` | Image composition — resize, text overlay, logo, gradient, translation |
@@ -375,25 +375,24 @@ streamlit run src/app.py
 
 ## 🧪 Tests
 
-**158 tests** across 10 modules:
+**152 tests** across 10 test files, verified with `pytest -q` on April 14, 2026:
 
 ```bash
-python -m pytest tests/ -v
+pytest tests/ -v
 ```
 
-| Module | What It Tests | Count |
-|:-------|:-------------|------:|
-| `test_models.py` | Pydantic schema enforcement | 14 |
-| `test_generator.py` | Mock generation, dimensions | 7 |
-| `test_compositor.py` | Composition, text, branding | 14 |
-| `test_validator.py` | Brand colors, logo, legal | 17 |
-| `test_pipeline.py` | End-to-end integration | 12 |
-| `test_storage.py` | File management, slugs | 5 |
-| `test_providers.py` | Provider factory, fallback | 14 |
-| `test_analyzer.py` | Brief scoring, enrichment | 17 |
-| `test_templates.py` | Template rendering, selection | 14 |
-| `test_tracker.py` | Metrics tracking | 4 |
-| `test_analytics.py` | KPIs, winner detection | 40 |
+| Test File | What It Covers |
+|:----------|:---------------|
+| `tests/test_models.py` | Pydantic schema enforcement and validation rules |
+| `tests/test_compositor.py` | Composition, text rendering, and branding behavior |
+| `tests/test_validator.py` | Brand colors, logo checks, and legal/compliance checks |
+| `tests/test_pipeline.py` | End-to-end orchestration and asset accounting |
+| `tests/test_storage.py` | File management, caching, and slug handling |
+| `tests/test_providers.py` | Provider factory behavior, fallback rules, and provider contracts |
+| `tests/test_analyzer.py` | Brief scoring, enrichment, and analyzer behavior |
+| `tests/test_templates.py` | Template rendering and auto-selection heuristics |
+| `tests/test_tracker.py` | Metrics and stage/asset tracking |
+| `tests/test_analytics.py` | KPI generation and winner detection |
 
 ---
 

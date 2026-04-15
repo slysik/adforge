@@ -1,11 +1,21 @@
 """
 CLI entry point for the creative automation pipeline.
 
-Commands:
-  generate  — Run the full pipeline on a campaign brief
-  validate  — Validate a brief without generating assets
-  analyze   — Score and analyze a brief's quality
-  providers — List available image generation providers
+Business Value:
+  Enables CI/CD integration and batch automation — campaigns can be
+  generated from shell scripts, cron jobs, or CI pipelines without
+  a GUI dependency.
+
+Purpose:
+  Provide a Click-based CLI interface exposing the pipeline's core
+  operations as shell commands.
+
+Description:
+  Commands:
+    generate  — Run the full 7-stage pipeline on a campaign brief YAML
+    validate  — Validate a brief without generating assets (fast check)
+    analyze   — Score and analyze a brief's quality via heuristic/LLM
+    providers — List available image generation providers and their status
 """
 
 from __future__ import annotations
@@ -27,7 +37,7 @@ def cli():
     """AdForge — creative automation for localized social campaigns.
 
     \b
-    Provider chain: Adobe Firefly → DALL-E 3 → Mock (auto-resolved)
+    Provider chain: Adobe Firefly → Google Imagen → Mock (auto-resolved)
     Templates: product_hero | editorial | split_panel | minimal | bold_type
     """
     load_dotenv()
@@ -35,21 +45,56 @@ def cli():
 
 @cli.command()
 @click.argument("brief", type=click.Path(exists=True))
-@click.option("--input-dir", "-i", default="input_assets", help="Directory with existing assets")
-@click.option("--output-dir", "-o", default="output", help="Output directory for generated creatives")
-@click.option("--mock", is_flag=True, help="Use mock image generation (no API key needed)")
-@click.option("--provider", "-p", type=click.Choice(["firefly", "dalle", "gemini", "mock"]),
-              help="Force a specific image provider")
-@click.option("--template", "-t",
-              type=click.Choice(["product_hero", "editorial", "split_panel", "minimal", "bold_type"]),
-              help="Force a specific layout template")
-@click.option("--api-key", envvar="OPENAI_API_KEY", help="OpenAI API key (or set OPENAI_API_KEY env)")
+@click.option(
+    "--input-dir", "-i", default="input_assets", help="Directory with existing assets"
+)
+@click.option(
+    "--output-dir",
+    "-o",
+    default="output",
+    help="Output directory for generated creatives",
+)
+@click.option(
+    "--mock", is_flag=True, help="Use mock image generation (no API key needed)"
+)
+@click.option(
+    "--provider",
+    "-p",
+    type=click.Choice(["firefly", "dalle", "gemini", "mock"]),
+    help="Force a specific image provider",
+)
+@click.option(
+    "--template",
+    "-t",
+    type=click.Choice(
+        ["product_hero", "editorial", "split_panel", "minimal", "bold_type"]
+    ),
+    help="Force a specific layout template",
+)
+@click.option(
+    "--api-key",
+    envvar="OPENAI_API_KEY",
+    help="OpenAI API key (or set OPENAI_API_KEY env)",
+)
 @click.option("--no-analysis", is_flag=True, help="Skip brief analysis stage")
 @click.option("--no-parallel", is_flag=True, help="Disable parallel hero generation")
-@click.option("--workers", "-w", default=4, help="Thread pool size for parallel generation")
+@click.option(
+    "--workers", "-w", default=4, help="Thread pool size for parallel generation"
+)
 @click.option("--verbose", "-v", is_flag=True, help="Enable verbose logging")
-def generate(brief, input_dir, output_dir, mock, provider, template,
-             api_key, no_analysis, no_parallel, workers, verbose):
+def generate(
+    brief,
+    input_dir,
+    output_dir,
+    mock,
+    provider,
+    template,
+    api_key,
+    no_analysis,
+    no_parallel,
+    workers,
+    verbose,
+):
     """Generate campaign creatives from a brief file.
 
     BRIEF is a YAML or JSON campaign brief file.
@@ -110,7 +155,9 @@ def validate(brief: str):
 
 @cli.command()
 @click.argument("brief", type=click.Path(exists=True))
-@click.option("--llm", is_flag=True, help="Augment heuristic analysis with LLM insights")
+@click.option(
+    "--llm", is_flag=True, help="Augment heuristic analysis with LLM insights"
+)
 def analyze(brief: str, llm: bool):
     """Analyze a campaign brief's quality and get recommendations.
 
@@ -144,20 +191,38 @@ def providers():
     console.print("\n[bold cyan]━━━ Available Providers ━━━[/bold cyan]\n")
 
     providers_list = [
-        ("Adobe Firefly Services", FireflyProvider(), "firefly",
-         "Production — uses Firefly v3 API (generate, expand, fill)"),
-        ("OpenAI DALL-E 3", DalleProvider(), "dalle",
-         "Development fallback — three fixed sizes, resized to target"),
-        ("Google Imagen 4.0", GeminiProvider(), "gemini",
-         "Development fallback — native aspect ratios via Gemini API"),
-        ("Mock Provider", MockProvider(), "mock",
-         "Testing — deterministic procedural images, no API calls"),
+        (
+            "Adobe Firefly Services",
+            FireflyProvider(),
+            "firefly",
+            "Production — uses Firefly v3 API (generate, expand, fill)",
+        ),
+        (
+            "OpenAI DALL-E 3",
+            DalleProvider(),
+            "dalle",
+            "Development fallback — three fixed sizes, resized to target",
+        ),
+        (
+            "Google Imagen 4.0",
+            GeminiProvider(),
+            "gemini",
+            "Development fallback — native aspect ratios via Gemini API",
+        ),
+        (
+            "Mock Provider",
+            MockProvider(),
+            "mock",
+            "Testing — deterministic procedural images, no API calls",
+        ),
     ]
 
     for name, prov, flag, desc in providers_list:
         available = prov.is_available()
         icon = "[green]✓[/green]" if available else "[red]✗[/red]"
-        status = "[green]available[/green]" if available else "[dim]not configured[/dim]"
+        status = (
+            "[green]available[/green]" if available else "[dim]not configured[/dim]"
+        )
         console.print(f"  {icon} [bold]{name}[/bold] (--provider {flag})")
         console.print(f"    Status: {status}")
         console.print(f"    Model:  {prov.model_name}")

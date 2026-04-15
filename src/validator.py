@@ -1,13 +1,31 @@
 """
 Brand compliance and legal content validation.
 
-Checks:
-  - Brand color presence in final image (pixel sampling)
-  - Logo presence detection (pixel-level verification in expected region)
-  - Prohibited word screening (against ALL rendered text)
-  - Basic legal/regulatory term flagging (against ALL rendered text)
+Business Value:
+  Automated brand governance at scale — catches off-brand creatives and
+  legal risks before they reach production. Replaces manual human review
+  for common compliance checks, reducing review time from minutes to
+  milliseconds per asset.
 
-Each check returns an evidence-backed (ComplianceStatus, notes) pair.
+Purpose:
+  Verify that every generated creative meets brand color standards, includes
+  the logo, and contains no prohibited or legally risky text. Returns
+  evidence-backed pass/fail results for audit trails.
+
+Description:
+  Four deterministic checks (no AI/vision models — fast, auditable,
+  no model drift):
+
+    1. Brand color presence — pixel sampling every 10th pixel, Euclidean
+       RGB distance with tolerance 80.0
+    2. Logo presence — checks top-right region for >=10% opaque pixels
+       and >=3 distinct colors
+    3. Prohibited word screening — string matching against rendered text
+       list from compositor (not OCR)
+    4. Legal/regulatory flags — flags terms like "guaranteed", "miracle",
+       "#1", "cure" in rendered text
+
+  Aggregate scoring: worst status wins (FAILED > WARNING > PASSED).
 """
 
 from __future__ import annotations
@@ -26,9 +44,17 @@ console = Console()
 # Common prohibited / sensitive terms for advertising
 # ---------------------------------------------------------------------------
 DEFAULT_LEGAL_FLAGS = [
-    "guaranteed", "miracle", "cure", "free*", "risk-free",
-    "no side effects", "clinically proven", "doctor approved",
-    "#1", "best in class", "unbeatable",
+    "guaranteed",
+    "miracle",
+    "cure",
+    "free*",
+    "risk-free",
+    "no side effects",
+    "clinically proven",
+    "doctor approved",
+    "#1",
+    "best in class",
+    "unbeatable",
 ]
 
 
@@ -55,7 +81,9 @@ class BrandComplianceChecker:
         self.prohibited_words = [w.lower() for w in (prohibited_words or [])]
 
     def check_brand_colors(
-        self, image_path: Path, tolerance: float = 80.0,
+        self,
+        image_path: Path,
+        tolerance: float = 80.0,
     ) -> ComplianceResult:
         """
         Check whether brand colors are represented in the image.
@@ -145,21 +173,27 @@ class BrandComplianceChecker:
             # Logo should be in top-right corner (matching compositor logic)
             logo_region_size = int(min(w, h) * 0.12)
             padding = int(w * 0.04)
-            region = img.crop((
-                w - logo_region_size - padding,
-                padding,
-                w - padding,
-                padding + logo_region_size,
-            ))
+            region = img.crop(
+                (
+                    w - logo_region_size - padding,
+                    padding,
+                    w - padding,
+                    padding + logo_region_size,
+                )
+            )
 
             # Check that the region has non-trivial alpha (i.e., logo pixels)
             region_pixels = list(region.getdata())
-            non_transparent = sum(1 for px in region_pixels if len(px) >= 4 and px[3] > 200)
+            non_transparent = sum(
+                1 for px in region_pixels if len(px) >= 4 and px[3] > 200
+            )
             total = len(region_pixels)
 
             if total > 0 and (non_transparent / total) > 0.1:
                 # Also verify the region isn't just solid background
-                unique_colors = len(set((px[0], px[1], px[2]) for px in region_pixels[:500]))
+                unique_colors = len(
+                    set((px[0], px[1], px[2]) for px in region_pixels[:500])
+                )
                 if unique_colors > 3:
                     return ComplianceResult(
                         status=ComplianceStatus.PASSED,

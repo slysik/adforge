@@ -1,0 +1,77 @@
+graph TD
+    %% Global State
+    subgraph Session_State ["Streamlit Session State"]
+        NAV["nav_page"]
+        RESULT["active_run_result"]
+        BRIEF_OBJ["campaign_brief"]
+        LOG["run_log"]
+        PROV["provider_config"]
+    end
+
+    %% Sidebar Navigation
+    subgraph Sidebar ["Sidebar Navigation"]
+        S_ICON["Icon Menu"]
+        S_ICON -- "Set nav_page='brief'" --> NAV
+        S_ICON -- "Set nav_page='results'" --> NAV
+    end
+
+    %% Page: Build Brief
+    subgraph Page_Brief ["Page: Build Brief"]
+        BUILDER["_render_brief_builder"]
+        UPLOAD["_save_uploaded_brief"]
+        MANUAL["Manual Form Inputs"]
+        CAMPAIGN_BRIEF["CampaignBrief Object"]
+
+        BUILDER --> UPLOAD
+        BUILDER --> MANUAL
+        MANUAL -- "Generates" --> CAMPAIGN_BRIEF
+    end
+
+    %% Pipeline Execution Trigger
+    subgraph Trigger ["Pipeline Execution"]
+        RUN_BTN["Button: Run Pipeline"]
+        STEPPER["render_pipeline_stepper"]
+        PIPELINE["src.pipeline.run_pipeline()"]
+        _log_run["_log_run"]
+
+        RUN_BTN -- "Triggers" --> PIPELINE
+        PIPELINE -- "Updates UI" --> STEPPER
+        PIPELINE -- "Returns PipelineResult" --> RESULT
+        PIPELINE -- "Log Entry" --> _log_run
+        _log_run -- "Appends to" --> LOG
+    end
+
+    %% Page: Results
+    subgraph Page_Results ["Page: Results / Library"]
+        CHECK_RES{"Result Exists?"}
+        EMPTY["Empty State"]
+        LIBRARY["_render_sample_library"]
+        RENDER_RES["_render_pipeline_results"]
+
+        NAV -- "if 'results'" --> CHECK_RES
+        CHECK_RES -- "No" --> EMPTY
+        CHECK_RES -- "No" --> LIBRARY
+        CHECK_RES -- "Yes" --> RENDER_RES
+
+        subgraph Result_Tabs ["Result Detail Tabs"]
+            SUMM["_build_campaign_summary_cards\nKPIs: Time Saved, Cache Hits"]
+            GAL["_render_gallery\nAssets by Product/Ratio"]
+            ANAL["_render_analysis\nBrief Quality Scores"]
+            APPQ["_render_approval_queue\nReview / Approve / Reject"]
+            PERF["_render_performance\nStage Timing Breakdown"]
+            METR["_render_metrics\nProvider Usage Stats"]
+        end
+
+        RENDER_RES --> SUMM
+        RENDER_RES --> GAL
+        RENDER_RES --> ANAL
+        RENDER_RES --> APPQ
+        RENDER_RES --> PERF
+        RENDER_RES --> METR
+    end
+
+    %% Data Flows
+    NAV -- "if 'brief'" --> BUILDER
+    CAMPAIGN_BRIEF --> PIPELINE
+    RESULT --> RENDER_RES
+    LOG --> _render_run_log["_render_run_log\nSession History"]

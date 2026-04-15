@@ -1,10 +1,22 @@
 """
 Reporting module.
 
-Generates:
-  - Console summary (via Rich)
-  - JSON report file (with metrics + analysis)
-  - HTML visual dashboard with thumbnails, metrics, and brief analysis
+Business Value:
+  Stakeholder-ready deliverables in three formats — console for developers,
+  JSON for CI/CD integration, and interactive HTML dashboard for creative
+  directors and campaign managers to review without touching code.
+
+Purpose:
+  Aggregate all pipeline outputs (assets, metrics, analysis, compliance
+  results) into human-readable and machine-readable reports.
+
+Description:
+  Three output formats:
+    - Console summary (Rich tables) — asset counts, timing, compliance
+    - JSON report — full pipeline result with metrics, analysis scores,
+      and per-asset metadata for programmatic consumption
+    - HTML dashboard — interactive page with thumbnail gallery, KPI
+      cards, brief analysis visualization, and compliance status
 """
 
 from __future__ import annotations
@@ -513,16 +525,18 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 def print_console_report(result: PipelineResult) -> None:
     """Print a rich summary table to the console."""
     console.print()
-    console.print(Panel.fit(
-        f"[bold white]{result.campaign_name}[/bold white]\n"
-        f"Total: {result.total_assets} | "
-        f"[green]Created: {result.created_count}[/green] | "
-        f"[blue]Hero Reused: {result.hero_reused_count}[/blue] | "
-        f"[red]Failed: {result.failed_count}[/red] | "
-        f"Time: {result.elapsed_seconds:.1f}s",
-        title="AdForge Summary",
-        border_style="cyan",
-    ))
+    console.print(
+        Panel.fit(
+            f"[bold white]{result.campaign_name}[/bold white]\n"
+            f"Total: {result.total_assets} | "
+            f"[green]Created: {result.created_count}[/green] | "
+            f"[blue]Hero Reused: {result.hero_reused_count}[/blue] | "
+            f"[red]Failed: {result.failed_count}[/red] | "
+            f"Time: {result.elapsed_seconds:.1f}s",
+            title="AdForge Summary",
+            border_style="cyan",
+        )
+    )
 
     table = Table(show_header=True, header_style="bold cyan")
     table.add_column("Product", style="white")
@@ -551,8 +565,13 @@ def print_console_report(result: PipelineResult) -> None:
         brand_icon = _COMPLIANCE_ICONS.get(a.brand_compliance.status, "[dim]?[/dim]")
         legal_icon = _COMPLIANCE_ICONS.get(a.legal_compliance.status, "[dim]?[/dim]")
         table.add_row(
-            a.product_id, a.aspect_ratio, a.language,
-            hero_icon, status_icon, brand_icon, legal_icon,
+            a.product_id,
+            a.aspect_ratio,
+            a.language,
+            hero_icon,
+            status_icon,
+            brand_icon,
+            legal_icon,
             a.file_path,
         )
 

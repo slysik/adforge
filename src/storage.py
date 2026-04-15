@@ -1,10 +1,25 @@
 """
 Asset storage manager.
 
-Handles:
-  - Local file-based storage for input assets and generated outputs
-  - Cache-aware: checks for existing generated assets to avoid re-generation
-  - Organized output structure: output/<campaign>/<product>/<ratio>/
+Business Value:
+  Hero image reuse across runs reduces API costs to zero for cached assets.
+  A campaign re-run with the same products skips generation entirely,
+  cutting both cost and latency.
+
+Purpose:
+  Manage the local filesystem for input assets, generated heroes, and
+  final composited outputs. Provide cache-aware asset resolution so the
+  pipeline only generates what's missing.
+
+Description:
+  - Directory convention: output/<campaign-slug>/<product-slug>/<ratio>/
+  - Hero discovery: partial filename matching against existing assets
+  - Cache validation: PIL.Image.verify() detects corrupt cached files
+  - Asset packaging: ZIP export of campaign outputs for delivery
+  - Slug generation: filesystem-safe names from campaign/product titles
+
+  Production extension: replace with S3/AEM DAM storage abstraction
+  for horizontal scaling.
 """
 
 from __future__ import annotations
@@ -53,13 +68,18 @@ class StorageManager:
         d.mkdir(parents=True, exist_ok=True)
         return d
 
-    def get_ratio_dir(self, campaign_name: str, product_id: str, ratio_name: str) -> Path:
+    def get_ratio_dir(
+        self, campaign_name: str, product_id: str, ratio_name: str
+    ) -> Path:
         d = self.get_product_dir(campaign_name, product_id) / slugify(ratio_name)
         d.mkdir(parents=True, exist_ok=True)
         return d
 
     def hero_output_path(
-        self, campaign_name: str, product_id: str, ratio_name: str | None = None,
+        self,
+        campaign_name: str,
+        product_id: str,
+        ratio_name: str | None = None,
     ) -> Path:
         """Path for storing a generated hero image.
 
@@ -126,12 +146,16 @@ class StorageManager:
                 if candidate.name == "logo.png":
                     continue
                 if slug in candidate.stem:
-                    console.print(f"  [green]✓ Found existing hero (partial match): {candidate}[/green]")
+                    console.print(
+                        f"  [green]✓ Found existing hero (partial match): {candidate}[/green]"
+                    )
                     return candidate
 
         return None
 
-    def copy_hero_to_output(self, src: Path, campaign_name: str, product_id: str) -> Path:
+    def copy_hero_to_output(
+        self, src: Path, campaign_name: str, product_id: str
+    ) -> Path:
         """Copy an existing hero into the output tree."""
         dest = self.hero_output_path(campaign_name, product_id)
         dest.parent.mkdir(parents=True, exist_ok=True)
@@ -158,5 +182,7 @@ class StorageManager:
                     arcname = file_path.relative_to(campaign_dir.parent)
                     zf.write(file_path, arcname)
 
-        console.print(f"  [dim]ZIP package: {zip_path} ({zip_path.stat().st_size / 1024:.0f} KB)[/dim]")
+        console.print(
+            f"  [dim]ZIP package: {zip_path} ({zip_path.stat().st_size / 1024:.0f} KB)[/dim]"
+        )
         return zip_path

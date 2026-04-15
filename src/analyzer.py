@@ -1,18 +1,31 @@
 """
 LLM-powered campaign brief analyzer.
 
-Uses GenAI as a JUDGMENT tool (not just an image generator) to:
-  1. Score brief completeness and quality
-  2. Identify missing or weak fields
-  3. Suggest prompt enrichment for better hero generation
-  4. Flag potential brand/legal risks before generation
-  5. Generate creative direction recommendations
+Business Value:
+  Catches weak briefs before they burn GPU budget on mediocre creatives.
+  A 2-second analysis pass can prevent $5+ in wasted generation costs
+  and hours of manual creative review.
 
-This demonstrates explainable AI orchestration — the LLM's analysis
-is structured, auditable, and surfaced in the pipeline report.
+Purpose:
+  Use GenAI as a JUDGMENT tool — not just an image generator — to score
+  brief quality, flag risks, and enrich prompts before hero generation.
 
-In production, this would integrate with Adobe GenStudio or a
-client's creative brief management system.
+Description:
+  Two analysis paths that merge results:
+
+  1. HeuristicAnalyzer (no API key needed) — rule-based scoring across
+     four dimensions: completeness (0-25), clarity (0-25), brand strength
+     (0-25), and targeting (0-25). Always available for demos and CI.
+
+  2. LLMAnalyzer (optional, GPT-4o-mini) — generates strategic insights,
+     risk flags, and creative direction via structured JSON output. Falls
+     back gracefully to heuristic-only if API unavailable.
+
+  Output: BriefAnalysis with scores, recommendations, and prompt
+  enrichments that feed directly into hero generation prompts.
+
+  In production, this would integrate with Adobe GenStudio or a
+  client's creative brief management system.
 """
 
 from __future__ import annotations
@@ -34,19 +47,22 @@ console = Console()
 # Analysis result models
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class BriefScore:
     """Structured quality score for a campaign brief."""
-    overall: int = 0           # 0-100
-    completeness: int = 0      # 0-25: are all fields filled meaningfully?
-    clarity: int = 0           # 0-25: is the message clear and actionable?
-    brand_strength: int = 0    # 0-25: are brand guidelines well-defined?
-    targeting: int = 0         # 0-25: is the audience/region specific enough?
+
+    overall: int = 0  # 0-100
+    completeness: int = 0  # 0-25: are all fields filled meaningfully?
+    clarity: int = 0  # 0-25: is the message clear and actionable?
+    brand_strength: int = 0  # 0-25: are brand guidelines well-defined?
+    targeting: int = 0  # 0-25: is the audience/region specific enough?
 
 
 @dataclass
 class BriefAnalysis:
     """Complete analysis of a campaign brief."""
+
     score: BriefScore
     strengths: list[str] = field(default_factory=list)
     weaknesses: list[str] = field(default_factory=list)
@@ -60,6 +76,7 @@ class BriefAnalysis:
 # ---------------------------------------------------------------------------
 # Heuristic analyzer (always available, no API key needed)
 # ---------------------------------------------------------------------------
+
 
 class HeuristicAnalyzer:
     """Rule-based brief analyzer — fast, deterministic, always available.
@@ -105,15 +122,23 @@ class HeuristicAnalyzer:
             if p.keywords and len(p.keywords) >= 3:
                 completeness += 2
             else:
-                suggestions.append(f"Add more keywords for '{p.name}' — improves hero generation quality")
+                suggestions.append(
+                    f"Add more keywords for '{p.name}' — improves hero generation quality"
+                )
 
             if p.hero_image:
-                strengths.append(f"Pre-existing hero for '{p.name}' — saves generation cost")
+                strengths.append(
+                    f"Pre-existing hero for '{p.name}' — saves generation cost"
+                )
             else:
-                enrichments[p.id] = self._enrich_prompt(p.name, p.description, p.keywords, brief)
+                enrichments[p.id] = self._enrich_prompt(
+                    p.name, p.description, p.keywords, brief
+                )
 
             if len(p.description) < 20:
-                weaknesses.append(f"Product '{p.name}' description is thin — may produce generic heroes")
+                weaknesses.append(
+                    f"Product '{p.name}' description is thin — may produce generic heroes"
+                )
             elif len(p.description) > 50:
                 completeness += 2
 
@@ -123,28 +148,65 @@ class HeuristicAnalyzer:
         clarity = 0
 
         # Message actionability
-        action_words = ["stay", "get", "try", "feel", "glow", "discover", "taste", "enjoy"]
+        action_words = [
+            "stay",
+            "get",
+            "try",
+            "feel",
+            "glow",
+            "discover",
+            "taste",
+            "enjoy",
+        ]
         if any(w in brief.message.lower() for w in action_words):
             clarity += 8
             strengths.append("Campaign message uses action-oriented language")
         else:
             clarity += 3
-            suggestions.append("Consider action-oriented messaging (e.g., 'Discover...', 'Feel...')")
+            suggestions.append(
+                "Consider action-oriented messaging (e.g., 'Discover...', 'Feel...')"
+            )
 
         # Audience specificity
-        if any(term in brief.target_audience.lower() for term in ["ages", "year", "gen z", "millennial", "women", "men"]):
+        if any(
+            term in brief.target_audience.lower()
+            for term in ["ages", "year", "gen z", "millennial", "women", "men"]
+        ):
             clarity += 8
             strengths.append("Target audience includes demographic specifics")
         else:
             clarity += 3
-            weaknesses.append("Target audience is vague — add age range or psychographic details")
+            weaknesses.append(
+                "Target audience is vague — add age range or psychographic details"
+            )
 
         # Region specificity — recognize both country-level and sub-regional targeting
-        broad_regions = ["north america", "europe", "asia", "us", "uk", "germany", "france", "japan"]
+        broad_regions = [
+            "north america",
+            "europe",
+            "asia",
+            "us",
+            "uk",
+            "germany",
+            "france",
+            "japan",
+        ]
         local_regions = [
-            "florida", "naples", "palm beach", "miami", "charleston",
-            "southern", "california", "new york", "texas", "chicago",
-            "london", "paris", "tokyo", "sydney", "berlin",
+            "florida",
+            "naples",
+            "palm beach",
+            "miami",
+            "charleston",
+            "southern",
+            "california",
+            "new york",
+            "texas",
+            "chicago",
+            "london",
+            "paris",
+            "tokyo",
+            "sydney",
+            "berlin",
         ]
         region_lower = brief.target_region.lower()
         local_match = any(r in region_lower for r in local_regions)
@@ -157,7 +219,9 @@ class HeuristicAnalyzer:
             clarity += 6
         else:
             clarity += 2
-            suggestions.append("Be more specific about target region for localized creative style")
+            suggestions.append(
+                "Be more specific about target region for localized creative style"
+            )
 
         score.clarity = min(25, clarity)
 
@@ -169,7 +233,9 @@ class HeuristicAnalyzer:
             brand += 6
             strengths.append(f"Brand palette defined ({len(bg.primary_colors)} colors)")
         else:
-            weaknesses.append("Minimal brand palette — creatives may lack visual consistency")
+            weaknesses.append(
+                "Minimal brand palette — creatives may lack visual consistency"
+            )
 
         if bg.accent_color:
             brand += 3
@@ -179,17 +245,23 @@ class HeuristicAnalyzer:
             brand += 5
             strengths.append("Logo asset provided")
         else:
-            weaknesses.append("No logo provided — creatives will lack brand identity mark")
+            weaknesses.append(
+                "No logo provided — creatives will lack brand identity mark"
+            )
 
         if bg.prohibited_words:
             brand += 4
-            strengths.append(f"Prohibited words list ({len(bg.prohibited_words)} terms)")
+            strengths.append(
+                f"Prohibited words list ({len(bg.prohibited_words)} terms)"
+            )
 
         if bg.required_disclaimer:
             brand += 4
             strengths.append("Legal disclaimer configured")
         else:
-            risk_flags.append("No required disclaimer — verify legal compliance for target markets")
+            risk_flags.append(
+                "No required disclaimer — verify legal compliance for target markets"
+            )
 
         if bg.font_family and bg.font_family.lower() != "arial":
             brand += 3
@@ -207,7 +279,9 @@ class HeuristicAnalyzer:
 
         if len(brief.aspect_ratios) >= 3:
             targeting += 8
-            strengths.append(f"{len(brief.aspect_ratios)} aspect ratios for multi-platform delivery")
+            strengths.append(
+                f"{len(brief.aspect_ratios)} aspect ratios for multi-platform delivery"
+            )
 
         # Check if ratios cover major platforms
         ratio_values = {r.ratio for r in brief.aspect_ratios}
@@ -215,7 +289,9 @@ class HeuristicAnalyzer:
         covered = ratio_values & platform_coverage
         if covered == platform_coverage:
             targeting += 6
-            strengths.append("Full platform coverage: Instagram, Stories/Reels, Facebook/YouTube")
+            strengths.append(
+                "Full platform coverage: Instagram, Stories/Reels, Facebook/YouTube"
+            )
         else:
             missing = platform_coverage - covered
             suggestions.append(f"Missing aspect ratios: {', '.join(missing)}")
@@ -223,14 +299,18 @@ class HeuristicAnalyzer:
         score.targeting = min(25, targeting)
 
         # ── Overall ──────────────────────────────────────────────────
-        score.overall = score.completeness + score.clarity + score.brand_strength + score.targeting
+        score.overall = (
+            score.completeness + score.clarity + score.brand_strength + score.targeting
+        )
 
         # ── Risk flags ───────────────────────────────────────────────
         sensitive_terms = ["free", "best", "guaranteed", "miracle", "#1", "proven"]
         msg_lower = brief.message.lower()
         for term in sensitive_terms:
             if term in msg_lower:
-                risk_flags.append(f"Campaign message contains '{term}' — may trigger ad platform review")
+                risk_flags.append(
+                    f"Campaign message contains '{term}' — may trigger ad platform review"
+                )
 
         # ── Creative direction ───────────────────────────────────────
         direction = self._infer_creative_direction(brief)
@@ -307,7 +387,10 @@ class HeuristicAnalyzer:
             signals.append("seasonal")
         if any(w in msg_lower for w in ["new", "launch", "discover", "introducing"]):
             signals.append("product launch")
-        if any(w in msg_lower for w in ["coast", "shell", "beach", "ocean", "sea", "coastal"]):
+        if any(
+            w in msg_lower
+            for w in ["coast", "shell", "beach", "ocean", "sea", "coastal"]
+        ):
             signals.append("coastal/nautical")
 
         if not signals:
@@ -327,6 +410,7 @@ class HeuristicAnalyzer:
 # ---------------------------------------------------------------------------
 # LLM-powered analyzer (when API keys available)
 # ---------------------------------------------------------------------------
+
 
 class LLMAnalyzer:
     """LLM-enhanced brief analyzer.
@@ -370,12 +454,15 @@ Be specific and actionable. Focus on creative strategy, not technical implementa
             llm_insights = self._call_llm(brief)
             return self._merge(base, llm_insights)
         except Exception as exc:
-            console.print(f"  [yellow]⚠ LLM analysis failed ({exc}), using heuristic only[/yellow]")
+            console.print(
+                f"  [yellow]⚠ LLM analysis failed ({exc}), using heuristic only[/yellow]"
+            )
             return base
 
     def _call_llm(self, brief: CampaignBrief) -> dict:
         """Call the LLM with the brief for structured analysis."""
         from openai import OpenAI
+
         client = OpenAI(api_key=self.api_key)
 
         brief_text = self._format_brief_for_llm(brief)
@@ -385,7 +472,10 @@ Be specific and actionable. Focus on creative strategy, not technical implementa
             response_format={"type": "json_object"},
             messages=[
                 {"role": "system", "content": self.SYSTEM_PROMPT},
-                {"role": "user", "content": f"Analyze this campaign brief:\n\n{brief_text}"},
+                {
+                    "role": "user",
+                    "content": f"Analyze this campaign brief:\n\n{brief_text}",
+                },
             ],
             temperature=0.3,
             max_tokens=1000,
@@ -411,7 +501,9 @@ Be specific and actionable. Focus on creative strategy, not technical implementa
         for p in brief.products:
             lines.append(f"  - {p.name}: {p.description}")
             lines.append(f"    Keywords: {', '.join(p.keywords)}")
-            lines.append(f"    Hero: {'existing' if p.hero_image else 'needs generation'}")
+            lines.append(
+                f"    Hero: {'existing' if p.hero_image else 'needs generation'}"
+            )
 
         return "\n".join(lines)
 
@@ -437,11 +529,15 @@ Be specific and actionable. Focus on creative strategy, not technical implementa
                 base.risk_flags.append(f"[AI] {r}")
 
         if llm.get("creative_direction"):
-            base.creative_direction = f"{base.creative_direction}\n[AI] {llm['creative_direction']}"
+            base.creative_direction = (
+                f"{base.creative_direction}\n[AI] {llm['creative_direction']}"
+            )
 
         for pid, enrichment in llm.get("prompt_enrichments", {}).items():
             existing = base.prompt_enrichments.get(pid, "")
-            base.prompt_enrichments[pid] = f"{existing}; [AI] {enrichment}" if existing else f"[AI] {enrichment}"
+            base.prompt_enrichments[pid] = (
+                f"{existing}; [AI] {enrichment}" if existing else f"[AI] {enrichment}"
+            )
 
         return base
 
@@ -450,7 +546,10 @@ Be specific and actionable. Focus on creative strategy, not technical implementa
 # Public API
 # ---------------------------------------------------------------------------
 
-def analyze_brief(brief: CampaignBrief, use_llm: bool = False, api_key: Optional[str] = None) -> BriefAnalysis:
+
+def analyze_brief(
+    brief: CampaignBrief, use_llm: bool = False, api_key: Optional[str] = None
+) -> BriefAnalysis:
     """Analyze a campaign brief and return structured insights.
 
     Args:
@@ -473,19 +572,25 @@ def print_analysis(analysis: BriefAnalysis) -> None:
     # Score bar
     bar_filled = "█" * (score.overall // 5)
     bar_empty = "░" * (20 - score.overall // 5)
-    grade = "A" if score.overall >= 80 else "B" if score.overall >= 60 else "C" if score.overall >= 40 else "D"
+    grade = (
+        "A"
+        if score.overall >= 80
+        else "B" if score.overall >= 60 else "C" if score.overall >= 40 else "D"
+    )
 
-    console.print(Panel.fit(
-        f"[bold]Brief Quality Score: {score.overall}/100 ({grade})[/bold]\n"
-        f"  [{bar_filled}{bar_empty}]\n\n"
-        f"  Completeness:   {score.completeness}/25\n"
-        f"  Clarity:        {score.clarity}/25\n"
-        f"  Brand Strength: {score.brand_strength}/25\n"
-        f"  Targeting:      {score.targeting}/25\n\n"
-        f"  Analyzed by: {analysis.analyzed_by}",
-        title="[cyan]Brief Analysis[/cyan]",
-        border_style="cyan",
-    ))
+    console.print(
+        Panel.fit(
+            f"[bold]Brief Quality Score: {score.overall}/100 ({grade})[/bold]\n"
+            f"  [{bar_filled}{bar_empty}]\n\n"
+            f"  Completeness:   {score.completeness}/25\n"
+            f"  Clarity:        {score.clarity}/25\n"
+            f"  Brand Strength: {score.brand_strength}/25\n"
+            f"  Targeting:      {score.targeting}/25\n\n"
+            f"  Analyzed by: {analysis.analyzed_by}",
+            title="[cyan]Brief Analysis[/cyan]",
+            border_style="cyan",
+        )
+    )
 
     if analysis.strengths:
         console.print("\n[green]✓ Strengths:[/green]")
@@ -508,6 +613,8 @@ def print_analysis(analysis: BriefAnalysis) -> None:
             console.print(f"  • {r}")
 
     if analysis.creative_direction:
-        console.print(f"\n[bold]🎨 Creative Direction:[/bold] {analysis.creative_direction}")
+        console.print(
+            f"\n[bold]🎨 Creative Direction:[/bold] {analysis.creative_direction}"
+        )
 
     console.print()

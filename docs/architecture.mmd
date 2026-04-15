@@ -1,0 +1,93 @@
+graph TD
+    %% Entry Points
+    subgraph Entry_Points ["User Interfaces"]
+        CLI["CLI: src/cli.py"]
+        APP["Streamlit Web UI: src/app.py"]
+    end
+
+    %% Models - The Core Data Structure
+    subgraph Core_Data ["Data Models: src/models.py"]
+        BRIEF["CampaignBrief Pydantic Model"]
+        ASSET["GeneratedAsset Pydantic Model"]
+        RESULT["PipelineResult Pydantic Model"]
+    end
+
+    %% Orchestrator
+    subgraph Orchestrator ["Pipeline Orchestrator: src/pipeline.py"]
+        RUN["run_pipeline()"]
+
+        subgraph Stages ["7-Stage Execution Flow"]
+            S1["1. Ingestion & Pydantic Validation"]
+            S2["2. Brief Analysis & Enrichment"]
+            S3["3. Asset Resolution / Cache Check"]
+            S4["4. Parallel Hero Generation"]
+            S5["5. Layout Rendering / Composition"]
+            S6["6. Policy Compliance & Legal Checks"]
+            S7["7. Reporting & Analytics"]
+        end
+    end
+
+    %% Support Modules
+    ANALYZER["Brief Analyzer: src/analyzer.py"]
+    STORAGE["Storage Manager: src/storage.py"]
+    PROVIDERS["Provider Abstraction: src/providers.py"]
+    TEMPLATES["Template Registry: src/templates.py"]
+    COMPOSITOR["Compositor Engine: src/compositor.py"]
+    VALIDATOR["Compliance Validator: src/validator.py"]
+    TRACKER["Performance Tracker: src/tracker.py"]
+    REPORT["Report Generator: src/report.py"]
+
+    %% External Dependencies
+    FILESYSTEM[("Local Filesystem")]
+    AI_APIS{"External GenAI APIs"}
+
+    %% Data Flow Connections
+    CLI --> RUN
+    APP --> RUN
+
+    %% Stage 1
+    RUN --> S1
+    S1 -- "Validates YAML/JSON" --> BRIEF
+    S1 -- "Reads Input Assets" --> STORAGE
+    STORAGE <--> FILESYSTEM
+
+    %% Stage 2
+    S1 --> S2
+    S2 -- "Calls" --> ANALYZER
+    ANALYZER -- "Heuristic/LLM Analysis" --> S2
+    S2 -- "Enriches" --> BRIEF
+
+    %% Stage 3
+    S2 --> S3
+    S3 -- "Checks for existing assets" --> STORAGE
+
+    %% Stage 4
+    S3 --> S4
+    S4 -- "Uses Provider Factory" --> PROVIDERS
+    PROVIDERS -- "Text-to-Image / Expand" --> AI_APIS
+    AI_APIS -- "Returns Images" --> S4
+    S4 -- "Saves Heroes" --> STORAGE
+
+    %% Stage 5
+    S4 --> S5
+    S5 -- "Selects Strategy" --> TEMPLATES
+    S5 -- "Renders Text/Overlays" --> COMPOSITOR
+    COMPOSITOR -- "Composites via Pillow" --> S5
+
+    %% Stage 6
+    S5 --> S6
+    S6 -- "Pixel/String Audit" --> VALIDATOR
+    VALIDATOR -- "Status: Pass/Fail" --> ASSET
+
+    %% Stage 7
+    S6 --> S7
+    S7 -- "Aggregates Metrics" --> TRACKER
+    S7 -- "Generates HTML/JSON" --> REPORT
+    REPORT -- "Final Outputs" --> FILESYSTEM
+    S7 --> RESULT
+
+    %% Metadata Tracking - Cross-cutting
+    TRACKER -.-> RUN
+    TRACKER -.-> S4
+    TRACKER -.-> S5
+    TRACKER -.-> S6

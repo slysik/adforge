@@ -1,22 +1,32 @@
 """
 Image generation provider abstraction.
 
-Designed for Adobe Firefly-first architecture with graceful fallback chain:
-  1. Adobe Firefly Services (production — requires Adobe credentials)
-  2. OpenAI DALL-E 3 (development fallback)
-  3. Mock provider (testing — no API keys needed)
+Business Value:
+  Eliminates vendor lock-in and reduces per-asset generation costs by enabling
+  instant provider switching without code changes. The pipeline always runs —
+  even without API keys — so demos, tests, and CI never block on credentials.
 
-Why this abstraction matters:
-  - The target role works with Adobe Firefly Services daily
-  - A production deployment would use Firefly's generate, expand, and fill APIs
-  - This abstraction makes provider-swapping a config change, not a refactor
-  - Each provider exposes the same interface: generate_hero() → (Path, prompt, metadata)
+Purpose:
+  Provide a unified ImageProvider interface that decouples the pipeline from
+  any single GenAI vendor. The factory auto-resolves the best available provider
+  at runtime via a preference chain: Firefly → Gemini → Mock.
 
-Adobe Firefly Services API capabilities modeled here:
-  - Text-to-Image (generate) — primary hero generation
-  - Generative Expand — aspect-ratio adaptation without cropping artifacts
-  - Generative Fill — content-aware inpainting for localized variants
-  - Style Reference — brand-consistent generation from reference images
+Description:
+  Four concrete providers implement the same generate() contract:
+
+  1. Adobe Firefly Services (production) — Text-to-Image, Generative Expand
+     for aspect-ratio adaptation, and Style Reference for brand consistency.
+     Requires FIREFLY_CLIENT_ID / FIREFLY_CLIENT_SECRET.
+  2. Google Imagen 4.0 (primary fallback) — native aspect-ratio support via
+     the google-genai SDK. Requires GEMINI_API_KEY.
+  3. OpenAI DALL-E 3 (explicit selection only) — three fixed sizes, resized
+     to target dimensions after generation. Requires OPENAI_API_KEY.
+  4. Mock provider (testing) — deterministic procedural images using brand
+     colors from the prompt. Zero cost, fully repeatable.
+
+  All providers return (PIL.Image, GenerationMetadata) so downstream modules
+  (compositor, validator) are completely provider-agnostic. Transient API
+  failures are handled via exponential backoff with jitter.
 """
 
 from __future__ import annotations
@@ -41,7 +51,19 @@ console = Console()
 
 # ---------------------------------------------------------------------------
 # Retry utility with exponential backoff
+#
+# Business Value:  Prevents pipeline failures from costing time and money when
+#                  a single transient API hiccup would otherwise abort an
+#                  entire 18-asset generation run.
+# Purpose:         Wrap any callable with automatic retry, distinguishing
+#                  transient errors (rate limits, server errors, network)
+#                  from permanent ones (bad input, auth failures).
+# Description:     Exponential backoff with jitter:
+#                    delay = min(base * 2^attempt + random(0, base * 2^attempt), max)
+#                  Retries ConnectionError, TimeoutError, HTTP 429/5xx.
+#                  Does NOT retry ValueError, HTTP 4xx (except 429).
 # ---------------------------------------------------------------------------
+
 
 def _retry_api_call(
     func: Callable,
@@ -156,7 +178,7 @@ def _exponential_backoff(attempt: int, base_delay: float, max_delay: float):
     delay = min(base_delay * (2 ^ attempt) + jitter, max_delay)
     where jitter is uniformly random in [0, base_delay * (2 ^ attempt))
     """
-    exp_delay = base_delay * (2 ** attempt)
+    exp_delay = base_delay * (2**attempt)
     jitter = random.uniform(0, exp_delay)
     delay = min(exp_delay + jitter, max_delay)
     console.print(f"  [dim]Retrying in {delay:.1f}s…[/dim]")
@@ -165,11 +187,21 @@ def _exponential_backoff(attempt: int, base_delay: float, max_delay: float):
 
 # ---------------------------------------------------------------------------
 # Provider metadata
+#
+# Business Value:  Enables per-asset cost tracking and performance dashboards
+#                  so campaign managers can optimize spend across providers.
+# Purpose:         Carry provider, model, timing, and cost data alongside
+#                  every generated image through the pipeline.
+# Description:     Immutable dataclass returned by every provider's generate()
+#                  method. Downstream modules (tracker, report) consume this
+#                  without needing to know which provider created the asset.
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class GenerationMetadata:
     """Metadata returned by every provider alongside the generated image."""
+
     provider: str
     model: str
     prompt_used: str
@@ -181,6 +213,7 @@ class GenerationMetadata:
 
 class ProviderType(str, Enum):
     """Available image generation providers."""
+
     FIREFLY = "firefly"
     DALLE = "dalle"
     GEMINI = "gemini"
@@ -189,7 +222,17 @@ class ProviderType(str, Enum):
 
 # ---------------------------------------------------------------------------
 # Abstract base provider
+#
+# Business Value:  Makes the pipeline vendor-agnostic — new providers can be
+#                  added without touching orchestration or composition code.
+# Purpose:         Define the contract every image provider must fulfill:
+#                  generate() → (PIL.Image, GenerationMetadata).
+# Description:     ABC with three abstract members (provider_type, model_name,
+#                  generate) and an optional is_available() check. The factory
+#                  function get_provider() uses is_available() to auto-resolve
+#                  the best provider at runtime.
 # ---------------------------------------------------------------------------
+
 
 class ImageProvider(ABC):
     """Abstract image generation provider.
@@ -200,13 +243,11 @@ class ImageProvider(ABC):
 
     @property
     @abstractmethod
-    def provider_type(self) -> ProviderType:
-        ...
+    def provider_type(self) -> ProviderType: ...
 
     @property
     @abstractmethod
-    def model_name(self) -> str:
-        ...
+    def model_name(self) -> str: ...
 
     @abstractmethod
     def generate(
@@ -238,27 +279,29 @@ class ImageProvider(ABC):
 
 # ---------------------------------------------------------------------------
 # Adobe Firefly Services Provider
+#
+# Business Value:  Targets the production-grade GenAI platform used by creative
+#                  teams at scale. Firefly's Generative Expand eliminates
+#                  cropping artifacts when adapting assets across aspect ratios,
+#                  saving manual design rework.
+# Purpose:         Primary provider — implements Text-to-Image and Generative
+#                  Expand via the Firefly Services REST API, plus Style
+#                  Reference for brand-consistent generation.
+# Description:     Authenticates via Adobe IMS client_credentials grant.
+#                  Maps requested dimensions to the nearest Firefly-supported
+#                  size, generates the image, then resizes to exact target.
+#                  The expand() method adapts existing assets to new aspect
+#                  ratios by generating contextually consistent edge content.
+#                  Falls back gracefully when credentials are absent.
+#
+#                  Env vars: FIREFLY_CLIENT_ID, FIREFLY_CLIENT_SECRET,
+#                            FIREFLY_IMS_ORG_ID (optional, enterprise).
+#                  Pricing: ~$0.04/standard, ~$0.08/premium generation.
 # ---------------------------------------------------------------------------
 
+
 class FireflyProvider(ImageProvider):
-    """Adobe Firefly Services provider.
-
-    Implements the Firefly Services REST API for:
-      - Text-to-Image generation (POST /v3/images/generate)
-      - Generative Expand (POST /v3/images/expand) — for aspect ratio adaptation
-      - Style Reference — pass a reference image for brand consistency
-
-    Authentication: requires Adobe IMS client credentials:
-      - FIREFLY_CLIENT_ID (from Adobe Developer Console)
-      - FIREFLY_CLIENT_SECRET
-      - FIREFLY_IMS_ORG_ID (optional, for enterprise)
-
-    In production, this would use adobe-auth-sdk for token management.
-    It falls back gracefully when credentials are absent.
-
-    API Reference: https://developer.adobe.com/firefly-services/docs/
-    Pricing: ~$0.04 per standard generation, ~$0.08 per premium generation
-    """
+    """Adobe Firefly Services provider — production-grade image generation."""
 
     GENERATE_ENDPOINT = "https://firefly-api.adobe.io/v3/images/generate"
     EXPAND_ENDPOINT = "https://firefly-api.adobe.io/v3/images/expand"
@@ -266,8 +309,13 @@ class FireflyProvider(ImageProvider):
 
     # Firefly supports these sizes natively
     SUPPORTED_SIZES = {
-        (1024, 1024), (1152, 896), (896, 1152),
-        (1024, 1408), (1408, 1024), (1024, 1792), (1792, 1024),
+        (1024, 1024),
+        (1152, 896),
+        (896, 1152),
+        (1024, 1408),
+        (1408, 1024),
+        (1024, 1792),
+        (1792, 1024),
     }
 
     def __init__(self):
@@ -298,6 +346,7 @@ class FireflyProvider(ImageProvider):
             return self._access_token
 
         import requests
+
         response = requests.post(
             self.TOKEN_ENDPOINT,
             data={
@@ -357,6 +406,7 @@ class FireflyProvider(ImageProvider):
         # Style reference for brand consistency
         if style_reference and style_reference.exists():
             import base64
+
             ref_bytes = style_reference.read_bytes()
             body["style"] = {
                 "imageReference": {
@@ -368,7 +418,9 @@ class FireflyProvider(ImageProvider):
                 "strength": 60,  # 0-100, balanced between reference and prompt
             }
 
-        console.print(f"  [magenta]Calling Firefly Services ({gen_w}×{gen_h})…[/magenta]")
+        console.print(
+            f"  [magenta]Calling Firefly Services ({gen_w}×{gen_h})…[/magenta]"
+        )
 
         # Retry wrapper for the API call
         def make_request():
@@ -452,17 +504,24 @@ class FireflyProvider(ImageProvider):
             "size": {"width": target_width, "height": target_height},
         }
 
-        response = requests.post(
-            self.EXPAND_ENDPOINT,
-            headers=headers,
-            json=body,
-            timeout=120,
-        )
-        response.raise_for_status()
-        data = response.json()
+        def _expand_request():
+            resp = requests.post(
+                self.EXPAND_ENDPOINT,
+                headers=headers,
+                json=body,
+                timeout=120,
+            )
+            resp.raise_for_status()
+            return resp.json()
+
+        data = _retry_api_call(_expand_request)
 
         image_url = data["outputs"][0]["image"]["url"]
-        img_bytes = requests.get(image_url, timeout=120).content
+
+        def _download_expanded():
+            return requests.get(image_url, timeout=120).content
+
+        img_bytes = _retry_api_call(_download_expanded)
         img = Image.open(io.BytesIO(img_bytes)).convert("RGBA")
 
         elapsed_ms = int((time.time() - start) * 1000)
@@ -484,6 +543,20 @@ class FireflyProvider(ImageProvider):
 
 # ---------------------------------------------------------------------------
 # OpenAI DALL-E 3 Provider
+#
+# Business Value:  Provides access to OpenAI's image generation when Firefly
+#                  or Gemini are not available or when creative teams want to
+#                  compare outputs across providers.
+# Purpose:         Explicit-selection provider — used only when the caller
+#                  specifies provider_type="dalle". Not part of the auto-detect
+#                  fallback chain.
+# Description:     DALL-E 3 supports only three fixed sizes (1024x1024,
+#                  1024x1792, 1792x1024). The provider picks the closest match
+#                  by aspect ratio, generates the image, then resizes to exact
+#                  target dimensions via Lanczos resampling.
+#
+#                  Env vars: OPENAI_API_KEY
+#                  Pricing: ~$0.04/standard, ~$0.08/HD generation.
 # ---------------------------------------------------------------------------
 
 DALLE3_SIZES = {
@@ -494,14 +567,7 @@ DALLE3_SIZES = {
 
 
 class DalleProvider(ImageProvider):
-    """OpenAI DALL-E 3 provider.
-
-    Used as a development fallback when Firefly credentials are not available.
-    DALL-E 3 supports only three fixed sizes; images are resized to target
-    dimensions after generation.
-
-    Pricing: ~$0.040 per standard, ~$0.080 per HD generation
-    """
+    """OpenAI DALL-E 3 provider — explicit selection only, not auto-detected."""
 
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
@@ -509,9 +575,16 @@ class DalleProvider(ImageProvider):
         if self.api_key:
             try:
                 from openai import OpenAI
+
                 self._client = OpenAI(api_key=self.api_key)
-            except Exception:
-                pass
+            except ImportError:
+                console.print(
+                    "[yellow]⚠ openai package not installed — DALL-E unavailable.[/yellow]"
+                )
+            except Exception as exc:
+                console.print(
+                    f"[yellow]⚠ OpenAI init failed ({exc}) — DALL-E unavailable.[/yellow]"
+                )
 
     @property
     def provider_type(self) -> ProviderType:
@@ -590,29 +663,44 @@ class DalleProvider(ImageProvider):
 
 # ---------------------------------------------------------------------------
 # Google Gemini / Imagen Provider
+#
+# Business Value:  Offers a free-tier entry point for development and the
+#                  widest native aspect-ratio support (5 ratios), reducing
+#                  post-generation resize distortion compared to DALL-E.
+# Purpose:         Primary fallback when Firefly credentials are absent.
+#                  Second in the auto-detect chain: Firefly → Gemini → Mock.
+# Description:     Uses the google-genai SDK to call Imagen 4.0. Picks the
+#                  closest native aspect ratio (1:1, 9:16, 16:9, 3:4, 4:3)
+#                  then resizes to exact target dimensions if needed.
+#
+#                  Env vars: GEMINI_API_KEY or NANO_BANANA_API_KEY
+#                  Pricing: free tier available, then per-image.
 # ---------------------------------------------------------------------------
 
 IMAGEN_RATIOS = {"1:1", "9:16", "16:9", "3:4", "4:3"}
 
 
 class GeminiProvider(ImageProvider):
-    """Google Gemini Imagen 4.0 provider.
-
-    Uses the google-genai SDK to generate images via Imagen 4.0.
-    Supports native aspect ratios so no post-resize distortion.
-
-    Pricing: free tier available, then per-image pricing.
-    """
+    """Google Imagen 4.0 provider — primary fallback in the auto-detect chain."""
 
     def __init__(self, api_key: Optional[str] = None):
-        self.api_key = api_key or os.getenv("GEMINI_API_KEY") or os.getenv("NANO_BANANA_API_KEY")
+        self.api_key = (
+            api_key or os.getenv("GEMINI_API_KEY") or os.getenv("NANO_BANANA_API_KEY")
+        )
         self._client = None
         if self.api_key:
             try:
                 from google import genai
+
                 self._client = genai.Client(api_key=self.api_key)
-            except Exception:
-                pass
+            except ImportError:
+                console.print(
+                    "[yellow]⚠ google-genai package not installed — Gemini unavailable.[/yellow]"
+                )
+            except Exception as exc:
+                console.print(
+                    f"[yellow]⚠ Gemini init failed ({exc}) — Gemini unavailable.[/yellow]"
+                )
 
     @property
     def provider_type(self) -> ProviderType:
@@ -693,6 +781,19 @@ class GeminiProvider(ImageProvider):
 
 # ---------------------------------------------------------------------------
 # Mock Provider
+#
+# Business Value:  Enables the full pipeline demo, CI/CD, and test suite to
+#                  run without any API keys or network access — zero cost,
+#                  instant feedback, no rate-limit risk.
+# Purpose:         Last resort in the auto-detect chain and the default for
+#                  testing. Produces deterministic images so test assertions
+#                  are stable across runs.
+# Description:     Generates procedural product-style images using brand
+#                  colors extracted from the prompt (or a hash-derived
+#                  palette as fallback). Output is label-free and watermark-
+#                  free. Same (PIL.Image, GenerationMetadata) contract as
+#                  real providers — downstream modules are unaware they are
+#                  consuming mock output.
 # ---------------------------------------------------------------------------
 
 # Canonical dimensions for mock mode per aspect ratio
@@ -704,16 +805,7 @@ MOCK_DIMS = {
 
 
 class MockProvider(ImageProvider):
-    """Deterministic mock provider for testing.
-
-    Generates clean, label-free product-style images using procedural
-    graphics. Every property of the output (dimensions, palette) is
-    deterministic given the same prompt, so tests are repeatable.
-
-    NO text labels, NO watermarks. Mock output has the same contract
-    as real provider output — the downstream compositor doesn't know
-    or care which provider generated the hero.
-    """
+    """Deterministic mock provider — zero cost, fully repeatable output."""
 
     @property
     def provider_type(self) -> ProviderType:
@@ -734,7 +826,11 @@ class MockProvider(ImageProvider):
         start = time.time()
 
         # Extract product name from prompt for deterministic palette
-        product_name = prompt.split("Product: ")[-1].split(" – ")[0] if "Product:" in prompt else prompt[:30]
+        product_name = (
+            prompt.split("Product: ")[-1].split(" – ")[0]
+            if "Product:" in prompt
+            else prompt[:30]
+        )
         img = self._procedural_image(product_name, width, height, prompt)
 
         elapsed_ms = int((time.time() - start) * 1000)
@@ -757,6 +853,7 @@ class MockProvider(ImageProvider):
     def _parse_brand_colors(prompt: str) -> list[tuple[int, int, int]]:
         """Extract hex colors from the 'Brand color palette:' clause in the prompt."""
         import re
+
         match = re.search(r"Brand color palette:\s*([^.]+)\.", prompt)
         if not match:
             return []
@@ -764,7 +861,9 @@ class MockProvider(ImageProvider):
         return [(int(h[:2], 16), int(h[2:4], 16), int(h[4:6], 16)) for h in hex_codes]
 
     @staticmethod
-    def _procedural_image(product_name: str, w: int, h: int, prompt: str = "") -> Image.Image:
+    def _procedural_image(
+        product_name: str, w: int, h: int, prompt: str = ""
+    ) -> Image.Image:
         """Generate a clean procedural product image using brand colors when available."""
         from colorsys import hsv_to_rgb, rgb_to_hsv
 
@@ -778,6 +877,7 @@ class MockProvider(ImageProvider):
             # Use actual brand colors: first for background (lightened), second for product, last for accent
             def lighten(rgb, factor=0.85):
                 return tuple(int(c + (255 - c) * factor) for c in rgb)
+
             bg = lighten(brand_rgbs[0], 0.75)
             prod_color = brand_rgbs[1] if len(brand_rgbs) > 1 else brand_rgbs[0]
             accent = brand_rgbs[-1] if len(brand_rgbs) > 2 else brand_rgbs[0]
@@ -802,7 +902,9 @@ class MockProvider(ImageProvider):
             alpha = int(40 * (radius / max_r))
             draw.ellipse(
                 [cx - radius, cy - radius, cx + radius, cy + radius],
-                fill=None, outline=(255, 255, 255, alpha), width=4,
+                fill=None,
+                outline=(255, 255, 255, alpha),
+                width=4,
             )
 
         # Central product shape
@@ -819,7 +921,8 @@ class MockProvider(ImageProvider):
             )
             draw.rounded_rectangle(
                 [margin_x, margin_top + int(h * 0.08), w - margin_x, h - margin_bot],
-                radius=int(w * 0.04), fill=prod_color + (230,),
+                radius=int(w * 0.04),
+                fill=prod_color + (230,),
             )
             band_y = int(h * 0.42)
             draw.rectangle(
@@ -833,36 +936,49 @@ class MockProvider(ImageProvider):
                 fill=prod_color + (230,),
             )
             draw.rectangle(
-                [cx - int(jar_r * 0.7), cy - jar_r - int(h * 0.04),
-                 cx + int(jar_r * 0.7), cy - jar_r + int(h * 0.02)],
+                [
+                    cx - int(jar_r * 0.7),
+                    cy - jar_r - int(h * 0.04),
+                    cx + int(jar_r * 0.7),
+                    cy - jar_r + int(h * 0.02),
+                ],
                 fill=accent + (180,),
             )
             draw.ellipse(
-                [cx - int(jar_r * 0.5), cy - int(jar_r * 0.5),
-                 cx + int(jar_r * 0.2), cy + int(jar_r * 0.2)],
+                [
+                    cx - int(jar_r * 0.5),
+                    cy - int(jar_r * 0.5),
+                    cx + int(jar_r * 0.2),
+                    cy + int(jar_r * 0.2),
+                ],
                 fill=(255, 255, 255, 40),
             )
         else:
             draw.rounded_rectangle(
                 [margin_x, margin_top, w - margin_x, h - margin_bot],
-                radius=int(w * 0.02), fill=prod_color + (230,),
+                radius=int(w * 0.02),
+                fill=prod_color + (230,),
             )
             panel_x = cx - int(w * 0.05)
             draw.line(
                 [(panel_x, margin_top + 10), (panel_x, h - margin_bot - 10)],
-                fill=accent + (100,), width=3,
+                fill=accent + (100,),
+                width=3,
             )
             draw.polygon(
-                [(margin_x, margin_top), (cx, margin_top - int(h * 0.05)),
-                 (w - margin_x, margin_top)],
+                [
+                    (margin_x, margin_top),
+                    (cx, margin_top - int(h * 0.05)),
+                    (w - margin_x, margin_top),
+                ],
                 fill=prod_color + (200,),
             )
 
         # Accent circles
         for i in range(5):
-            seed_val = int(digest[6 + i * 2: 8 + i * 2], 16)
+            seed_val = int(digest[6 + i * 2 : 8 + i * 2], 16)
             ax = int((seed_val / 255) * w)
-            ay = int((int(digest[8 + i * 2: 10 + i * 2], 16) / 255) * h)
+            ay = int((int(digest[8 + i * 2 : 10 + i * 2], 16) / 255) * h)
             ar = int(min(w, h) * 0.03 + (seed_val % 30))
             draw.ellipse([ax - ar, ay - ar, ax + ar, ay + ar], fill=accent + (50,))
 
@@ -880,7 +996,20 @@ class MockProvider(ImageProvider):
 
 # ---------------------------------------------------------------------------
 # Provider factory
+#
+# Business Value:  Guarantees the pipeline always runs regardless of which
+#                  API keys are available — demos never fail, production
+#                  uses the best provider, and tests use mock automatically.
+# Purpose:         Single entry point for provider resolution. Handles both
+#                  explicit selection (fail loudly) and auto-detection
+#                  (degrade gracefully).
+# Description:     Resolution order:
+#                    1. mock=True or provider_type="mock" → MockProvider
+#                    2. Explicit provider_type → that provider (raises if
+#                       credentials are missing)
+#                    3. Auto-detect: Firefly → Gemini → Mock (with warning)
 # ---------------------------------------------------------------------------
+
 
 def get_provider(
     provider_type: Optional[str] = None,
@@ -898,11 +1027,11 @@ def get_provider(
     This design ensures the pipeline always runs, degrading gracefully.
     Explicit provider selection raises instead of silently falling back.
     """
-    if mock or provider_type == "mock":
+    if mock or provider_type == ProviderType.MOCK.value:
         return MockProvider()
 
     # Explicit provider selection — fail loudly if unavailable
-    if provider_type == "firefly":
+    if provider_type == ProviderType.FIREFLY.value:
         provider = FireflyProvider()
         if provider.is_available():
             return provider
@@ -910,15 +1039,13 @@ def get_provider(
             "Firefly provider selected but FIREFLY_CLIENT_ID / FIREFLY_CLIENT_SECRET not set."
         )
 
-    if provider_type == "dalle":
+    if provider_type == ProviderType.DALLE.value:
         provider = DalleProvider(api_key=api_key)
         if provider.is_available():
             return provider
-        raise RuntimeError(
-            "DALL-E provider selected but OPENAI_API_KEY not set."
-        )
+        raise RuntimeError("DALL-E provider selected but OPENAI_API_KEY not set.")
 
-    if provider_type == "gemini":
+    if provider_type == ProviderType.GEMINI.value:
         provider = GeminiProvider(api_key=api_key)
         if provider.is_available():
             return provider

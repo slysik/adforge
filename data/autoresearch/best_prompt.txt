@@ -1,0 +1,21 @@
+Create a rich hand-drawn sketchnote illustration on a clean white background. Style: professional illustrator with bold markers — hand-lettered text with natural pen imperfections, small hand-drawn pictogram icons (clipboard=validate, brain=analyze, database=cache, wand=generate, palette=compose, shield=validate, chart=report), dashed rough-edged borders on boxes, soft pastel watercolor fills. NOT a wireframe. NOT flat digital. Warm, illustrated, hand-crafted technical diagram feel.
+
+CONTEXT: AdForge — a creative automation pipeline that transforms a single campaign brief into 18 localized ad creatives in seconds. This is the solution architecture overview for a technical interview.
+
+COLORS:
+- Stage boxes: soft pastels — light blue (#a5d8ff), light green (#b2f2bb), light yellow (#fff3bf), light purple (#d0bfff), light pink (#fef2f0), light teal (#c3fae8), light gray (#e9ecef).
+- Input/output boxes: pastel orange (#ffd8a8).
+- Orchestrator banner: light coral (#ffc9c9).
+- All text: dark (#1e1e1e). No bright/saturated fills.
+
+TITLE RULE: Slide title = plain bold marker text at top-left. NO box around the title.
+
+TEXT CLARITY — HIGHEST PRIORITY: Every character crisp and readable at 30pt+. Generous spacing. NEVER overlap text. Module names in smaller text below each stage box.
+
+LAYOUT LAW: STRICT left-to-right horizontal flow. Seven stage boxes in a single row connected by right-arrows. Input on far left, output on far right. Orchestrator banner below spanning full width. ALL arrows point RIGHT only.
+
+FORBIDDEN — ZERO TOLERANCE:
+- NO hub-and-spoke, radial, circular, or fan-out arrangements
+- NO diagonal arrows, NO upward arrows
+- NO step numbers, NO digits indicating sequence
+- NO cluttered or overlapping elements

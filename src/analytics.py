@@ -1,9 +1,21 @@
 """
 Performance analytics for creative campaigns.
 
-Generates sample KPI data and identifies winning creatives based on
-spend efficiency (CTR, CPA). In production, this would ingest real
-ad platform data; here we generate realistic demo data.
+Business Value:
+  Identifies winning creatives for budget reallocation — the asset with
+  the lowest CPA gets more spend. Demonstrates how creative automation
+  connects to performance marketing decisions.
+
+Purpose:
+  Simulate campaign KPIs (CTR, CPA, impressions, conversions) and
+  identify the winning creative variant per campaign. In production,
+  this would ingest real ad platform data (Meta Ads, Google Ads).
+
+Description:
+  Generates realistic demo KPI data per asset, then ranks by CPA
+  (Cost Per Acquisition). Winner detection uses lowest CPA among
+  eligible assets (minimum impression threshold). Exports to CSV
+  for further analysis.
 """
 
 from __future__ import annotations
@@ -17,6 +29,7 @@ from pathlib import Path
 @dataclass
 class CreativeKPI:
     """Performance metrics for a single creative asset."""
+
     creative_id: str
     product_id: str
     aspect_ratio: str
@@ -45,6 +58,7 @@ class CreativeKPI:
 @dataclass
 class PerformanceReport:
     """Aggregated performance report with winner detection."""
+
     kpis: list[CreativeKPI] = field(default_factory=list)
     winner: CreativeKPI | None = None
     total_spend: float = 0.0
@@ -85,16 +99,18 @@ def generate_sample_kpis(
 
         creative_id = f"{product_id}_{ratio.replace(':', 'x')}_{lang}"
 
-        kpis.append(CreativeKPI(
-            creative_id=creative_id,
-            product_id=product_id,
-            aspect_ratio=ratio,
-            language=lang,
-            spend_usd=spend,
-            impressions=impressions,
-            clicks=clicks,
-            conversions=conversions,
-        ))
+        kpis.append(
+            CreativeKPI(
+                creative_id=creative_id,
+                product_id=product_id,
+                aspect_ratio=ratio,
+                language=lang,
+                spend_usd=spend,
+                impressions=impressions,
+                clicks=clicks,
+                conversions=conversions,
+            )
+        )
 
     return kpis
 
@@ -133,16 +149,35 @@ def export_kpis_csv(kpis: list[CreativeKPI], path: Path) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w", newline="") as f:
         writer = csv.writer(f)
-        writer.writerow([
-            "creative_id", "product_id", "aspect_ratio", "language",
-            "spend_usd", "impressions", "clicks", "conversions",
-            "ctr_pct", "cpa_usd", "cpc_usd",
-        ])
+        writer.writerow(
+            [
+                "creative_id",
+                "product_id",
+                "aspect_ratio",
+                "language",
+                "spend_usd",
+                "impressions",
+                "clicks",
+                "conversions",
+                "ctr_pct",
+                "cpa_usd",
+                "cpc_usd",
+            ]
+        )
         for k in kpis:
-            writer.writerow([
-                k.creative_id, k.product_id, k.aspect_ratio, k.language,
-                f"{k.spend_usd:.2f}", k.impressions, k.clicks, k.conversions,
-                f"{k.ctr:.2f}", f"{k.cpa:.2f}" if k.cpa != float("inf") else "N/A",
-                f"{k.cpc:.2f}" if k.cpc != float("inf") else "N/A",
-            ])
+            writer.writerow(
+                [
+                    k.creative_id,
+                    k.product_id,
+                    k.aspect_ratio,
+                    k.language,
+                    f"{k.spend_usd:.2f}",
+                    k.impressions,
+                    k.clicks,
+                    k.conversions,
+                    f"{k.ctr:.2f}",
+                    f"{k.cpa:.2f}" if k.cpa != float("inf") else "N/A",
+                    f"{k.cpc:.2f}" if k.cpc != float("inf") else "N/A",
+                ]
+            )
     return path
