@@ -141,7 +141,6 @@ render_hero_header(
     "AdForge",
     "Build briefs. Generate creatives. Review and approve — all in one place.",
     compact=_has_results,
-    badge="Pipeline Studio",
 )
 
 # ---------------------------------------------------------------------------
