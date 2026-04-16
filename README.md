@@ -258,28 +258,7 @@ Results embedded in every asset's metadata:
 
 ## 🏗️ Architecture
 
-```mermaid
-graph TD
-    subgraph Frontend ["src/frontend/"]
-        APP["Streamlit Web UI"]
-    end
-
-    subgraph Backend ["src/backend/"]
-        CLI["CLI"]
-        Pipeline["Pipeline Orchestrator"]
-        CLI --> Pipeline
-        Pipeline --> Models[Models / Pydantic]
-        Pipeline --> Analyzer[Analyzer]
-        Pipeline --> Providers[Providers]
-        Pipeline --> Templates[Templates]
-        Pipeline --> Compositor[Compositor]
-        Pipeline --> Validator[Validator]
-        Pipeline --> Report[Report Engine]
-    end
-
-    APP --> Pipeline
-    Providers --> GenAI[GenAI APIs / Mock]
-```
+![AdForge Solution Architecture](docs/solution_architecture.png)
 
 ### Module Inventory (~7,900 lines)
 
