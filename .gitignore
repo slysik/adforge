@@ -27,6 +27,8 @@ pytest-cache-files-*/
 .idea/
 .vscode/
 *.swp
+.streamlit/*.log
+.streamlit/*.pid
 
 # OS
 .DS_Store
