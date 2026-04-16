@@ -383,49 +383,29 @@ def _render_import_section() -> None:
     """Render the brief import controls: file uploader + saved brief picker."""
     import yaml as _yaml
 
-    with st.expander("📂 Import a Campaign Brief", expanded=False):
-        col_upload, col_saved = st.columns(2)
-
-        with col_upload:
-            uploaded = st.file_uploader(
-                "Upload YAML file",
-                type=["yaml", "yml"],
-                key="brief_uploader",
+    with st.expander("📂 Load Saved Brief", expanded=False):
+        saved_briefs = _list_saved_briefs()
+        if saved_briefs:
+            labels = {p.stem.replace("_", " ").title(): p for p in saved_briefs}
+            choice = st.selectbox(
+                "Load saved brief",
+                ["— Select —"] + list(labels.keys()),
+                key="saved_brief_picker",
+                label_visibility="collapsed",
             )
-            if uploaded is not None:
+            if choice != "— Select —" and st.button("Load", key="load_saved_brief"):
                 try:
-                    data = _yaml.safe_load(uploaded.read())
+                    data = _yaml.safe_load(labels[choice].read_text())
                     if "campaign" in data:
                         data = data["campaign"]
                     brief = CampaignBrief(**data)
                     _populate_builder_from_brief(brief)
-                    st.success(f"Loaded **{brief.name}** — fields updated below.")
+                    st.success(f"Loaded **{brief.name}**")
                     st.rerun()
                 except Exception as exc:
                     st.error(f"Failed to load brief: {exc}")
-
-        with col_saved:
-            saved_briefs = _list_saved_briefs()
-            if saved_briefs:
-                labels = {p.stem.replace("_", " ").title(): p for p in saved_briefs}
-                choice = st.selectbox(
-                    "Or load a saved brief",
-                    ["— Select —"] + list(labels.keys()),
-                    key="saved_brief_picker",
-                )
-                if choice != "— Select —" and st.button("Load", key="load_saved_brief"):
-                    try:
-                        data = _yaml.safe_load(labels[choice].read_text())
-                        if "campaign" in data:
-                            data = data["campaign"]
-                        brief = CampaignBrief(**data)
-                        _populate_builder_from_brief(brief)
-                        st.success(f"Loaded **{brief.name}**")
-                        st.rerun()
-                    except Exception as exc:
-                        st.error(f"Failed to load brief: {exc}")
-            else:
-                st.caption("No saved briefs yet. Run the pipeline to save one.")
+        else:
+            st.caption("No saved briefs yet. Run the pipeline to save one.")
 
 
 def render_brief_builder() -> CampaignBrief | None:

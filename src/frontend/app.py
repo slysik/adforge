@@ -111,7 +111,7 @@ with st.sidebar:
     st.markdown(
         '<div style="position:fixed;bottom:0.8rem;left:0;width:88px;text-align:center">'
         '<div class="af-nav-divider"></div>'
-        '<div style="font-size:0.55rem;color:rgba(255,255,255,.4);padding-top:0.3rem">AdForge v1.0</div>'
+        '<div style="font-size:0.55rem;color:rgba(255,255,255,.4);padding-top:0.3rem">AdForge v2.0</div>'
         "</div>",
         unsafe_allow_html=True,
     )

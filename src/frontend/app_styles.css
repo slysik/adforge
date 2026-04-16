@@ -157,26 +157,20 @@ html, body, [class*="css"] {
   background: rgba(255,255,255,.15);
   margin: 0.4rem 0.6rem;
 }
-/* Sidebar button overrides — functional but visually minimal */
+/* Sidebar button overrides */
 [data-testid="stSidebar"] .stButton > button {
   background: transparent !important;
   color: rgba(255,255,255,.85) !important;
   border: none !important;
   font-weight: 600 !important;
-  padding: 0.4rem 0.2rem !important;
+  padding: 0.5rem 0.4rem !important;
   width: 100% !important;
-  font-size: 0.68rem !important;
+  font-size: 0.72rem !important;
   border-radius: var(--radius-sm) !important;
   transition: background var(--transition) !important;
-  margin-top: -2.8rem !important;
-  position: relative;
-  z-index: 10;
-  height: 3.2rem !important;
-  opacity: 0;
 }
 [data-testid="stSidebar"] .stButton > button:hover {
-  opacity: 1;
-  background: rgba(255,255,255,.08) !important;
+  background: rgba(255,255,255,.12) !important;
 }
 /* Hide sidebar close button */
 [data-testid="stSidebar"] [data-testid="stSidebarCloseButton"] {
