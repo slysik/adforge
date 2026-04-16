@@ -289,62 +289,6 @@ Results embedded in every asset's metadata:
 | `app_styles.css` | Custom CSS theme for branded UI |
 
 ---
-
-## 🔌 Provider Architecture
-
-```
-┌────────────────────────────────────────────┐
-│          ImageProvider (ABC)                │
-│     generate() → (PIL Image, Metadata)     │
-└───┬────────┬────────┬────────┬─────────────┘
-    │        │        │        │
-┌───▼──┐ ┌───▼──┐ ┌───▼──┐ ┌──▼───┐
-│Fire- │ │Imagen│ │DALL-E│ │ Mock │
-│fly   │ │4.0   │ │3     │ │      │
-│      │ │      │ │      │ │$0.00 │
-│$0.04/│ │Native│ │$0.04/│ │      │
-│image │ │ratio │ │image │ │No API│
-│      │ │      │ │      │ │needed│
-│v3 API│ │      │ │3 size│ │      │
-│Gen   │ │      │ │      │ │Determ│
-│Expand│ │      │ │      │ │inistc│
-│Fill  │ │      │ │      │ │      │
-└──────┘ └──────┘ └──────┘ └──────┘
-```
-
-**Auto-resolution:** Firefly → Gemini → Mock. Pipeline always runs.
-
-The `FireflyProvider` models the actual Firefly Services REST API:
-- **Text-to-Image** (`/v3/images/generate`) — hero generation
-- **Generative Expand** (`/v3/images/expand`) — aspect ratio adaptation
-- **Style Reference** — brand-consistent generation
-- **IMS Authentication** — `client_credentials` grant with auto-refresh
-
----
-
-## 📊 Performance Tracking
-
-Every pipeline run tracks timing, cost, and provider details:
-
-```
-                    Pipeline Performance
-┏━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━┳━━━━━━━┳━━━━━━━━━━━┓
-┃ Stage                     ┃ Time ┃ Items ┃ API Calls ┃
-┡━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━╇━━━━━━━╇━━━━━━━━━━━┩
-│ brief_ingestion           │  5ms │     1 │         0 │
-│ brief_analysis            │  0ms │     1 │         0 │
-│ compose_resort-shell-ha…  │ 1.4s │     6 │         0 │
-│ validate_resort-shell-h…  │ 1.4s │     6 │         0 │
-│ compose_cowrie-shell-box  │ 1.4s │     6 │         0 │
-│ validate_cowrie-shell-b…  │ 1.4s │     6 │         0 │
-│ compose_painted-shell-a…  │ 1.4s │     6 │         0 │
-│ validate_painted-shell-…  │ 1.4s │     6 │         0 │
-│ TOTAL                     │ 4.2s │       │         0 │
-└───────────────────────────┴──────┴───────┴───────────┘
-```
-
----
-
 ## 🌐 Web UI
 
 ```bash
@@ -359,8 +303,6 @@ streamlit run src/frontend/app.py
 | 📈 Performance analytics | Sample KPIs with CTR, CPA, winner detection |
 | 📊 Pipeline metrics | Stage timing, cost breakdown, provider info |
 | 🚀 Live execution | Run the full pipeline from the browser |
-
----
 
 ## 🧪 Tests
 
@@ -383,66 +325,6 @@ pytest tests/ -v
 | `tests/test_tracker.py` | Metrics and stage/asset tracking |
 | `tests/test_analytics.py` | KPI generation and winner detection |
 
----
-
-## 🧠 Key Design Decisions
-
-**1. Firefly-First Provider Architecture**
-The provider abstraction models a production deployment where Adobe Firefly is the primary generator. Swapping any provider is a config change, not a refactor.
-
-**2. GenAI as Judgment, Not Just Generation**
-The brief analyzer uses AI to evaluate strategy quality *before* any image is generated. It scores completeness, flags weak messaging, and enriches prompts with audience/region context.
-
-**3. Template System Over Single Layout**
-Real creative teams use different layouts for different placements. Auto-selection based on content signals encodes creative judgment into code.
-
-**4. Composition Over Text-in-Image**
-Campaign text is composited via Pillow, not baked into GenAI prompts. This gives exact typographic control and instant language switching without regenerating.
-
-**5. Contrast-Safe Panel Colors**
-The split-panel template auto-selects the darkest brand color (by luminance) for text panels, guaranteeing readable white text regardless of palette.
-
-**6. Cost Tracking From Day One**
-Every stage is timed and costed. Client-facing creative automation needs cost visibility per campaign, per asset, per API call.
-
----
-
-## 🔮 Production Extension Points
-
-| Capability | Current (POC) | Production |
-|:-----------|:-------------|:-----------|
-| Image Generation | Mock / Gemini / DALL-E | Adobe Firefly Services |
-| Asset Storage | Local filesystem | AEM DAM / S3 / Azure Blob |
-| Brief Management | YAML files | Adobe GenStudio / CMS |
-| Translation | Curated lookup table | TMS (Smartling / Transifex) |
-| Brand Assets | Local files | Creative Cloud Libraries |
-| Compositing | Pillow | Photoshop API / Express |
-| Approval | Web UI queue | Workfront / Slack workflows |
-| Analytics | Sample KPIs | Ad platform APIs + dashboards |
-| Deployment | CLI / Streamlit | App Builder + webhooks |
-
----
-
-## 📂 CLI Reference
-
-```bash
-# Generate creatives
-python -m src.backend.cli generate <BRIEF> [OPTIONS]
-  --mock              No API keys needed
-  -p, --provider      firefly | gemini | dalle | mock
-  -t, --template      product_hero | editorial | split_panel | minimal | bold_type
-  -o, --output-dir    Output directory (default: output)
-  --no-analysis       Skip brief analysis
-  -v, --verbose       Debug logging
-
-# Analyze brief quality
-python -m src.backend.cli analyze <BRIEF> [--llm]
-
-# Validate brief schema
-python -m src.backend.cli validate <BRIEF>
-
-# List available providers
-python -m src.backend.cli providers
 ```
 
 ## 📄 License
