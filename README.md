@@ -24,15 +24,7 @@
 
 ## ✨ Pipeline at a Glance
 
-```mermaid
-graph TD
-    A[📋 INGEST: Parse & Validate Brief] --> B[🔍 ANALYZE: Score Quality & Enrich Prompts]
-    B --> C[📂 RESOLVE: Hero Images]
-    C --> D[🎨 GENERATE: GenAI Hero Creation]
-    D --> E[🖼️ COMPOSE: Layout + Text + I18n]
-    E --> F[✅ VALIDATE: Brand & Legal]
-    F --> G[📊 REPORT: Summary & Dashboard]
-```
+![AdForge: How the Pipeline Works End to End](docs/pipeline_overview.png)
 
 **Input:** 1 YAML brief + product photos
 

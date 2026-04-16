@@ -179,7 +179,11 @@ def render_pipeline_stepper(
         )
     render_target = target or st
     render_target.markdown(
-        f'<div class="af-stepper">{steps_html}</div>',
+        f'<div class="af-stepper-wrap">'
+        f'<div class="af-stepper-title">Pipeline Workflow</div>'
+        f'<div class="af-stepper-arrow">→</div>'
+        f'<div class="af-stepper">{steps_html}</div>'
+        f"</div>",
         unsafe_allow_html=True,
     )
 

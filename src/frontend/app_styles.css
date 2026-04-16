@@ -365,11 +365,49 @@ html, body, [class*="css"] {
 .af-hero-meta-value { display: none; }
 
 /* ── Pipeline stepper ─────────────────────────────────────────────────── */
+.af-stepper-wrap {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  margin: .5rem 0 2rem;
+}
+.af-stepper-title {
+  flex: 0 0 auto;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--ocean-blue);
+  white-space: nowrap;
+}
+.af-stepper-arrow {
+  flex: 0 0 auto;
+  font-size: 1.6rem;
+  line-height: 1;
+  color: var(--ocean-blue);
+  font-weight: 700;
+}
+.af-results-header {
+  margin: 1rem 0 .5rem;
+}
+.af-results-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--ocean-blue);
+  margin-bottom: .35rem;
+}
+.af-results-divider {
+  height: 1px;
+  background: var(--sandy-beige);
+  width: 100%;
+}
 .af-stepper {
   display: flex;
   align-items: flex-start;
   gap: 0;
-  margin: .5rem 0;
+  flex: 1 1 auto;
   overflow-x: auto;
   padding-bottom: .25rem;
 }
@@ -392,7 +430,9 @@ html, body, [class*="css"] {
   background: var(--sandy-beige);
   z-index: 0;
 }
-.af-step.done:not(:last-child)::after,
+.af-step.done:not(:last-child)::after {
+  background: var(--success);
+}
 .af-step.active:not(:last-child)::after {
   background: var(--ocean-light);
 }
@@ -413,8 +453,8 @@ html, body, [class*="css"] {
   transition: all var(--transition);
 }
 .af-step.done .af-step-circle {
-  background: var(--ocean-blue);
-  border-color: var(--ocean-blue);
+  background: var(--success);
+  border-color: var(--success);
   color: #fff;
 }
 .af-step.active .af-step-circle {

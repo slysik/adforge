@@ -56,6 +56,11 @@ DEFAULT_ASPECT_RATIOS = [
 
 def _render_campaign_tab() -> None:
     """Collect campaign-level inputs in session state."""
+    # Pending overrides (e.g., from a Load Brief action) are applied before
+    # widgets render, since Streamlit forbids writing to a keyed widget's
+    # session-state entry after it has been instantiated.
+    if "_pending_bb_langs" in st.session_state:
+        st.session_state.bb_langs = st.session_state.pop("_pending_bb_langs")
     col1, col2 = st.columns(2)
     with col1:
         st.session_state.bb_name = st.text_input(
@@ -95,10 +100,12 @@ def _render_campaign_tab() -> None:
             "Theme",
             value=st.session_state.get("bb_theme", "warm coastal"),
         )
-        st.session_state.bb_langs = st.multiselect(
+        st.session_state.setdefault("bb_langs", ["en"])
+        st.multiselect(
             "Languages",
             BUILDER_LANGUAGE_OPTIONS,
-            default=st.session_state.get("bb_langs", ["en"]),
+            key="bb_langs",
+            help="Each added language multiplies the number of creatives.",
         )
 
     _render_import_section()
@@ -122,16 +129,25 @@ def _render_brand_tab() -> None:
             "Accent Color", st.session_state.get("bb_accent", "#D4A574")
         )
     with gc3:
+        st.markdown(
+            '<div style="font-size:0.92rem;font-weight:600;'
+            'color:var(--charcoal);margin-bottom:.35rem">Logo</div>',
+            unsafe_allow_html=True,
+        )
+        logo_path = ROOT / "data" / "input_assets" / "logo.png"
+        if logo_path.exists():
+            st.image(str(logo_path), width=72)
+        else:
+            st.caption("logo.png not found")
+        st.markdown(
+            "<div style='height:.75rem'></div>", unsafe_allow_html=True
+        )
         st.session_state.bb_font = st.selectbox(
             "Font Family",
             BUILDER_FONT_OPTIONS,
             index=BUILDER_FONT_OPTIONS.index(
                 st.session_state.get("bb_font", "Georgia")
             ),
-        )
-        st.session_state.bb_prohibited = st.text_input(
-            "Prohibited Words (comma-separated)",
-            value=st.session_state.get("bb_prohibited", "cheap, fake, plastic"),
         )
 
     colors = [
@@ -153,10 +169,17 @@ def _render_brand_tab() -> None:
         unsafe_allow_html=True,
     )
 
-    st.session_state.bb_disclaimer = st.text_input(
-        "Legal Disclaimer (optional)",
-        value=st.session_state.get("bb_disclaimer", ""),
-    )
+    rc1, rc2 = st.columns(2, gap="large")
+    with rc1:
+        st.session_state.bb_prohibited = st.text_input(
+            "Prohibited Words (comma-separated)",
+            value=st.session_state.get("bb_prohibited", "cheap, fake, plastic"),
+        )
+    with rc2:
+        st.session_state.bb_disclaimer = st.text_input(
+            "Legal Disclaimer (optional)",
+            value=st.session_state.get("bb_disclaimer", ""),
+        )
 
 
 def _default_product(index: int) -> dict:
@@ -275,30 +298,45 @@ def _build_campaign_brief() -> CampaignBrief:
 
 def _render_brief_summary(brief: CampaignBrief) -> None:
     """Show the exact object the pipeline will consume before execution."""
-    rows = "".join(
-        f'<div><div class="af-brief-label">{label}</div><div class="af-brief-value">{value}</div></div>'
-        for label, value in [
-            ("Brand", brief.brand),
-            ("Campaign", brief.name),
-            ("Message", brief.message),
-            ("Region", brief.target_region),
-            ("Audience", brief.target_audience),
-            ("Theme", brief.theme or "—"),
-            ("Products", str(len(brief.products))),
-        ]
-    )
-    st.markdown(
-        f'<div class="af-card"><div class="af-brief-grid">{rows}</div></div>',
-        unsafe_allow_html=True,
-    )
+    bg = brief.brand_guidelines
 
     total_creatives = (
         len(brief.products) * len(brief.aspect_ratios) * len(brief.languages)
     )
     st.success(
         f"Ready to generate **{total_creatives} creatives** — "
-        f"{len(brief.aspect_ratios)} ratios × {len(brief.products)} products × {len(brief.languages)} language(s)"
+        f"{len(brief.aspect_ratios)} ratios × {len(brief.products)} products "
+        f"× {len(brief.languages)} language(s)"
     )
+
+    text_on_image: list[str] = [f"Brand name: **{brief.brand}**"]
+    text_on_image.append(f"Campaign message: **{brief.message}**")
+    if brief.tagline:
+        text_on_image.append(f"Tagline: **{brief.tagline}**")
+    if bg.required_disclaimer:
+        text_on_image.append(f"Disclaimer: **{bg.required_disclaimer}**")
+    prompt_inputs = [
+        f"theme **{brief.theme}**" if brief.theme else None,
+        f"audience **{brief.target_audience}**",
+        f"region **{brief.target_region}**",
+        f"brand palette **{', '.join(bg.primary_colors)}**",
+    ]
+    prompt_inputs = [p for p in prompt_inputs if p]
+
+    with st.expander("🔤 Text used on generated creatives", expanded=False):
+        st.markdown(
+            "**Rendered directly on each image (translated per language):**\n\n"
+            + "\n".join(f"- {line}" for line in text_on_image)
+            + "\n\n**Fed into the hero-image prompt:**\n\n"
+            + "\n".join(
+                f"- {line}"
+                for line in [
+                    f"product name, description, and keywords (×{len(brief.products)})",
+                    f"campaign message **{brief.message}**",
+                    *[f"{p}" for p in prompt_inputs],
+                ]
+            )
+        )
 
 
 def _render_run_controls() -> None:
@@ -359,7 +397,9 @@ def _populate_builder_from_brief(brief: CampaignBrief) -> None:
     st.session_state.bb_region = brief.target_region
     st.session_state.bb_audience = brief.target_audience
     st.session_state.bb_theme = brief.theme or ""
-    st.session_state.bb_langs = brief.languages
+    # bb_langs is bound to a keyed multiselect — write via pending slot so
+    # the value is applied before the widget re-renders next run.
+    st.session_state._pending_bb_langs = brief.languages
 
     bg = brief.brand_guidelines
     colors = bg.primary_colors + ["#FFFFFF"] * 3  # pad if fewer than 3
@@ -520,11 +560,14 @@ def render_approval_queue(assets: list[dict], session_key: str = "default"):
         return
 
     state_key = f"approvals_{session_key}"
-    if state_key not in st.session_state:
-        st.session_state[state_key] = {
-            i: {"status": "pending", "comment": ""} for i in range(len(assets))
-        }
-    approvals = st.session_state[state_key]
+    existing = st.session_state.get(state_key, {})
+    # Resize state when asset count changes (e.g., a rerun added a language),
+    # preserving any prior decisions that still map to the same index.
+    approvals = {
+        i: existing.get(i, {"status": "pending", "comment": ""})
+        for i in range(len(assets))
+    }
+    st.session_state[state_key] = approvals
 
     statuses = [approvals[i]["status"] for i in range(len(assets))]
     approved = statuses.count("approved")
@@ -924,6 +967,14 @@ def render_pipeline_results(brief, result):
         result.created_count, result.elapsed_seconds
     )
     assets_data = serialize_result_assets(result)
+
+    st.markdown(
+        '<div class="af-results-header">'
+        '<div class="af-results-title">Pipeline Results</div>'
+        '<div class="af-results-divider"></div>'
+        "</div>",
+        unsafe_allow_html=True,
+    )
 
     tab_campaign, tab_approval, tab_ab, tab_analytics = st.tabs(
         ["Campaign", "Approval", "Variations", "Analytics"]
