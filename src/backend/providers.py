@@ -13,6 +13,7 @@ failures are handled via exponential backoff with jitter (see retry.py).
 from __future__ import annotations
 
 import io
+import mimetypes
 import os
 import time
 from abc import ABC, abstractmethod
@@ -41,6 +42,21 @@ class GenerationMetadata:
     estimated_cost_usd: float = 0.0
     aspect_ratio: str = ""
     raw_response: dict = field(default_factory=dict)
+
+
+@dataclass
+class BriefContext:
+    """Brief fields that don't fit in plain prompt text.
+
+    The text prompt built by pipeline._build_prompt already carries
+    brand/message/colors/tagline/theme/audience. This struct carries the
+    remaining user-supplied inputs (font, logo, reference images) so the
+    Gemini planner can reason over them multimodally before Imagen runs.
+    """
+
+    font_family: Optional[str] = None
+    logo_path: Optional[Path] = None
+    reference_images: list[Path] = field(default_factory=list)
 
 
 class ProviderType(str, Enum):
@@ -75,8 +91,13 @@ class ImageProvider(ABC):
         height: int,
         output_path: Path,
         style_reference: Optional[Path] = None,
+        brief_context: Optional[BriefContext] = None,
     ) -> tuple[Image.Image, GenerationMetadata]:
         """Generate an image from a text prompt.
+
+        ``brief_context`` carries supplementary brief fields (font, logo,
+        reference images) — currently consumed only by Gemini's planner;
+        other providers ignore it.
 
         Returns (PIL Image, GenerationMetadata).
         """
@@ -164,6 +185,7 @@ class FireflyProvider(ImageProvider):
         height: int,
         output_path: Path,
         style_reference: Optional[Path] = None,
+        brief_context: Optional[BriefContext] = None,
     ) -> tuple[Image.Image, GenerationMetadata]:
         """Generate via Adobe Firefly Services API."""
         import requests
@@ -296,6 +318,7 @@ class DalleProvider(ImageProvider):
         height: int,
         output_path: Path,
         style_reference: Optional[Path] = None,
+        brief_context: Optional[BriefContext] = None,
     ) -> tuple[Image.Image, GenerationMetadata]:
         """Generate via OpenAI DALL-E 3 API."""
         import requests as req
@@ -348,7 +371,25 @@ class GeminiProvider(ImageProvider):
 
     Supports 5 native aspect ratios (1:1, 9:16, 16:9, 3:4, 4:3), reducing
     post-generation resize distortion compared to DALL-E.
+
+    Prompts are first expanded by a multimodal planner (``gemini-2.5-flash``)
+    that can see the brand logo and any reference images — Imagen 4.0 itself
+    is text-only, so the planner is how multimodal brief context actually
+    reaches the generator.
     """
+
+    PLANNER_MODEL = "gemini-2.5-flash"
+
+    PLANNER_SYSTEM_INSTRUCTION = (
+        "You are a prompt engineer for Google Imagen 4.0. "
+        "Given an advertising brief (and optional reference images), produce a single "
+        "detailed visual prompt of 150-250 words covering: subject and product placement, "
+        "composition and framing, lighting and palette, mood and style, background treatment. "
+        "If reference images are supplied (logo, style reference), extract stylistic cues — "
+        "color, texture, mood — but never describe them literally or copy them. "
+        "Do NOT request any text, words, logos, or watermarks in the output image; these "
+        "are composited separately. Return ONLY the prompt prose, with no preamble."
+    )
 
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = (
@@ -392,6 +433,97 @@ class GeminiProvider(ImageProvider):
         }
         return min(candidates, key=lambda k: abs(candidates[k] - ratio))
 
+    def _collect_reference_images(
+        self,
+        style_reference: Optional[Path],
+        brief_context: Optional[BriefContext],
+    ) -> list[Path]:
+        """Gather all user-supplied image references: logo, style_reference, extras."""
+        refs: list[Path] = []
+        seen: set[Path] = set()
+
+        def add(p: Optional[Path]) -> None:
+            if p is None:
+                return
+            path = Path(p)
+            if path in seen or not path.exists():
+                return
+            refs.append(path)
+            seen.add(path)
+
+        if brief_context:
+            add(brief_context.logo_path)
+            for ref in brief_context.reference_images or []:
+                add(ref)
+        add(style_reference)
+        return refs
+
+    def _plan_prompt(
+        self,
+        raw_prompt: str,
+        style_reference: Optional[Path],
+        brief_context: Optional[BriefContext],
+    ) -> str:
+        """Expand the raw brief into a detailed Imagen prompt via gemini-2.5-flash.
+
+        Runs the brief through a multimodal planner so user-supplied font and
+        reference images (logo, style refs) influence the final image — Imagen
+        is text-only, so this is the only place image context can land.
+
+        Falls back to the raw prompt on any planner failure so the pipeline
+        stays non-fatal.
+        """
+        from google.genai import types
+
+        text_parts = [f"Brief:\n{raw_prompt}"]
+        if brief_context and brief_context.font_family:
+            text_parts.append(
+                f"Brand font family: {brief_context.font_family}. Let this inform "
+                f"the typographic mood (serif=editorial, sans=modern, display=bold), "
+                f"but do NOT render any text in the image."
+            )
+
+        contents: list = ["\n\n".join(text_parts)]
+        for img_path in self._collect_reference_images(style_reference, brief_context):
+            mime, _ = mimetypes.guess_type(str(img_path))
+            if not mime or not mime.startswith("image/"):
+                mime = "image/png"
+            try:
+                data = img_path.read_bytes()
+            except OSError as exc:
+                console.print(
+                    f"[yellow]⚠ Planner could not read {img_path}: {exc}[/yellow]"
+                )
+                continue
+            contents.append(types.Part.from_bytes(data=data, mime_type=mime))
+
+        def call_planner():
+            return self._client.models.generate_content(
+                model=self.PLANNER_MODEL,
+                contents=contents,
+                config=types.GenerateContentConfig(
+                    system_instruction=self.PLANNER_SYSTEM_INSTRUCTION,
+                    temperature=0.7,
+                    max_output_tokens=512,
+                ),
+            )
+
+        try:
+            response = retry_api_call(call_planner)
+            planned = (getattr(response, "text", "") or "").strip()
+        except Exception as exc:
+            console.print(
+                f"[yellow]⚠ Prompt planner failed ({exc}) — using raw prompt.[/yellow]"
+            )
+            return raw_prompt
+
+        if not planned:
+            console.print(
+                "[yellow]⚠ Prompt planner returned empty text — using raw prompt.[/yellow]"
+            )
+            return raw_prompt
+        return planned
+
     def generate(
         self,
         prompt: str,
@@ -399,18 +531,23 @@ class GeminiProvider(ImageProvider):
         height: int,
         output_path: Path,
         style_reference: Optional[Path] = None,
+        brief_context: Optional[BriefContext] = None,
     ) -> tuple[Image.Image, GenerationMetadata]:
-        """Generate via Google Imagen 4.0 API."""
+        """Generate via Google Imagen 4.0 API, preceded by a multimodal planner."""
         from google.genai import types
 
         start = time.time()
         aspect_ratio = self._closest_ratio(width, height)
+
+        console.print(f"  [blue]Planning prompt via {self.PLANNER_MODEL}…[/blue]")
+        planned_prompt = self._plan_prompt(prompt, style_reference, brief_context)
+
         console.print(f"  [blue]Calling Imagen 4.0 ({aspect_ratio})…[/blue]")
 
         def generate_image():
             return self._client.models.generate_images(
                 model="imagen-4.0-generate-001",
-                prompt=prompt,
+                prompt=planned_prompt,
                 config=types.GenerateImagesConfig(
                     number_of_images=1,
                     aspect_ratio=aspect_ratio,
@@ -436,10 +573,11 @@ class GeminiProvider(ImageProvider):
         meta = GenerationMetadata(
             provider="gemini",
             model="imagen-4.0",
-            prompt_used=prompt,
+            prompt_used=planned_prompt,
             generation_time_ms=elapsed_ms,
-            estimated_cost_usd=0.04,
+            estimated_cost_usd=0.041,
             aspect_ratio=f"{width}:{height}",
+            raw_response={"raw_prompt": prompt},
         )
 
         return img, meta
@@ -468,6 +606,7 @@ class MockProvider(ImageProvider):
         height: int,
         output_path: Path,
         style_reference: Optional[Path] = None,
+        brief_context: Optional[BriefContext] = None,
     ) -> tuple[Image.Image, GenerationMetadata]:
         """Generate a deterministic procedural image."""
         start = time.time()
@@ -525,7 +664,9 @@ def get_provider(
         raise RuntimeError("DALL-E provider selected but OPENAI_API_KEY not set.")
 
     if provider_type == ProviderType.GEMINI.value:
-        provider = GeminiProvider(api_key=api_key)
+        # Gemini sources its key from GEMINI_API_KEY / NANO_BANANA_API_KEY —
+        # the CLI's --api-key flag is OpenAI-specific and must not bleed here.
+        provider = GeminiProvider()
         if provider.is_available():
             return provider
         raise RuntimeError(
@@ -538,7 +679,7 @@ def get_provider(
         console.print("[magenta]Using Adobe Firefly Services[/magenta]")
         return firefly
 
-    gemini = GeminiProvider(api_key=api_key)
+    gemini = GeminiProvider()
     if gemini.is_available():
         console.print("[blue]Using Google Imagen 4.0[/blue]")
         return gemini

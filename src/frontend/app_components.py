@@ -234,7 +234,12 @@ def place_logo_on_canvas(canvas, logo_path: str | None):
     return canvas
 
 
-def render_ab_comparison(brief, sample_hero_path: Path | None = None):
+def render_ab_comparison(
+    brief,
+    sample_hero_path: Path | None = None,
+    headline: str | None = None,
+    product_keywords: list[str] | None = None,
+):
     from PIL import Image as PILImage
 
     if sample_hero_path is None or not sample_hero_path.exists():
@@ -247,8 +252,13 @@ def render_ab_comparison(brief, sample_hero_path: Path | None = None):
     bg = brief.brand_guidelines
     logo_path = getattr(bg, "logo_path", None)
 
+    message = headline or brief.message
+    keywords = product_keywords if product_keywords is not None else brief.products[0].keywords
+
     ratio = brief.aspect_ratios[0]
     st.caption(f"Preview at **{ratio.ratio}** ({ratio.width}×{ratio.height})")
+    if headline:
+        st.caption(f"Planner headline: _{message}_")
 
     cols = st.columns(len(TEMPLATE_RENDERERS))
     for col, (template, renderer) in zip(cols, TEMPLATE_RENDERERS.items()):
@@ -259,7 +269,7 @@ def render_ab_comparison(brief, sample_hero_path: Path | None = None):
                     hero=hero.copy(),
                     width=ratio.width,
                     height=ratio.height,
-                    message=brief.message,
+                    message=message,
                     tagline=brief.tagline,
                     brand_name=brief.brand,
                     font_family=bg.font_family,
@@ -275,9 +285,7 @@ def render_ab_comparison(brief, sample_hero_path: Path | None = None):
             except Exception as e:
                 st.error(f"{info['label']}: {e}")
 
-        auto = auto_select_template(
-            ratio.ratio, brief.products[0].keywords, brief.message
-        )
+        auto = auto_select_template(ratio.ratio, keywords, message)
         if template == auto:
             with col:
                 st.success("Auto-selected")

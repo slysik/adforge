@@ -50,12 +50,18 @@ from .models import (
     GeneratedAsset,
     AssetStatus,
 )
-from .providers import get_provider, ImageProvider, GenerationMetadata
+from .providers import (
+    BriefContext,
+    GenerationMetadata,
+    ImageProvider,
+    get_provider,
+)
 from .analyzer import analyze_brief
 from .templates import LayoutTemplate, auto_select_template
 from .compositor import Compositor, TranslationProvider, get_translator
+from .copy_planner import CopyPlanner
 from .validator import BrandComplianceChecker, LegalChecker
-from .storage import StorageManager
+from .storage import StorageManager, slugify
 from .tracker import PipelineTracker, AssetMetrics, print_metrics
 from .report import print_console_report, save_json_report, save_html_report
 
@@ -172,6 +178,7 @@ def _generate_hero_task(
     width: int,
     height: int,
     output_path: Path,
+    brief_context: BriefContext | None = None,
 ) -> tuple[Path, GenerationMetadata]:
     """Generate a single hero image (designed for thread pool execution)."""
     _, meta = provider.generate(
@@ -179,6 +186,7 @@ def _generate_hero_task(
         width=width,
         height=height,
         output_path=output_path,
+        brief_context=brief_context,
     )
     return output_path, meta
 
@@ -199,6 +207,7 @@ class PipelineServices:
     legal_checker: LegalChecker
     translator: TranslationProvider
     forced_template: LayoutTemplate | None
+    copy_planner: CopyPlanner | None = None
 
 
 @dataclass
@@ -270,6 +279,14 @@ def _initialize_services(
     translator = get_translator()
     translator.clear_warnings()
 
+    # The copy planner runs on gemini-2.5-flash regardless of the image
+    # provider — so a WOW headline is generated even when the hero is a
+    # reused product photo (no Imagen call). Falls back silently when no
+    # Gemini key is available.
+    copy_planner = CopyPlanner()
+    if not copy_planner.is_available():
+        copy_planner = None
+
     return PipelineServices(
         provider=provider,
         storage=storage,
@@ -278,6 +295,7 @@ def _initialize_services(
         legal_checker=LegalChecker(),
         translator=translator,
         forced_template=_resolve_forced_template(template),
+        copy_planner=copy_planner,
     )
 
 
@@ -332,6 +350,46 @@ def _build_product_prompt(
         brand_colors=brief.brand_guidelines.primary_colors,
         accent_color=brief.brand_guidelines.accent_color,
         tagline=brief.tagline or "",
+    )
+
+
+def _find_product_reference_image(product_id: str, input_dir: Path) -> Path | None:
+    """Locate a local product photo to feed the Imagen planner as style reference.
+
+    Mirrors storage.find_existing_hero's slug-matching but prints nothing — this
+    is a reference for the multimodal planner, not a hero resolution.
+    """
+    slug = slugify(product_id)
+    for ext in ("png", "jpg", "jpeg", "webp"):
+        for candidate in input_dir.glob(f"*.{ext}"):
+            if candidate.name == "logo.png":
+                continue
+            if candidate.stem == slug or slug in candidate.stem:
+                return candidate
+    return None
+
+
+def _build_brief_context(
+    brief: CampaignBrief, product, storage: StorageManager
+) -> BriefContext:
+    """Gather brief fields that the prompt text can't carry (font, images).
+
+    The text prompt already encodes brand/message/colors/tagline/theme. This
+    pulls in the font family, the brand logo, and — when a matching product
+    photo exists in input_assets — feeds it to the planner as a style reference
+    so Imagen's output is informed by the real product's colors, texture, and
+    silhouette without directly reproducing the photo.
+    """
+    guidelines = brief.brand_guidelines
+    logo = Path(guidelines.logo_path) if guidelines.logo_path else None
+    refs: list[Path] = []
+    ref = _find_product_reference_image(product.id, storage.input_dir)
+    if ref is not None:
+        refs.append(ref)
+    return BriefContext(
+        font_family=guidelines.font_family,
+        logo_path=logo,
+        reference_images=refs,
     )
 
 
@@ -409,6 +467,7 @@ def _generate_product_heroes(
 
     report(f"Generating heroes for {product.name}...")
     prompt = _build_product_prompt(brief, product, enrichments)
+    brief_context = _build_brief_context(brief, product, services.storage)
 
     with tracker.stage(f"hero_gen_{product.id}") as stage:
         if parallel and len(brief.aspect_ratios) > 1:
@@ -433,6 +492,7 @@ def _generate_product_heroes(
                         ratio.width,
                         ratio.height,
                         hero_out,
+                        brief_context,
                     )
                     futures[future] = ratio
 
@@ -462,6 +522,7 @@ def _generate_product_heroes(
                         width=ratio.width,
                         height=ratio.height,
                         output_path=hero_out,
+                        brief_context=brief_context,
                     )
                     _record_generated_hero(artifacts, ratio, hero_out, meta, stage)
                 except Exception as exc:
@@ -535,6 +596,24 @@ def _compose_product_assets(
     accent elements for each language.
     """
     report("Compositing and Validating...")
+    # Plan one WOW headline per language using the product photo + full brief.
+    # This runs once per product (not per ratio) because the headline is
+    # aspect-ratio-independent. A None value means the planner failed or was
+    # unavailable; the compositor falls back to brief.message.
+    copy_photo = artifacts.existing_hero or next(iter(artifacts.paths.values()), None)
+    headlines: dict[str, str] = {}
+    if services.copy_planner is not None:
+        for lang in brief.languages:
+            plan = services.copy_planner.plan_headline(
+                brief, product, copy_photo, language=lang
+            )
+            if plan is not None:
+                headlines[lang] = plan.headline
+                console.print(
+                    f"  [green]✦ Headline ({product.id}/{lang}): "
+                    f"{plan.headline}[/green]"
+                )
+
     with (
         tracker.stage(f"compose_{product.id}") as comp_stage,
         tracker.stage(f"validate_{product.id}") as val_stage,
@@ -571,12 +650,13 @@ def _compose_product_assets(
                     # Template choice is runtime-configurable: a forced template
                     # wins, otherwise the heuristics keep layout selection
                     # explainable and auditable.
+                    campaign_message = headlines.get(lang, brief.message)
                     selected_template = (
                         services.forced_template
                         or auto_select_template(
                             ratio.ratio,
                             product.keywords,
-                            brief.message,
+                            campaign_message,
                         )
                     )
                     _, rendered_texts = services.compositor.compose(
@@ -584,7 +664,7 @@ def _compose_product_assets(
                         output_path=output_path,
                         width=ratio.width,
                         height=ratio.height,
-                        campaign_message=brief.message,
+                        campaign_message=campaign_message,
                         tagline=brief.tagline,
                         brand_name=brief.brand,
                         language=lang,
@@ -616,6 +696,7 @@ def _compose_product_assets(
                             brand_compliance=brand_result,
                             legal_compliance=legal_result,
                             rendered_texts=rendered_texts,
+                            campaign_message=campaign_message,
                         )
                     )
                     result.created_count += 1

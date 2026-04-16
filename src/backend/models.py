@@ -223,6 +223,10 @@ class GeneratedAsset(BaseModel):
         default_factory=list,
         description="All text strings actually rendered on this creative",
     )
+    campaign_message: Optional[str] = Field(
+        default=None,
+        description="Headline actually used on this creative (planner output or brief fallback)",
+    )
 
 
 class PipelineResult(BaseModel):

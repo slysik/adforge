@@ -1009,6 +1009,15 @@ def render_pipeline_results(brief, result):
         from src.backend.storage import StorageManager as _SM
         from src.backend.storage import slugify as _slugify
 
+        # Map product_id → planner headline (prefer English, fall back to first).
+        headline_by_product: dict[str, str] = {}
+        for asset in result.assets:
+            if not asset.campaign_message:
+                continue
+            pid = asset.product_id
+            if pid not in headline_by_product or asset.language == "en":
+                headline_by_product[pid] = asset.campaign_message
+
         storage = _SM(input_dir=Path("data/input_assets"), output_dir=Path("output"))
         for product in brief.products:
             st.markdown(f"**{product.name}**")
@@ -1017,7 +1026,12 @@ def render_pipeline_results(brief, result):
                 hero_dir.rglob("hero*.jpg")
             )
             if hero_candidates:
-                render_ab_comparison(brief, hero_candidates[0])
+                render_ab_comparison(
+                    brief,
+                    hero_candidates[0],
+                    headline=headline_by_product.get(product.id),
+                    product_keywords=product.keywords,
+                )
             else:
                 st.info(f"No hero found for {product.name}")
             st.divider()
