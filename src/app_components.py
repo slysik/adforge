@@ -96,11 +96,6 @@ PIPELINE_STAGES = [
 ]
 
 
-# ---------------------------------------------------------------------------
-# Run log
-# ---------------------------------------------------------------------------
-
-
 def log_run(
     campaign: str,
     provider: str,
@@ -127,28 +122,6 @@ def log_run(
     )
 
 
-def render_run_log():
-    log = st.session_state.run_log
-    if not log:
-        st.info("No pipeline runs yet this session.")
-        return
-    entries = log[:3]
-    cols = st.columns(len(entries))
-    for col, entry in zip(cols, entries):
-        with col:
-            st.markdown(
-                f'<div class="af-card">'
-                f'<div class="af-brief-label">Campaign</div>'
-                f'<div class="af-brief-value">{entry["campaign"]}</div>'
-                f'<div class="af-brief-label">Result</div>'
-                f'<div class="af-brief-value">{entry["created"]} creatives · {entry["elapsed"]}</div>'
-                f'<div class="af-brief-label">Efficiency</div>'
-                f'<div class="af-brief-value">saved {entry["time_saved"]}</div>'
-                f"</div>",
-                unsafe_allow_html=True,
-            )
-
-
 # ---------------------------------------------------------------------------
 # Reusable UI widgets
 # ---------------------------------------------------------------------------
@@ -158,9 +131,8 @@ def render_hero_header(
     title: str,
     subtitle: str,
     compact: bool = False,
-    meta: list[tuple[str, str]] | None = None,
-    badge: str = "",
 ):
+    """Render the main page header in expanded or compact mode."""
     if compact:
         st.markdown(
             f'<div class="af-hero" style="padding:.5rem 1.2rem;margin-bottom:.3rem">'
@@ -241,20 +213,6 @@ def render_metric_cards(metrics: list[dict]):
 
 def render_section_title(text: str):
     st.markdown(f'<div class="af-section-title">{text}</div>', unsafe_allow_html=True)
-
-
-def compliance_badge(status: str) -> str:
-    cls_map = {"passed": "passed", "warning": "warning", "failed": "failed"}
-    cls = cls_map.get(status, "default")
-    label_map = {
-        "passed": "✓ Brand",
-        "warning": "⚠ Brand",
-        "failed": "✗ Brand",
-        "not_checked": "— Brand",
-    }
-    return (
-        f'<span class="af-badge af-badge-{cls}">{label_map.get(status, status)}</span>'
-    )
 
 
 def place_logo_on_canvas(canvas, logo_path: str | None):

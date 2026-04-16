@@ -20,10 +20,8 @@ Description:
 
 from __future__ import annotations
 
-import csv
 import random
 from dataclasses import dataclass, field
-from pathlib import Path
 
 
 @dataclass
@@ -142,42 +140,3 @@ def build_performance_report(assets: list[dict], seed: int = 42) -> PerformanceR
         report.avg_cpa = report.total_spend / report.total_conversions
 
     return report
-
-
-def export_kpis_csv(kpis: list[CreativeKPI], path: Path) -> Path:
-    """Export KPI data to CSV."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with open(path, "w", newline="") as f:
-        writer = csv.writer(f)
-        writer.writerow(
-            [
-                "creative_id",
-                "product_id",
-                "aspect_ratio",
-                "language",
-                "spend_usd",
-                "impressions",
-                "clicks",
-                "conversions",
-                "ctr_pct",
-                "cpa_usd",
-                "cpc_usd",
-            ]
-        )
-        for k in kpis:
-            writer.writerow(
-                [
-                    k.creative_id,
-                    k.product_id,
-                    k.aspect_ratio,
-                    k.language,
-                    f"{k.spend_usd:.2f}",
-                    k.impressions,
-                    k.clicks,
-                    k.conversions,
-                    f"{k.ctr:.2f}",
-                    f"{k.cpa:.2f}" if k.cpa != float("inf") else "N/A",
-                    f"{k.cpc:.2f}" if k.cpc != float("inf") else "N/A",
-                ]
-            )
-    return path

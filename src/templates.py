@@ -33,10 +33,9 @@ from __future__ import annotations
 
 import textwrap
 from enum import Enum
-from pathlib import Path
 from typing import Optional
 
-from PIL import Image, ImageDraw, ImageFilter, ImageFont
+from PIL import Image, ImageDraw, ImageFilter
 from rich.console import Console
 
 from .compositor import (

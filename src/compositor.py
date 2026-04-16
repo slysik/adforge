@@ -27,9 +27,8 @@ from __future__ import annotations
 
 import textwrap
 from pathlib import Path
-from typing import Optional
 
-from PIL import Image, ImageDraw, ImageFilter, ImageFont
+from PIL import Image, ImageDraw, ImageFont
 from rich.console import Console
 
 from .utils import hex_to_rgb as _hex_to_rgb, smart_resize

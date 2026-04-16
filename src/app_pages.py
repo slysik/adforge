@@ -10,28 +10,44 @@ from pathlib import Path
 
 import streamlit as st
 
-from src.analyzer import analyze_brief
 from src.analytics import build_performance_report
 from src.app_components import (
     COMPLIANCE_EMOJI,
     DEFAULT_BUILDER_PRODUCTS,
-    SAMPLE_BRIEFS,
     TEMPLATE_INFO,
-    analysis_to_payload,
     build_campaign_summary_cards,
     estimate_time_saved_hours,
-    find_sample_campaigns,
     load_sample_report,
     render_ab_comparison,
     render_metric_cards,
-    render_pipeline_stepper,
     render_section_title,
-    score_asset,
 )
-from src.pipeline import load_brief
+from src.models import CampaignBrief
 from src.templates import LayoutTemplate
 
 ROOT = Path(__file__).resolve().parent.parent
+BUILDER_LANGUAGE_OPTIONS = ["en", "es", "fr", "de", "pt", "ja", "zh", "ko"]
+BUILDER_FONT_OPTIONS = ["Georgia", "Helvetica", "Arial", "Times"]
+DEFAULT_ASPECT_RATIOS = [
+    {
+        "name": "instagram_square",
+        "ratio": "1:1",
+        "width": 1080,
+        "height": 1080,
+    },
+    {
+        "name": "stories",
+        "ratio": "9:16",
+        "width": 1080,
+        "height": 1920,
+    },
+    {
+        "name": "facebook_landscape",
+        "ratio": "16:9",
+        "width": 1920,
+        "height": 1080,
+    },
+]
 
 
 # ---------------------------------------------------------------------------
@@ -39,396 +55,316 @@ ROOT = Path(__file__).resolve().parent.parent
 # ---------------------------------------------------------------------------
 
 
-def render_brief_builder():
-    """Build Brief wizard — collects campaign config across 4 tabs, validates
-    into a CampaignBrief Pydantic model, and returns it when ready to run.
-    """
-    from src.models import CampaignBrief
-
-    tab1, tab2, tab3, tab4 = st.tabs(["Campaign", "Brand", "Products", "Review & Run"])
-    brief = None
-
-    # ── Tab 1: Campaign ─────────────────────────────────────────────────
-    with tab1:
-        col1, col2 = st.columns(2)
-        with col1:
-            st.session_state.bb_name = st.text_input(
-                "Campaign Name",
-                value=st.session_state.get("bb_name", "My Campaign 2025"),
-            )
-            st.session_state.bb_brand = st.text_input(
-                "Brand Name",
-                value=st.session_state.get("bb_brand", "Blue Beach House Designs"),
-            )
-            st.session_state.bb_msg = st.text_area(
-                "Campaign Message",
-                value=st.session_state.get(
-                    "bb_msg", "Handcrafted coastal elegance for your home"
-                ),
-                height=80,
-            )
-            st.session_state.bb_tagline = st.text_input(
-                "Tagline (optional)",
-                value=st.session_state.get("bb_tagline", ""),
-            )
-        with col2:
-            st.session_state.bb_region = st.text_input(
-                "Target Region",
-                value=st.session_state.get(
-                    "bb_region", "Southern Florida — Naples & Palm Beach"
-                ),
-            )
-            st.session_state.bb_audience = st.text_input(
-                "Target Audience",
-                value=st.session_state.get(
-                    "bb_audience",
-                    "Home decor designers, interior stylists, ages 30-60",
-                ),
-            )
-            st.session_state.bb_theme = st.text_input(
-                "Theme",
-                value=st.session_state.get("bb_theme", "warm coastal"),
-            )
-            st.session_state.bb_langs = st.multiselect(
-                "Languages",
-                ["en", "es", "fr", "de", "pt", "ja", "zh", "ko"],
-                default=st.session_state.get("bb_langs", ["en"]),
-            )
-
-    # ── Tab 2: Brand ────────────────────────────────────────────────────
-    with tab2:
-        gc1, gc2, gc3 = st.columns(3)
-        with gc1:
-            st.session_state.bb_c1 = st.color_picker(
-                "Primary Color", st.session_state.get("bb_c1", "#1B4F72")
-            )
-            st.session_state.bb_c2 = st.color_picker(
-                "Secondary Color", st.session_state.get("bb_c2", "#F5E6CA")
-            )
-        with gc2:
-            st.session_state.bb_c3 = st.color_picker(
-                "Tertiary Color", st.session_state.get("bb_c3", "#FFFFFF")
-            )
-            st.session_state.bb_accent = st.color_picker(
-                "Accent Color", st.session_state.get("bb_accent", "#D4A574")
-            )
-        with gc3:
-            st.session_state.bb_font = st.selectbox(
-                "Font Family",
-                ["Georgia", "Helvetica", "Arial", "Times"],
-                index=["Georgia", "Helvetica", "Arial", "Times"].index(
-                    st.session_state.get("bb_font", "Georgia")
-                ),
-            )
-            st.session_state.bb_prohibited = st.text_input(
-                "Prohibited Words (comma-separated)",
-                value=st.session_state.get("bb_prohibited", "cheap, fake, plastic"),
-            )
-
-        # Live swatch preview
-        colors = [
-            st.session_state.bb_c1,
-            st.session_state.bb_c2,
-            st.session_state.bb_c3,
-            st.session_state.bb_accent,
-        ]
-        labels = ["Primary", "Secondary", "Tertiary", "Accent"]
-        swatch_items = "".join(
-            f'<div style="text-align:center">'
-            f'<div class="af-swatch" style="background:{color};"></div>'
-            f'<div style="font-size:.65rem;margin-top:.2rem;color:#7F8C8D">{label}</div>'
-            f"</div>"
-            for color, label in zip(colors, labels)
+def _render_campaign_tab() -> None:
+    """Collect campaign-level inputs in session state."""
+    col1, col2 = st.columns(2)
+    with col1:
+        st.session_state.bb_name = st.text_input(
+            "Campaign Name",
+            value=st.session_state.get("bb_name", "My Campaign 2025"),
         )
-        st.markdown(
-            f'<div class="af-swatches">{swatch_items}</div>',
-            unsafe_allow_html=True,
+        st.session_state.bb_brand = st.text_input(
+            "Brand Name",
+            value=st.session_state.get("bb_brand", "Blue Beach House Designs"),
+        )
+        st.session_state.bb_msg = st.text_area(
+            "Campaign Message",
+            value=st.session_state.get(
+                "bb_msg", "Handcrafted coastal elegance for your home"
+            ),
+            height=80,
+        )
+        st.session_state.bb_tagline = st.text_input(
+            "Tagline (optional)",
+            value=st.session_state.get("bb_tagline", ""),
+        )
+    with col2:
+        st.session_state.bb_region = st.text_input(
+            "Target Region",
+            value=st.session_state.get(
+                "bb_region", "Southern Florida — Naples & Palm Beach"
+            ),
+        )
+        st.session_state.bb_audience = st.text_input(
+            "Target Audience",
+            value=st.session_state.get(
+                "bb_audience",
+                "Home decor designers, interior stylists, ages 30-60",
+            ),
+        )
+        st.session_state.bb_theme = st.text_input(
+            "Theme",
+            value=st.session_state.get("bb_theme", "warm coastal"),
+        )
+        st.session_state.bb_langs = st.multiselect(
+            "Languages",
+            BUILDER_LANGUAGE_OPTIONS,
+            default=st.session_state.get("bb_langs", ["en"]),
         )
 
-        st.session_state.bb_disclaimer = st.text_input(
-            "Legal Disclaimer (optional)",
-            value=st.session_state.get("bb_disclaimer", ""),
+
+def _render_brand_tab() -> None:
+    """Collect brand guidelines and show the live palette preview."""
+    gc1, gc2, gc3 = st.columns(3)
+    with gc1:
+        st.session_state.bb_c1 = st.color_picker(
+            "Primary Color", st.session_state.get("bb_c1", "#1B4F72")
+        )
+        st.session_state.bb_c2 = st.color_picker(
+            "Secondary Color", st.session_state.get("bb_c2", "#F5E6CA")
+        )
+    with gc2:
+        st.session_state.bb_c3 = st.color_picker(
+            "Tertiary Color", st.session_state.get("bb_c3", "#FFFFFF")
+        )
+        st.session_state.bb_accent = st.color_picker(
+            "Accent Color", st.session_state.get("bb_accent", "#D4A574")
+        )
+    with gc3:
+        st.session_state.bb_font = st.selectbox(
+            "Font Family",
+            BUILDER_FONT_OPTIONS,
+            index=BUILDER_FONT_OPTIONS.index(
+                st.session_state.get("bb_font", "Georgia")
+            ),
+        )
+        st.session_state.bb_prohibited = st.text_input(
+            "Prohibited Words (comma-separated)",
+            value=st.session_state.get("bb_prohibited", "cheap, fake, plastic"),
         )
 
-    # ── Tab 3: Products ─────────────────────────────────────────────────
-    with tab3:
-        num_products = st.number_input(
-            "Number of Products",
-            min_value=2,
-            max_value=10,
-            value=st.session_state.get("bb_nprods", 3),
-            key="bb_nprods",
-        )
+    colors = [
+        st.session_state.bb_c1,
+        st.session_state.bb_c2,
+        st.session_state.bb_c3,
+        st.session_state.bb_accent,
+    ]
+    labels = ["Primary", "Secondary", "Tertiary", "Accent"]
+    swatch_items = "".join(
+        f'<div style="text-align:center">'
+        f'<div class="af-swatch" style="background:{color};"></div>'
+        f'<div style="font-size:.65rem;margin-top:.2rem;color:#7F8C8D">{label}</div>'
+        f"</div>"
+        for color, label in zip(colors, labels)
+    )
+    st.markdown(
+        f'<div class="af-swatches">{swatch_items}</div>',
+        unsafe_allow_html=True,
+    )
 
-        products_data = []
-        for i in range(int(num_products)):
-            default_product = (
-                DEFAULT_BUILDER_PRODUCTS[i]
-                if i < len(DEFAULT_BUILDER_PRODUCTS)
-                else {
-                    "id": f"product-{i + 1}",
-                    "name": f"Product {i + 1}",
-                    "description": "A beautiful handcrafted coastal product",
-                    "keywords": "handcrafted, coastal, design",
-                }
-            )
-            with st.expander(f"📦 Product {i + 1}", expanded=(i < 2)):
-                pc1, pc2 = st.columns(2)
-                with pc1:
-                    p_name = st.text_input(
-                        "Product Name",
-                        value=st.session_state.get(
-                            f"bb_pname_{i}", default_product["name"]
-                        ),
-                        key=f"bb_pname_{i}",
-                    )
-                    p_id = st.text_input(
-                        "Product ID (lowercase, hyphens)",
-                        value=st.session_state.get(
-                            f"bb_pid_{i}", default_product["id"]
-                        ),
-                        key=f"bb_pid_{i}",
-                    )
-                with pc2:
-                    p_desc = st.text_area(
-                        "Description",
-                        value=st.session_state.get(
-                            f"bb_pdesc_{i}", default_product["description"]
-                        ),
-                        key=f"bb_pdesc_{i}",
-                        height=68,
-                    )
-                    p_kw = st.text_input(
-                        "Keywords (comma-separated)",
-                        value=st.session_state.get(
-                            f"bb_pkw_{i}", default_product["keywords"]
-                        ),
-                        key=f"bb_pkw_{i}",
-                    )
-                product_entry = {
-                    "id": p_id.strip(),
-                    "name": p_name.strip(),
-                    "description": p_desc.strip(),
-                    "keywords": [k.strip() for k in p_kw.split(",") if k.strip()],
-                }
-                hero_image = default_product.get("hero_image")
-                if hero_image:
-                    product_entry["hero_image"] = hero_image
-                products_data.append(product_entry)
+    st.session_state.bb_disclaimer = st.text_input(
+        "Legal Disclaimer (optional)",
+        value=st.session_state.get("bb_disclaimer", ""),
+    )
 
-        st.session_state.bb_products_data = products_data
 
-    # ── Tab 4: Review & Run ─────────────────────────────────────────────
-    with tab4:
-        brief_dict = {
-            "name": st.session_state.get("bb_name", "My Campaign"),
-            "brand": st.session_state.get("bb_brand", "Brand"),
-            "message": st.session_state.get("bb_msg", ""),
-            "tagline": st.session_state.get("bb_tagline") or None,
-            "target_region": st.session_state.get("bb_region", ""),
-            "target_audience": st.session_state.get("bb_audience", ""),
-            "theme": st.session_state.get("bb_theme") or None,
-            "languages": st.session_state.get("bb_langs", ["en"]),
-            "brand_guidelines": {
-                "primary_colors": [
-                    st.session_state.get("bb_c1", "#1B4F72").upper(),
-                    st.session_state.get("bb_c2", "#F5E6CA").upper(),
-                    st.session_state.get("bb_c3", "#FFFFFF").upper(),
+def _default_product(index: int) -> dict:
+    """Return a seeded product for the builder, or a generic fallback."""
+    if index < len(DEFAULT_BUILDER_PRODUCTS):
+        return DEFAULT_BUILDER_PRODUCTS[index]
+    return {
+        "id": f"product-{index + 1}",
+        "name": f"Product {index + 1}",
+        "description": "A beautiful handcrafted coastal product",
+        "keywords": "handcrafted, coastal, design",
+    }
+
+
+def _render_products_tab() -> None:
+    """Collect the per-product fields used by the pipeline."""
+    num_products = st.number_input(
+        "Number of Products",
+        min_value=2,
+        max_value=10,
+        value=st.session_state.get("bb_nprods", 3),
+        key="bb_nprods",
+    )
+
+    products_data = []
+    for index in range(int(num_products)):
+        default_product = _default_product(index)
+        with st.expander(f"📦 Product {index + 1}", expanded=(index < 2)):
+            pc1, pc2 = st.columns(2)
+            with pc1:
+                product_name = st.text_input(
+                    "Product Name",
+                    value=st.session_state.get(
+                        f"bb_pname_{index}", default_product["name"]
+                    ),
+                    key=f"bb_pname_{index}",
+                )
+                product_id = st.text_input(
+                    "Product ID (lowercase, hyphens)",
+                    value=st.session_state.get(
+                        f"bb_pid_{index}", default_product["id"]
+                    ),
+                    key=f"bb_pid_{index}",
+                )
+            with pc2:
+                product_description = st.text_area(
+                    "Description",
+                    value=st.session_state.get(
+                        f"bb_pdesc_{index}", default_product["description"]
+                    ),
+                    key=f"bb_pdesc_{index}",
+                    height=68,
+                )
+                product_keywords = st.text_input(
+                    "Keywords (comma-separated)",
+                    value=st.session_state.get(
+                        f"bb_pkw_{index}", default_product["keywords"]
+                    ),
+                    key=f"bb_pkw_{index}",
+                )
+
+            product_entry = {
+                "id": product_id.strip(),
+                "name": product_name.strip(),
+                "description": product_description.strip(),
+                "keywords": [
+                    keyword.strip()
+                    for keyword in product_keywords.split(",")
+                    if keyword.strip()
                 ],
-                "accent_color": st.session_state.get("bb_accent", "#D4A574").upper(),
-                "font_family": st.session_state.get("bb_font", "Georgia"),
-                "logo_path": (
-                    "input_assets/logo.png"
-                    if Path("input_assets/logo.png").exists()
-                    else None
-                ),
-                "prohibited_words": [
-                    w.strip()
-                    for w in st.session_state.get("bb_prohibited", "").split(",")
-                    if w.strip()
-                ],
-                "required_disclaimer": st.session_state.get("bb_disclaimer") or None,
-            },
-            "products": st.session_state.get("bb_products_data", []),
-            "aspect_ratios": [
-                {
-                    "name": "instagram_square",
-                    "ratio": "1:1",
-                    "width": 1080,
-                    "height": 1080,
-                },
-                {
-                    "name": "stories",
-                    "ratio": "9:16",
-                    "width": 1080,
-                    "height": 1920,
-                },
-                {
-                    "name": "facebook_landscape",
-                    "ratio": "16:9",
-                    "width": 1920,
-                    "height": 1080,
-                },
+            }
+            if default_product.get("hero_image"):
+                product_entry["hero_image"] = default_product["hero_image"]
+            products_data.append(product_entry)
+
+    st.session_state.bb_products_data = products_data
+
+
+def _builder_logo_path() -> str | None:
+    """Use the standard demo logo when it exists on disk."""
+    logo_path = Path("input_assets/logo.png")
+    return str(logo_path) if logo_path.exists() else None
+
+
+def _build_campaign_brief() -> CampaignBrief:
+    """Assemble the current builder state into the single pipeline input model."""
+    return CampaignBrief(
+        name=st.session_state.get("bb_name", "My Campaign"),
+        brand=st.session_state.get("bb_brand", "Brand"),
+        message=st.session_state.get("bb_msg", ""),
+        tagline=st.session_state.get("bb_tagline") or None,
+        target_region=st.session_state.get("bb_region", ""),
+        target_audience=st.session_state.get("bb_audience", ""),
+        theme=st.session_state.get("bb_theme") or None,
+        languages=st.session_state.get("bb_langs", ["en"]),
+        brand_guidelines={
+            "primary_colors": [
+                st.session_state.get("bb_c1", "#1B4F72").upper(),
+                st.session_state.get("bb_c2", "#F5E6CA").upper(),
+                st.session_state.get("bb_c3", "#FFFFFF").upper(),
             ],
-        }
+            "accent_color": st.session_state.get("bb_accent", "#D4A574").upper(),
+            "font_family": st.session_state.get("bb_font", "Georgia"),
+            "logo_path": _builder_logo_path(),
+            "prohibited_words": [
+                word.strip()
+                for word in st.session_state.get("bb_prohibited", "").split(",")
+                if word.strip()
+            ],
+            "required_disclaimer": st.session_state.get("bb_disclaimer") or None,
+        },
+        products=st.session_state.get("bb_products_data", []),
+        aspect_ratios=DEFAULT_ASPECT_RATIOS,
+    )
 
-        try:
-            brief = CampaignBrief(**brief_dict)
-        except Exception as e:
-            st.warning(f"Brief validation: {e}")
-            return None
 
-        # Brief card preview
-        meta_left = [
+def _render_brief_summary(brief: CampaignBrief) -> None:
+    """Show the exact object the pipeline will consume before execution."""
+    rows = "".join(
+        f'<div><div class="af-brief-label">{label}</div><div class="af-brief-value">{value}</div></div>'
+        for label, value in [
             ("Brand", brief.brand),
             ("Campaign", brief.name),
             ("Message", brief.message),
-        ]
-        meta_right = [
             ("Region", brief.target_region),
             ("Audience", brief.target_audience),
             ("Theme", brief.theme or "—"),
             ("Products", str(len(brief.products))),
         ]
-        rows = "".join(
-            f'<div><div class="af-brief-label">{lbl}</div><div class="af-brief-value">{val}</div></div>'
-            for (lbl, val) in meta_left + meta_right
-        )
-        st.markdown(
-            f'<div class="af-card"><div class="af-brief-grid">{rows}</div></div>',
-            unsafe_allow_html=True,
-        )
+    )
+    st.markdown(
+        f'<div class="af-card"><div class="af-brief-grid">{rows}</div></div>',
+        unsafe_allow_html=True,
+    )
 
-        total = len(brief.products) * 3 * len(brief.languages)
-        st.success(
-            f"Ready to generate **{total} creatives** — "
-            f"{len(brief.aspect_ratios)} ratios × {len(brief.products)} products × {len(brief.languages)} language(s)"
-        )
-
-        # --- Run Pipeline controls ---
-        st.markdown("<div style='height:0.75rem'></div>", unsafe_allow_html=True)
-        action_col, options_col, template_col = st.columns([0.9, 1.1, 1.1])
-        with action_col:
-            st.markdown("<div style='height:1.8rem'></div>", unsafe_allow_html=True)
-            run_pipeline_now = st.button(
-                "🚀 Run Pipeline",
-                type="primary",
-                use_container_width=True,
-                key="main_run_pipeline",
-            )
-        with options_col:
-            st.selectbox(
-                "Image Provider",
-                ["mock", "gemini", "firefly", "dalle", "auto"],
-                help="Mock = no API key. Gemini = Imagen 4.0. Firefly = Adobe Firefly Services.",
-                key="main_provider_choice",
-            )
-        with template_col:
-            template_options = ["auto"] + [
-                template.value for template in LayoutTemplate
-            ]
-            template_choice = st.selectbox(
-                "Layout Template",
-                template_options,
-                help="Auto picks the best template per product.",
-                key="main_template_choice",
-            )
-            if template_choice != "auto":
-                info = TEMPLATE_INFO.get(LayoutTemplate(template_choice), {})
-                st.caption(f"{info.get('icon', '')} {info.get('desc', '')}")
-
-        if run_pipeline_now:
-            st.session_state._run_triggered = True
-            st.session_state._pipeline_reran = False
-
-    return brief
+    total_creatives = (
+        len(brief.products) * len(brief.aspect_ratios) * len(brief.languages)
+    )
+    st.success(
+        f"Ready to generate **{total_creatives} creatives** — "
+        f"{len(brief.aspect_ratios)} ratios × {len(brief.products)} products × {len(brief.languages)} language(s)"
+    )
 
 
-# ---------------------------------------------------------------------------
-# Gallery
-# ---------------------------------------------------------------------------
+def _render_run_controls() -> None:
+    """Capture the runtime knobs without mixing them into brief validation."""
+    st.markdown("<div style='height:0.75rem'></div>", unsafe_allow_html=True)
+    action_col, options_col, template_col = st.columns([0.9, 1.1, 1.1])
 
-
-def render_gallery(assets: list[dict], base_dir: Path | None = None):
-    products: dict[str, list] = {}
-    for asset in assets:
-        pid = asset["product_id"]
-        if pid not in products:
-            products[pid] = []
-        products[pid].append(asset)
-
-    # AI-pick: find best creative per product
-    ai_picks: dict[str, int] = {}
-    for pid, passets in products.items():
-        scored = [(i, score_asset(a)) for i, a in enumerate(passets)]
-        best_idx, _ = max(scored, key=lambda x: x[1])
-        ai_picks[pid] = id(passets[best_idx])
-
-    for product_id, product_assets in products.items():
-        friendly_name = product_id.replace("-", " ").title()
-        st.markdown(
-            f'<div class="af-gallery-product-title">📦 {friendly_name}</div>',
-            unsafe_allow_html=True,
+    with action_col:
+        st.markdown("<div style='height:1.8rem'></div>", unsafe_allow_html=True)
+        run_pipeline_now = st.button(
+            "🚀 Run Pipeline",
+            type="primary",
+            use_container_width=True,
+            key="main_run_pipeline",
         )
 
-        languages = sorted(set(a["language"] for a in product_assets))
+    with options_col:
+        st.selectbox(
+            "Image Provider",
+            ["mock", "gemini", "firefly", "dalle", "auto"],
+            help="Mock = no API key. Gemini = Imagen 4.0. Firefly = Adobe Firefly Services.",
+            key="main_provider_choice",
+        )
 
-        for lang in languages:
-            lang_assets = [a for a in product_assets if a["language"] == lang]
-            lang_assets.sort(key=lambda a: a["aspect_ratio"])
+    with template_col:
+        template_options = ["auto"] + [
+            template.value for template in LayoutTemplate
+        ]
+        template_choice = st.selectbox(
+            "Layout Template",
+            template_options,
+            help="Auto picks the best template per product.",
+            key="main_template_choice",
+        )
+        if template_choice != "auto":
+            info = TEMPLATE_INFO.get(LayoutTemplate(template_choice), {})
+            st.caption(f"{info.get('icon', '')} {info.get('desc', '')}")
 
-            st.markdown(
-                f'<span class="af-gallery-lang-badge">🌐 {lang.upper()}</span>',
-                unsafe_allow_html=True,
-            )
+    if run_pipeline_now:
+        st.session_state._run_triggered = True
+        st.session_state._pipeline_reran = False
 
-            cols = st.columns(len(lang_assets))
-            for col, asset in zip(cols, lang_assets):
-                file_path = asset["file_path"]
-                if base_dir and not Path(file_path).is_absolute():
-                    file_path = (
-                        str(
-                            base_dir
-                            / Path(file_path).relative_to(Path(file_path).parts[0])
-                        )
-                        if Path(file_path).parts
-                        else file_path
-                    )
 
-                brand_status = asset.get("brand_compliance", {}).get(
-                    "status", "not_checked"
-                )
-                legal_status = asset.get("legal_compliance", {}).get(
-                    "status", "not_checked"
-                )
-                hero_status = asset.get("hero_status", "generated")
-                hero_icon = "♻️" if hero_status == "reused" else "✦"
-                is_ai_pick = id(asset) == ai_picks.get(product_id)
+def render_brief_builder() -> CampaignBrief | None:
+    """Collect input tab-by-tab, then return one validated CampaignBrief."""
+    tab1, tab2, tab3, tab4 = st.tabs(["Campaign", "Brand", "Products", "Review & Run"])
 
-                with col:
-                    if is_ai_pick:
-                        st.markdown(
-                            '<div style="background:linear-gradient(135deg,#FFF3D0,#FFEAA7);color:#8B6914;'
-                            "text-align:center;padding:0.35rem;border-radius:8px 8px 0 0;font-size:0.85rem;font-weight:700;"
-                            'border:1px solid #E8B849;border-bottom:none">'
-                            "⭐ AI Pick</div>",
-                            unsafe_allow_html=True,
-                        )
-                    if Path(file_path).exists():
-                        st.image(str(file_path), use_container_width=True)
-                    else:
-                        st.warning(f"File not found: {file_path}")
-                    st.markdown(
-                        f'<div class="af-gallery-ratio">{asset["aspect_ratio"]}</div>'
-                        f'<div class="af-gallery-compliance">'
-                        f"{COMPLIANCE_EMOJI.get(brand_status, '—')} Brand &nbsp;"
-                        f"{COMPLIANCE_EMOJI.get(legal_status, '—')} Legal &nbsp;"
-                        f"{hero_icon} Hero"
-                        f"</div>",
-                        unsafe_allow_html=True,
-                    )
+    with tab1:
+        _render_campaign_tab()
 
-        st.markdown("<div style='height:1rem'></div>", unsafe_allow_html=True)
+    with tab2:
+        _render_brand_tab()
+
+    with tab3:
+        _render_products_tab()
+
+    with tab4:
+        col1, col2 = st.columns(2)
+        try:
+            brief = _build_campaign_brief()
+        except Exception as exc:
+            st.warning(f"Brief validation: {exc}")
+            return None
+
+        _render_brief_summary(brief)
+        _render_run_controls()
+        return brief
 
 
 # ---------------------------------------------------------------------------
@@ -889,66 +825,6 @@ def render_metrics(report: dict):
     st.markdown(f"**Provider:** `{provider}`")
 
 
-# ---------------------------------------------------------------------------
-# Brief review
-# ---------------------------------------------------------------------------
-
-
-def render_brief_review(brief):
-    """Render a compact brief review panel before pipeline execution."""
-    rows = "".join(
-        f'<div><div class="af-brief-label">{label}</div><div class="af-brief-value">{value}</div></div>'
-        for label, value in [
-            ("Brand", brief.brand),
-            ("Campaign", brief.name),
-            ("Message", brief.message),
-            ("Region", brief.target_region),
-            ("Audience", brief.target_audience),
-            ("Theme", brief.theme or "—"),
-            ("Languages", ", ".join(brief.languages)),
-            ("Products", str(len(brief.products))),
-        ]
-    )
-    st.markdown(
-        f'<div class="af-card"><div class="af-brief-grid">{rows}</div></div>',
-        unsafe_allow_html=True,
-    )
-
-    total = len(brief.products) * len(brief.aspect_ratios) * len(brief.languages)
-    st.info(
-        f"Ready to generate **{total} creatives** "
-        f"({len(brief.aspect_ratios)} aspect ratios × {len(brief.products)} products × {len(brief.languages)} languages)."
-    )
-
-    render_section_title("Pipeline Overview")
-    render_pipeline_stepper(active_stage=0)
-
-    render_section_title("Brief Analysis")
-    render_analysis(analysis_to_payload(analyze_brief(brief)))
-
-    render_section_title("Products")
-    for product in brief.products:
-        with st.expander(f"📦 {product.name}"):
-            col_left, col_right = st.columns(2)
-            with col_left:
-                st.markdown(f"**ID:** `{product.id}`")
-                st.markdown(f"**Description:** {product.description}")
-            with col_right:
-                hero_text = (
-                    "Will be generated via GenAI"
-                    if not product.hero_image
-                    else f"Existing: `{product.hero_image}`"
-                )
-                st.markdown(f"**Hero Image:** {hero_text}")
-                if product.keywords:
-                    st.markdown(f"**Keywords:** {', '.join(product.keywords)}")
-
-
-# ---------------------------------------------------------------------------
-# Serialization helpers
-# ---------------------------------------------------------------------------
-
-
 def serialize_result_assets(result) -> list[dict]:
     """Prepare assets for gallery and approval queue rendering."""
     assets = []
@@ -973,27 +849,6 @@ def serialize_result_assets(result) -> list[dict]:
             ].value
         assets.append(data)
     return assets
-
-
-def normalize_report_asset_paths(assets: list[dict], campaign_dir: Path) -> list[dict]:
-    """Convert report-relative asset paths into on-disk paths the UI can open."""
-    normalized = []
-    for asset in assets:
-        patched = dict(asset)
-        original = Path(patched["file_path"])
-        if not original.exists():
-            parts = original.parts
-            if parts and parts[0] == "sample_output":
-                patched["file_path"] = str(ROOT / original)
-            else:
-                patched["file_path"] = str(campaign_dir / Path(*parts[1:]))
-        normalized.append(patched)
-    return normalized
-
-
-# ---------------------------------------------------------------------------
-# Pipeline results (post-run tabs)
-# ---------------------------------------------------------------------------
 
 
 def render_pipeline_results(brief, result):
@@ -1062,110 +917,6 @@ def render_pipeline_results(brief, result):
             render_metrics(report)
         else:
             st.info("Metrics available in the JSON report.")
-
-
-# ---------------------------------------------------------------------------
-# Sample library
-# ---------------------------------------------------------------------------
-
-
-def render_sample_library():
-    """Render pre-generated sample outputs as a secondary discovery section."""
-    sample_base = ROOT / "sample_output"
-    campaigns = find_sample_campaigns(sample_base)
-
-    if not campaigns:
-        st.info("No pre-generated samples found in `sample_output/`.")
-        return
-
-    selected_name = st.selectbox(
-        "Sample campaign",
-        [campaign.name.replace("_", " ").title() for campaign in campaigns],
-        key="sample_library_select",
-    )
-    selected_idx = [
-        campaign.name.replace("_", " ").title() for campaign in campaigns
-    ].index(selected_name)
-    campaign_dir = campaigns[selected_idx]
-    report = load_sample_report(campaign_dir)
-
-    if not report:
-        st.info("No report found for the selected sample campaign.")
-        return
-
-    sample_tabs = st.tabs(["Campaign", "Approval", "Variations", "Analytics"])
-    patched_assets = normalize_report_asset_paths(
-        report.get("assets", []), campaign_dir
-    )
-
-    with sample_tabs[0]:
-        elapsed = report.get("elapsed_seconds", 0)
-        efficiency = report.get("efficiency", {})
-        render_metric_cards(
-            build_campaign_summary_cards(
-                total_assets=report["total_assets"],
-                created_count=report["created_count"],
-                hero_reused_count=report["hero_reused_count"],
-                failed_count=report["failed_count"],
-                elapsed_seconds=elapsed,
-                time_saved_hours=efficiency.get("time_saved_hours", 0),
-                created_sub="successfully composed",
-            )
-        )
-        analysis_data = report.get("brief_analysis")
-        if analysis_data:
-            render_section_title("Brief Analysis")
-            render_analysis(analysis_data)
-
-    with sample_tabs[1]:
-        render_approval_queue(patched_assets, session_key=f"sample_{selected_idx}")
-
-    with sample_tabs[2]:
-        try:
-            brief_for_ab = None
-            for _, brief_path in SAMPLE_BRIEFS.items():
-                try:
-                    candidate = load_brief(brief_path)
-                    if candidate.name.lower().replace(" ", "_") in campaign_dir.name:
-                        brief_for_ab = candidate
-                        break
-                except Exception:
-                    continue
-
-            if brief_for_ab:
-                hero_candidates = list(campaign_dir.rglob("hero*.png")) + list(
-                    campaign_dir.rglob("hero*.jpg")
-                )
-                if not hero_candidates:
-                    hero_candidates = list(campaign_dir.rglob("*.jpg"))
-                render_ab_comparison(
-                    brief_for_ab,
-                    hero_candidates[0] if hero_candidates else None,
-                )
-            else:
-                st.info("Could not match a campaign brief for A/B comparison.")
-        except Exception as exc:
-            st.warning(f"A/B comparison unavailable: {exc}")
-
-    with sample_tabs[3]:
-        render_performance(patched_assets, session_key=f"sample_{selected_idx}")
-        render_metrics(report)
-
-
-# ---------------------------------------------------------------------------
-# Brief file persistence
-# ---------------------------------------------------------------------------
-
-
-def save_uploaded_brief(uploaded) -> str:
-    """Persist an uploaded brief under an ignored per-session directory."""
-    safe_name = Path(uploaded.name).name
-    session_dir = _create_temp_brief_dir()
-    dest = session_dir / safe_name
-    if not dest.resolve().is_relative_to(session_dir.resolve()):
-        raise ValueError("Invalid filename")
-    dest.write_bytes(uploaded.getvalue())
-    return str(dest)
 
 
 def _create_temp_brief_dir() -> Path:

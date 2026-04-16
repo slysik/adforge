@@ -22,7 +22,6 @@ from __future__ import annotations
 
 import logging
 import sys
-from pathlib import Path
 
 import click
 from dotenv import load_dotenv
@@ -141,7 +140,7 @@ def validate(brief: str):
 
     try:
         b = load_brief(brief)
-        console.print(f"[green]✓ Brief is valid![/green]")
+        console.print("[green]✓ Brief is valid![/green]")
         console.print(f"  Campaign: {b.name}")
         console.print(f"  Products: {len(b.products)}")
         console.print(f"  Ratios:   {len(b.aspect_ratios)}")

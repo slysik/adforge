@@ -24,14 +24,13 @@ from __future__ import annotations
 import json
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 from jinja2 import Template
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
 
-from .models import PipelineResult, GeneratedAsset, AssetStatus, ComplianceStatus
+from .models import PipelineResult, ComplianceStatus
 
 console = Console()
 
