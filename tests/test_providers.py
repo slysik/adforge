@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 from PIL import Image
 
-from src.providers import (
+from src.backend.providers import (
     MockProvider, DalleProvider, FireflyProvider, GeminiProvider,
     get_provider, ProviderType, GenerationMetadata,
 )

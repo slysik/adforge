@@ -24,4 +24,4 @@ dependencies = [
 dev = ["pytest>=7.0.0"]
 
 [project.scripts]
-adforge = "src.cli:cli"
+adforge = "src.backend.cli:cli"

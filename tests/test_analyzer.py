@@ -2,10 +2,10 @@
 
 import pytest
 
-from src.models import (
+from src.backend.models import (
     CampaignBrief, Product, AspectRatio, BrandGuidelines,
 )
-from src.analyzer import HeuristicAnalyzer, analyze_brief, BriefAnalysis
+from src.backend.analyzer import HeuristicAnalyzer, analyze_brief, BriefAnalysis
 
 
 def _make_brief(**overrides):
@@ -22,7 +22,7 @@ def _make_brief(**overrides):
             primary_colors=["#00A86B", "#FFFFFF", "#1B1B1B"],
             accent_color="#FFD700",
             font_family="Helvetica",
-            logo_path="input_assets/logo.png",
+            logo_path="data/input_assets/logo.png",
             prohibited_words=["cheap", "discount"],
         ),
         products=[
@@ -36,7 +36,7 @@ def _make_brief(**overrides):
                 id="green-smoothie",
                 name="FreshCo Green Smoothie",
                 description="Organic green smoothie blend with kale and ginger",
-                hero_image="input_assets/green_smoothie.jpg",
+                hero_image="data/input_assets/green_smoothie.jpg",
                 keywords=["green smoothie", "organic", "healthy"],
             ),
         ],

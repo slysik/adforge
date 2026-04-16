@@ -25,14 +25,14 @@ install:
     echo "✓ Ready"
 
 # Run the CLI pipeline with mock images (no API keys needed)
-demo brief="sample_briefs/beach_house_campaign.yaml":
+demo brief="data/sample_briefs/beach_house_campaign.yaml":
     #!/usr/bin/env bash
     set -euo pipefail
     if command -v uv &> /dev/null; then
-        uv run python -m src.cli generate {{brief}} --mock
+        uv run python -m src.backend.cli generate {{brief}} --mock
     elif [ -f venv/bin/activate ]; then
         source venv/bin/activate
-        python -m src.cli generate {{brief}} --mock
+        python -m src.backend.cli generate {{brief}} --mock
     else
         echo "Run 'just install' first" && exit 1
     fi
@@ -74,27 +74,27 @@ test:
     fi
 
 # Analyze a campaign brief
-analyze brief="sample_briefs/beach_house_campaign.yaml":
+analyze brief="data/sample_briefs/beach_house_campaign.yaml":
     #!/usr/bin/env bash
     set -euo pipefail
     if command -v uv &> /dev/null; then
-        uv run python -m src.cli analyze {{brief}}
+        uv run python -m src.backend.cli analyze {{brief}}
     elif [ -f venv/bin/activate ]; then
         source venv/bin/activate
-        python -m src.cli analyze {{brief}}
+        python -m src.backend.cli analyze {{brief}}
     else
         echo "Run 'just install' first" && exit 1
     fi
 
 # Generate with a real provider (gemini, dalle, firefly)
-generate brief="sample_briefs/beach_house_campaign.yaml" provider="gemini":
+generate brief="data/sample_briefs/beach_house_campaign.yaml" provider="gemini":
     #!/usr/bin/env bash
     set -euo pipefail
     if command -v uv &> /dev/null; then
-        uv run python -m src.cli generate {{brief}} -p {{provider}}
+        uv run python -m src.backend.cli generate {{brief}} -p {{provider}}
     elif [ -f venv/bin/activate ]; then
         source venv/bin/activate
-        python -m src.cli generate {{brief}} -p {{provider}}
+        python -m src.backend.cli generate {{brief}} -p {{provider}}
     else
         echo "Run 'just install' first" && exit 1
     fi

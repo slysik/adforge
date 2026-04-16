@@ -1,7 +1,7 @@
 """Tests for campaign brief models and schema enforcement."""
 
 import pytest
-from src.models import (
+from src.backend.models import (
     CampaignBrief, Product, AspectRatio, BrandGuidelines,
     ComplianceStatus, ComplianceResult,
 )

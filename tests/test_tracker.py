@@ -4,7 +4,7 @@ import time
 
 import pytest
 
-from src.tracker import PipelineTracker, AssetMetrics, StageMetrics
+from src.backend.tracker import PipelineTracker, AssetMetrics, StageMetrics
 
 
 class TestPipelineTracker:

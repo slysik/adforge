@@ -1,5 +1,5 @@
 """Allow running as `python -m src`."""
 
-from .cli import main
+from .backend.cli import main
 
 main()

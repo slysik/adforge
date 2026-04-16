@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from src.analytics import (
+from src.backend.analytics import (
     generate_sample_kpis,
     detect_winner,
     build_performance_report,

@@ -13,8 +13,8 @@ from typing import Optional
 import pytest
 from PIL import Image, ImageDraw
 
-from src.models import ComplianceStatus
-from src.validator import BrandComplianceChecker, LegalChecker
+from src.backend.models import ComplianceStatus
+from src.backend.validator import BrandComplianceChecker, LegalChecker
 
 
 def _make_test_image(
@@ -76,7 +76,7 @@ class TestLogoPresenceCheck:
     def test_logo_not_placed_fails(self):
         """Logo file exists but compositor didn't place it → failed."""
         # Use a real existing file path
-        checker = BrandComplianceChecker(logo_path="input_assets/logo.png")
+        checker = BrandComplianceChecker(logo_path="data/input_assets/logo.png")
         result = checker.check_logo_presence(
             Path("dummy.jpg"), logo_was_placed=False,
         )
@@ -94,7 +94,7 @@ class TestLogoPresenceCheck:
         img_path = tmp_path / "test_logo.png"
         img.save(str(img_path))
 
-        checker = BrandComplianceChecker(logo_path="input_assets/logo.png")
+        checker = BrandComplianceChecker(logo_path="data/input_assets/logo.png")
         result = checker.check_logo_presence(img_path, logo_was_placed=True)
         # Should pass or warn (not fail) since we placed content
         assert result.status in (ComplianceStatus.PASSED, ComplianceStatus.WARNING)

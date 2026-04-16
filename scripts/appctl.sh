@@ -5,7 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PID_FILE="$ROOT_DIR/.streamlit/adforge-app.pid"
 LOG_FILE="$ROOT_DIR/.streamlit/adforge-app.log"
 PORT="${PORT:-8501}"
-APP_PATTERN="streamlit run src/app.py"
+APP_PATTERN="streamlit run src/frontend/app.py"
 
 mkdir -p "$(dirname "$PID_FILE")"
 
@@ -81,7 +81,7 @@ start() {
 
   (
     cd "$ROOT_DIR"
-    nohup bash -lc "$runner run src/app.py --server.headless true --server.port $PORT" \
+    nohup bash -lc "$runner run src/frontend/app.py --server.headless true --server.port $PORT" \
       >>"$LOG_FILE" 2>&1 &
     echo $! >"$PID_FILE"
   )

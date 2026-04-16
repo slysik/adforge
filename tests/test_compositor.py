@@ -10,7 +10,7 @@ from pathlib import Path
 import pytest
 from PIL import Image
 
-from src.compositor import Compositor, TranslationProvider, get_translator
+from src.backend.compositor import Compositor, TranslationProvider, get_translator
 
 
 @pytest.fixture
@@ -103,7 +103,7 @@ class TestRenderedTexts:
 class TestLogoPlacement:
     def test_logo_placed_flag(self, hero_1x1, tmp_path):
         """Compositor should track whether logo was actually placed."""
-        comp = Compositor(logo_path="input_assets/logo.png")
+        comp = Compositor(logo_path="data/input_assets/logo.png")
         comp.compose(hero_1x1, tmp_path / "out.jpg", 400, 400, "Msg")
         assert comp.logo_placed is True
 

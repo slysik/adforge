@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 from PIL import Image
 
-from src.templates import (
+from src.backend.templates import (
     LayoutTemplate, auto_select_template,
     render_product_hero, render_editorial, render_split_panel,
     render_minimal, render_bold_type, TEMPLATE_RENDERERS,

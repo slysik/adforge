@@ -4,7 +4,7 @@ import tempfile
 from pathlib import Path
 
 import pytest
-from src.storage import StorageManager, slugify
+from src.backend.storage import StorageManager, slugify
 
 
 class TestSlugify:

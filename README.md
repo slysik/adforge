@@ -48,14 +48,14 @@ Generated from the Blue Beach House Designs campaign brief using real product ph
 
 | Instagram 1:1 | Stories/Reels 9:16 | Facebook 16:9 |
 |:---:|:---:|:---:|
-| ![1x1](sample_output/coastal_collection_2025/resort-shell-handbag/instagram_square/creative_en.jpg) | ![9x16](sample_output/coastal_collection_2025/resort-shell-handbag/stories_reels/creative_en.jpg) | ![16x9](sample_output/coastal_collection_2025/resort-shell-handbag/facebook_landscape/creative_en.jpg) |
+| ![1x1](data/sample_briefs/sample_output/coastal_collection_2025/resort-shell-handbag/instagram_square/creative_en.jpg) | ![9x16](data/sample_briefs/sample_output/coastal_collection_2025/resort-shell-handbag/stories_reels/creative_en.jpg) | ![16x9](data/sample_briefs/sample_output/coastal_collection_2025/resort-shell-handbag/facebook_landscape/creative_en.jpg) |
 | Editorial layout | Split panel layout | Editorial layout |
 
 ### Localized Variants — Spanish 🇪🇸
 
 | Cowrie Shell Box (ES) | Painted Shell Art (ES) |
 |:---:|:---:|
-| ![cowrie-es](sample_output/coastal_collection_2025/cowrie-shell-box/instagram_square/creative_es.jpg) | ![painted-es](sample_output/coastal_collection_2025/painted-shell-art/instagram_square/creative_es.jpg) |
+| ![cowrie-es](data/sample_briefs/sample_output/coastal_collection_2025/cowrie-shell-box/instagram_square/creative_es.jpg) | ![painted-es](data/sample_briefs/sample_output/coastal_collection_2025/painted-shell-art/instagram_square/creative_es.jpg) |
 
 Each creative includes: brand name, campaign message (translated), tagline, logo, legal disclaimer, and accent bar.
 
@@ -89,7 +89,7 @@ output/coastal_collection_2025/
 
 ## 🚀 Quick Start
 
-[![Watch Installation Video](docs/assets/install-preview.jpg)](docs/assets/how-to-install-video.mov)
+[![Watch Installation Video](data/assets/install-preview.jpg)](data/assets/how-to-install-video.mov)
 
 **Prerequisites:** [just](https://github.com/casey/just#installation) + Python 3.9+ · No API keys needed for demo
 
@@ -153,18 +153,18 @@ campaign:
     primary_colors: ["#1B4F72", "#F5E6CA", "#FFFFFF"]
     accent_color: "#D4A574"
     font_family: "Georgia"
-    logo_path: "input_assets/logo.png"
+    logo_path: "data/input_assets/logo.png"
     prohibited_words: ["cheap", "fake", "plastic", "mass-produced"]
     required_disclaimer: "Custom orders welcome — bluebeachhousedesigns.com"
 
   products:
     - id: "resort-shell-handbag"
       name: "Resort Shell Handbag"
-      hero_image: "input_assets/resort-shell-handbag.png"  # ♻️ reused
+      hero_image: "data/input_assets/resort-shell-handbag.png"  # ♻️ reused
       keywords: [shell handbag, rattan bag, coastal fashion]
     - id: "cowrie-shell-box"
       name: "Bespoke Rattan Cowrie Shell Box"
-      hero_image: "input_assets/bespoke-rattan-cowrie-shell-box.png"
+      hero_image: "data/input_assets/bespoke-rattan-cowrie-shell-box.png"
     - id: "painted-shell-art"
       name: "Painted Shell Art"
       hero_image: null  # 🎨 generated via GenAI
@@ -175,7 +175,7 @@ campaign:
     - { name: facebook_landscape, ratio: "16:9", width: 1920, height: 1080 }
 ```
 
-Full file: [sample_briefs/beach_house_campaign.yaml](sample_briefs/beach_house_campaign.yaml)
+Full file: [data/sample_briefs/beach_house_campaign.yaml](data/sample_briefs/beach_house_campaign.yaml)
 
 ---
 
@@ -268,22 +268,30 @@ Results embedded in every asset's metadata:
 
 ```mermaid
 graph TD
-    CLI[CLI / Web UI] --> Pipeline[Pipeline Orchestrator]
-    
-    subgraph Core_Modules [Core Modules]
-    Pipeline --> Models[Models / Pydantic]
-    Pipeline --> Analyzer[Analyzer]
-    Pipeline --> Providers[Providers]
-    Pipeline --> Templates[Templates]
-    Pipeline --> Compositor[Compositor]
-    Pipeline --> Validator[Validator]
-    Pipeline --> Report[Report Engine]
+    subgraph Frontend ["src/frontend/"]
+        APP["Streamlit Web UI"]
     end
-    
+
+    subgraph Backend ["src/backend/"]
+        CLI["CLI"]
+        Pipeline["Pipeline Orchestrator"]
+        CLI --> Pipeline
+        Pipeline --> Models[Models / Pydantic]
+        Pipeline --> Analyzer[Analyzer]
+        Pipeline --> Providers[Providers]
+        Pipeline --> Templates[Templates]
+        Pipeline --> Compositor[Compositor]
+        Pipeline --> Validator[Validator]
+        Pipeline --> Report[Report Engine]
+    end
+
+    APP --> Pipeline
     Providers --> GenAI[GenAI APIs / Mock]
 ```
 
-### Module Inventory (11 modules, ~2,400 lines)
+### Module Inventory (~7,900 lines)
+
+**`src/backend/`** — Pipeline engine (15 modules, ~5,500 lines)
 
 | Module | Purpose |
 |:-------|:--------|
@@ -298,6 +306,16 @@ graph TD
 | `tracker.py` | Performance metrics — per-stage timing, API calls, cost estimation |
 | `report.py` | Reporting — Rich console table, JSON, interactive HTML dashboard |
 | `analytics.py` | Campaign analytics — sample KPIs, CTR/CPA, winner detection |
+| `cli.py` | Click CLI — generate, analyze, validate, providers commands |
+
+**`src/frontend/`** — Streamlit web UI (4 files, ~2,400 lines)
+
+| Module | Purpose |
+|:-------|:--------|
+| `app.py` | Entry point — page routing, session state, pipeline execution |
+| `app_pages.py` | Page renderers — Brief Builder, Results gallery, Approval queue, Analytics |
+| `app_components.py` | Reusable widgets — stepper, metric cards, A/B preview, constants |
+| `app_styles.css` | Custom CSS theme for branded UI |
 
 ---
 
@@ -359,7 +377,7 @@ Every pipeline run tracks timing, cost, and provider details:
 ## 🌐 Web UI
 
 ```bash
-streamlit run src/app.py
+streamlit run src/frontend/app.py
 ```
 
 | Feature | Description |
@@ -438,7 +456,7 @@ Every stage is timed and costed. Client-facing creative automation needs cost vi
 
 ```bash
 # Generate creatives
-python -m src.cli generate <BRIEF> [OPTIONS]
+python -m src.backend.cli generate <BRIEF> [OPTIONS]
   --mock              No API keys needed
   -p, --provider      firefly | gemini | dalle | mock
   -t, --template      product_hero | editorial | split_panel | minimal | bold_type
@@ -447,13 +465,13 @@ python -m src.cli generate <BRIEF> [OPTIONS]
   -v, --verbose       Debug logging
 
 # Analyze brief quality
-python -m src.cli analyze <BRIEF> [--llm]
+python -m src.backend.cli analyze <BRIEF> [--llm]
 
 # Validate brief schema
-python -m src.cli validate <BRIEF>
+python -m src.backend.cli validate <BRIEF>
 
 # List available providers
-python -m src.cli providers
+python -m src.backend.cli providers
 ```
 
 ## 📄 License

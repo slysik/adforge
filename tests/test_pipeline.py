@@ -13,38 +13,38 @@ from pathlib import Path
 
 import pytest
 
-from src.models import ComplianceStatus
-from src.pipeline import load_brief, run_pipeline
+from src.backend.models import ComplianceStatus
+from src.backend.pipeline import load_brief, run_pipeline
 
 
 class TestLoadBrief:
     def test_load_yaml(self):
-        brief = load_brief("sample_briefs/summer_campaign.yaml")
+        brief = load_brief("data/sample_briefs/summer_campaign.yaml")
         assert brief.name == "Summer Refresh 2025"
         assert brief.brand == "Blue Beach House Designs"
         assert len(brief.products) == 3
         assert len(brief.aspect_ratios) == 3
 
     def test_load_holiday(self):
-        brief = load_brief("sample_briefs/holiday_campaign.yaml")
+        brief = load_brief("data/sample_briefs/holiday_campaign.yaml")
         assert brief.brand == "Blue Beach House Designs"
         assert "fr" in brief.languages
         # Verify disclaimer is loaded
         assert brief.brand_guidelines.required_disclaimer is not None
 
     def test_load_beach_house(self):
-        brief = load_brief("sample_briefs/beach_house_campaign.yaml")
+        brief = load_brief("data/sample_briefs/beach_house_campaign.yaml")
         assert brief.brand == "Blue Beach House Designs"
         assert len(brief.products) == 3
-        assert brief.brand_guidelines.logo_path == "input_assets/logo.png"
+        assert brief.brand_guidelines.logo_path == "data/input_assets/logo.png"
 
 
 class TestPipelineMock:
     def test_correct_asset_count(self, tmp_path):
         """3 products x 3 ratios x 2 languages = 18 creatives."""
         result = run_pipeline(
-            brief_path="sample_briefs/summer_campaign.yaml",
-            input_dir="input_assets",
+            brief_path="data/sample_briefs/summer_campaign.yaml",
+            input_dir="data/input_assets",
             output_dir=str(tmp_path / "output"),
             mock=True,
         )
@@ -54,8 +54,8 @@ class TestPipelineMock:
 
     def test_all_output_files_exist(self, tmp_path):
         result = run_pipeline(
-            brief_path="sample_briefs/summer_campaign.yaml",
-            input_dir="input_assets",
+            brief_path="data/sample_briefs/summer_campaign.yaml",
+            input_dir="data/input_assets",
             output_dir=str(tmp_path / "output"),
             mock=True,
         )
@@ -65,8 +65,8 @@ class TestPipelineMock:
 
     def test_report_files_generated(self, tmp_path):
         result = run_pipeline(
-            brief_path="sample_briefs/summer_campaign.yaml",
-            input_dir="input_assets",
+            brief_path="data/sample_briefs/summer_campaign.yaml",
+            input_dir="data/input_assets",
             output_dir=str(tmp_path / "output"),
             mock=True,
         )
@@ -80,7 +80,7 @@ class TestPipelineMock:
         empty_input = tmp_path / "empty_input"
         empty_input.mkdir()
         result = run_pipeline(
-            brief_path="sample_briefs/summer_campaign.yaml",
+            brief_path="data/sample_briefs/summer_campaign.yaml",
             input_dir=str(empty_input),
             output_dir=str(tmp_path / "output"),
             mock=True,
@@ -96,8 +96,8 @@ class TestPipelineMock:
     def test_reused_assets_have_no_prompt(self, tmp_path):
         """Reused hero images should not have a prompt."""
         result = run_pipeline(
-            brief_path="sample_briefs/summer_campaign.yaml",
-            input_dir="input_assets",
+            brief_path="data/sample_briefs/summer_campaign.yaml",
+            input_dir="data/input_assets",
             output_dir=str(tmp_path / "output"),
             mock=True,
         )
@@ -109,8 +109,8 @@ class TestPipelineMock:
     def test_rendered_texts_populated(self, tmp_path):
         """Every asset must track rendered text for compliance."""
         result = run_pipeline(
-            brief_path="sample_briefs/summer_campaign.yaml",
-            input_dir="input_assets",
+            brief_path="data/sample_briefs/summer_campaign.yaml",
+            input_dir="data/input_assets",
             output_dir=str(tmp_path / "output"),
             mock=True,
         )
@@ -127,8 +127,8 @@ class TestPipelineMock:
     def test_brand_compliance_is_evidence_backed(self, tmp_path):
         """Compliance must have status + notes, not just bool."""
         result = run_pipeline(
-            brief_path="sample_briefs/summer_campaign.yaml",
-            input_dir="input_assets",
+            brief_path="data/sample_briefs/summer_campaign.yaml",
+            input_dir="data/input_assets",
             output_dir=str(tmp_path / "output"),
             mock=True,
         )
@@ -143,8 +143,8 @@ class TestPipelineMock:
     def test_hero_reuse_tracked(self, tmp_path):
         """Verify reuse count matches expectations."""
         result = run_pipeline(
-            brief_path="sample_briefs/summer_campaign.yaml",
-            input_dir="input_assets",
+            brief_path="data/sample_briefs/summer_campaign.yaml",
+            input_dir="data/input_assets",
             output_dir=str(tmp_path / "output"),
             mock=True,
         )
@@ -155,8 +155,8 @@ class TestPipelineMock:
     def test_json_report_round_trips(self, tmp_path):
         """JSON report should be valid and contain all fields."""
         result = run_pipeline(
-            brief_path="sample_briefs/summer_campaign.yaml",
-            input_dir="input_assets",
+            brief_path="data/sample_briefs/summer_campaign.yaml",
+            input_dir="data/input_assets",
             output_dir=str(tmp_path / "output"),
             mock=True,
         )
@@ -171,8 +171,8 @@ class TestPipelineMock:
     def test_localized_text_in_spanish_assets(self, tmp_path):
         """Spanish creatives should have text rendered (source or translated)."""
         result = run_pipeline(
-            brief_path="sample_briefs/summer_campaign.yaml",
-            input_dir="input_assets",
+            brief_path="data/sample_briefs/summer_campaign.yaml",
+            input_dir="data/input_assets",
             output_dir=str(tmp_path / "output"),
             mock=True,
         )
@@ -189,8 +189,8 @@ class TestHolidayCampaign:
     def test_holiday_asset_count(self, tmp_path):
         """3 products x 3 ratios x 3 languages = 27 creatives."""
         result = run_pipeline(
-            brief_path="sample_briefs/holiday_campaign.yaml",
-            input_dir="input_assets",
+            brief_path="data/sample_briefs/holiday_campaign.yaml",
+            input_dir="data/input_assets",
             output_dir=str(tmp_path / "output"),
             mock=True,
         )
@@ -200,8 +200,8 @@ class TestHolidayCampaign:
     def test_disclaimer_rendered(self, tmp_path):
         """Holiday campaign has required_disclaimer -> must appear in rendered_texts."""
         result = run_pipeline(
-            brief_path="sample_briefs/holiday_campaign.yaml",
-            input_dir="input_assets",
+            brief_path="data/sample_briefs/holiday_campaign.yaml",
+            input_dir="data/input_assets",
             output_dir=str(tmp_path / "output"),
             mock=True,
         )

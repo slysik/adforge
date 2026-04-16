@@ -12,8 +12,12 @@ venv/
 
 # Output (generated assets – don't commit these)
 output/
-temp_brief_upload/
+data/sample_briefs/temp_brief_upload/
 tmp*.yaml
+
+# Autoresearch generated slides (regenerated via autoresearch scripts)
+data/slides/*.png
+data/slides/*.json
 
 # Replit
 .replit
